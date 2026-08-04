@@ -1,0 +1,14 @@
+{
+  "name": "praxis-dashboard",
+  "version": "1.0.0",
+  "description": "Local Kanban dashboard for Praxis (prx) project-management workstreams — a bird's-eye view of any project's prxwork/ state.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "refresh": "node scripts/extract-praxis-data.mjs"
+  }
+}
