@@ -10,5 +10,5 @@
     "noEmitOnError": true,
     "skipLibCheck": true
   },
-  "include": ["app.ts", "../types/praxis-data.d.ts"]
+  "include": ["app.ts", "home.ts", "../types/praxis-data.d.ts"]
 }

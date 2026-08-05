@@ -18,25 +18,40 @@
     return Math.floor((Date.now() - then) / 86400000);
   }
 
-  fetch('./data.json', { cache: 'no-store' })
-    .then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(boot)
-    .catch(function (err) {
-      var board = byId('board');
-      board.innerHTML = '';
-      var box = el('div', 'load-state');
-      box.appendChild(el('h2', null, "Couldn't load data.json"));
-      var p = el('p', null, 'Generate it first, from this folder:');
-      box.appendChild(p);
-      var pre = el('pre', null, 'npm run refresh -- --root /path/to/your/praxis/project');
-      box.appendChild(pre);
-      var p2 = el('p', null, 'Detail: ' + err.message);
-      box.appendChild(p2);
-      board.appendChild(box);
-    });
+  function showLoadState(heading: string, detail: string) {
+    var board = byId('board');
+    board.innerHTML = '';
+    var box = el('div', 'load-state');
+    box.appendChild(el('h2', null, heading));
+    box.appendChild(el('p', null, detail));
+    var p = el('p');
+    var link = el('a', null, '← Back to the project list') as HTMLAnchorElement;
+    link.href = '/';
+    p.appendChild(link);
+    box.appendChild(p);
+    board.appendChild(box);
+  }
+
+  var projectParam = new URLSearchParams(location.search).get('project');
+
+  if (!projectParam) {
+    showLoadState('No project selected', 'This board renders one project at a time. Pick one from the project list to open its board.');
+  } else {
+    fetch('/api/projects/' + encodeURIComponent(projectParam) + '/data', { cache: 'no-store' })
+      .then(function (r) {
+        if (r.ok) return r.json();
+        // Every API failure answers with a JSON { error } string; surface that verbatim,
+        // falling back to the status code if the body itself cannot be parsed.
+        return r.json().then(
+          function (body) { throw new Error((body && body.error) || 'HTTP ' + r.status); },
+          function () { throw new Error('HTTP ' + r.status); }
+        );
+      })
+      .then(boot)
+      .catch(function (err) {
+        showLoadState("Couldn't load this project", err.message);
+      });
+  }
 
   function boot(raw: PraxisData) {
     var workstreams = raw.workstreams || [];
