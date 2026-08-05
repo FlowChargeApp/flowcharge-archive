@@ -28,7 +28,8 @@ Praxis-Dashboard/
 ├── scripts/
 │   └── extract-praxis-data.mjs      reads <project>/prxwork/ → writes public/data.json
 └── public/
-    ├── index.html                   page shell + styles
+    ├── index.html                   page shell and markup
+    ├── styles.css                   all page styling
     ├── app.js                       fetches data.json, renders KPIs, board, panels
     └── data.json                    generated data (not hand-edited)
 ```
