@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "praxis-dashboard",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["src/server.js"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
       "port": 4173
     }
   ]

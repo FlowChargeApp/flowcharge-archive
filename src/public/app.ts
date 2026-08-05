@@ -1,17 +1,18 @@
 (function () {
   var STATUS_ORDER = ['backlog', 'ready', 'in-progress', 'blocked', 'done', 'dropped'];
-  var STATUS_LABEL = { backlog: 'Backlog', ready: 'Ready', 'in-progress': 'In Progress', blocked: 'Blocked', done: 'Done', dropped: 'Dropped' };
+  var STATUS_LABEL: Record<string, string> = { backlog: 'Backlog', ready: 'Ready', 'in-progress': 'In Progress', blocked: 'Blocked', done: 'Done', dropped: 'Dropped' };
   var SEV_ORDER = ['critical', 'high', 'medium', 'low'];
-  var SEV_LABEL = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
+  var SEV_LABEL: Record<string, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
 
-  function el(tag, cls, text) {
+  function el(tag: string, cls?: string | null, text?: string | null): HTMLElement {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
     if (text != null) e.textContent = text;
     return e;
   }
-  function fmtDate(iso) { return iso || '—'; }
-  function daysSince(iso) {
+  function byId(id: string): HTMLElement { return document.getElementById(id)!; }
+  function fmtDate(iso: string) { return iso || '—'; }
+  function daysSince(iso: string) {
     if (!iso) return null;
     var then = new Date(iso + 'T00:00:00Z').getTime();
     return Math.floor((Date.now() - then) / 86400000);
@@ -24,7 +25,7 @@
     })
     .then(boot)
     .catch(function (err) {
-      var board = document.getElementById('board');
+      var board = byId('board');
       board.innerHTML = '';
       var box = el('div', 'load-state');
       box.appendChild(el('h2', null, "Couldn't load data.json"));
@@ -37,20 +38,20 @@
       board.appendChild(box);
     });
 
-  function boot(raw) {
+  function boot(raw: PraxisData) {
     var workstreams = raw.workstreams || [];
     var issues = raw.issues || [];
 
-    document.getElementById('gen-date').textContent = raw.generated || '—';
-    document.getElementById('tagline').textContent = raw.source
+    byId('gen-date').textContent = raw.generated || '—';
+    byId('tagline').textContent = raw.source
       ? 'Workstream state · ' + raw.source.split('/').pop()
       : 'Workstream state';
-    document.getElementById('meta-counts').textContent =
+    byId('meta-counts').textContent =
       workstreams.length + ' workstreams · ' + issues.length + ' issues';
-    document.getElementById('lower').style.display = '';
+    byId('lower').style.display = '';
 
     function collectStale() {
-      var out = [];
+      var out: any[] = [];
       workstreams.forEach(function (w) {
         (w.artefacts || []).forEach(function (a) {
           if (a.status !== 'in-progress') return;
@@ -68,9 +69,9 @@
 
     /* ---------------- KPI strip ---------------- */
     (function renderKpis() {
-      var strip = document.getElementById('kpi-strip');
+      var strip = byId('kpi-strip');
 
-      var wsByStatus = {};
+      var wsByStatus: Record<string, number> = {};
       STATUS_ORDER.forEach(function (s) { wsByStatus[s] = 0; });
       workstreams.forEach(function (w) { wsByStatus[w.status] = (wsByStatus[w.status] || 0) + 1; });
 
@@ -103,9 +104,9 @@
       k2.appendChild(el('div', 'kpi-label', 'Open issues'));
       k2.appendChild(el('div', 'kpi-value tab', String(openIssues.length)));
       k2.appendChild(el('div', 'kpi-sub', issues.length + ' filed total across all issue lists'));
-      var sevCounts = {};
+      var sevCounts: Record<string, number> = {};
       SEV_ORDER.forEach(function (s) { sevCounts[s] = 0; });
-      openIssues.forEach(function (i) { if (sevCounts[i.severity] != null) sevCounts[i.severity]++; });
+      openIssues.forEach(function (i) { if (i.severity != null && sevCounts[i.severity] != null) sevCounts[i.severity]++; });
       var chips2 = el('div', 'kpi-chips');
       SEV_ORDER.forEach(function (s) {
         if (!sevCounts[s]) return;
@@ -149,8 +150,8 @@
     /* ---------------- Attention panel ---------------- */
     (function renderAttention() {
       var stale = collectStale();
-      document.getElementById('attn-count').textContent = stale.length;
-      var list = document.getElementById('attn-list');
+      byId('attn-count').textContent = stale.length as unknown as string;
+      var list = byId('attn-list');
       if (!stale.length) {
         list.appendChild(el('div', 'attn-empty', 'Nothing in progress has gone quiet — everything active has moved in the last two weeks.'));
         return;
@@ -173,12 +174,12 @@
     /* ---------------- Severity panel ---------------- */
     (function renderSeverity() {
       var openIssues = issues.filter(function (i) { return i.status === 'ready' || i.status === 'in-progress'; });
-      document.getElementById('sev-total').textContent = openIssues.length + ' open';
-      var counts = {};
+      byId('sev-total').textContent = openIssues.length + ' open';
+      var counts: Record<string, number> = {};
       SEV_ORDER.forEach(function (s) { counts[s] = 0; });
-      openIssues.forEach(function (i) { if (counts[i.severity] != null) counts[i.severity]++; });
-      var bar = document.getElementById('sev-bar');
-      var legend = document.getElementById('sev-legend');
+      openIssues.forEach(function (i) { if (i.severity != null && counts[i.severity] != null) counts[i.severity]++; });
+      var bar = byId('sev-bar');
+      var legend = byId('sev-legend');
       SEV_ORDER.forEach(function (s) {
         if (!counts[s]) return;
         var seg = el('span');
@@ -197,23 +198,23 @@
     })();
 
     /* ---------------- Board ---------------- */
-    var sortKey = 'id';
-    var sortDir = 'asc';
+    var sortKey: string | undefined = 'id';
+    var sortDir: string | undefined = 'asc';
     var query = '';
 
-    function wsIdNum(id) { return parseInt(String(id).replace(/\D+/g, ''), 10) || 0; }
+    function wsIdNum(id: string) { return parseInt(String(id).replace(/\D+/g, ''), 10) || 0; }
 
-    function matches(w, q) {
+    function matches(w: PraxisWorkstream, q: string) {
       if (!q) return true;
       var hay = (w.id + ' ' + w.title + ' ' + w.slug + ' ' + (w.tags || []).join(' ')).toLowerCase();
       return hay.indexOf(q) !== -1;
     }
 
-    function artefactTypeLabel(t) {
-      return { plan: 'PLN', issuelist: 'IL', tasklist: 'TL', workstream: 'WS' }[t] || t;
+    function artefactTypeLabel(t: string) {
+      return ({ plan: 'PLN', issuelist: 'IL', tasklist: 'TL', workstream: 'WS' } as Record<string, string>)[t] || t;
     }
 
-    function buildCard(w) {
+    function buildCard(w: PraxisWorkstream) {
       var card = el('div', 'card' + (w.status === 'dropped' ? ' is-dropped' : ''));
       card.tabIndex = 0;
 
@@ -240,12 +241,12 @@
           row.appendChild(el('span', 'a-id', artefactTypeLabel(a.type) + '·' + a.id.split('-')[1]));
           if (a.type === 'issuelist' || a.type === 'tasklist') {
             var barWrap = el('div', 'a-bar');
-            var pct = a.total ? Math.round(100 * a.done / a.total) : 0;
+            var pct = a.total ? Math.round(100 * a.done! / a.total) : 0;
             var seg = el('span'); seg.style.width = pct + '%';
             if (a.status === 'dropped') seg.style.background = 'var(--st-dropped)';
             barWrap.appendChild(seg);
             row.appendChild(barWrap);
-            row.appendChild(el('span', 'a-frac tab', a.done + '/' + a.total));
+            row.appendChild(el('span', 'a-frac tab', a.done! + '/' + a.total!));
           } else {
             var dot = el('span', 'dot-sm');
             dot.style.background = 'var(--st-' + a.status + ')';
@@ -268,12 +269,12 @@
     }
 
     function renderBoard() {
-      var board = document.getElementById('board');
+      var board = byId('board');
       board.innerHTML = '';
       var q = query.trim().toLowerCase();
       var visibleTotal = 0;
 
-      var byStatus = {};
+      var byStatus: Record<string, PraxisWorkstream[]> = {};
       STATUS_ORDER.forEach(function (s) { byStatus[s] = []; });
       workstreams.forEach(function (w) { (byStatus[w.status] || byStatus.backlog).push(w); });
 
@@ -306,25 +307,25 @@
         board.appendChild(col);
       });
 
-      document.getElementById('result-count').textContent = visibleTotal + ' / ' + workstreams.length + ' workstreams shown';
+      byId('result-count').textContent = visibleTotal + ' / ' + workstreams.length + ' workstreams shown';
     }
 
-    document.getElementById('sort-key-seg').addEventListener('click', function (e) {
-      var btn = e.target.closest('button');
+    byId('sort-key-seg').addEventListener('click', function (e) {
+      var btn = (e.target as HTMLElement).closest('button');
       if (!btn) return;
       sortKey = btn.dataset.key;
       this.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
       renderBoard();
     });
-    document.getElementById('sort-dir-seg').addEventListener('click', function (e) {
-      var btn = e.target.closest('button');
+    byId('sort-dir-seg').addEventListener('click', function (e) {
+      var btn = (e.target as HTMLElement).closest('button');
       if (!btn) return;
       sortDir = btn.dataset.dir;
       this.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
       renderBoard();
     });
-    document.getElementById('search').addEventListener('input', function (e) {
-      query = e.target.value;
+    byId('search').addEventListener('input', function (e) {
+      query = (e.target as HTMLInputElement).value;
       renderBoard();
     });
 

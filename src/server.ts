@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, 'public');
 const port = process.env.PORT ? Number(process.env.PORT) : 4173;
 
-const MIME = {
+const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
@@ -17,7 +17,8 @@ const MIME = {
 };
 
 const server = http.createServer((req, res) => {
-  const reqPath = decodeURIComponent(req.url.split('?')[0]);
+  // req.url is string | undefined under @types/node but always set here; assert, don't fall back.
+  const reqPath = decodeURIComponent(req.url!.split('?')[0]);
   let filePath = path.join(root, reqPath === '/' ? '/index.html' : reqPath);
 
   // Prevent path traversal outside public/
