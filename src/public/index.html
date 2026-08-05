@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Praxis Board</title>
+<title>Praxis Projects</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,66 +12,31 @@
   <div>
     <div class="brand-row">
       <span class="mark">P</span>
-      <h1>Praxis Board</h1>
+      <h1>Praxis Projects</h1>
     </div>
-    <div class="tagline" id="tagline">Workstream state</div>
-  </div>
-  <div class="meta">
-    Data generated <strong id="gen-date">—</strong><br>
-    <span id="meta-counts"></span>
+    <div class="tagline">Registered projects</div>
   </div>
 </div>
 
-<div class="kpi-strip" id="kpi-strip"></div>
+<section class="home">
+  <h2 class="home-heading">Your projects</h2>
+  <div id="project-tiles"></div>
 
-<div class="controls">
-  <div class="group">
-    <label>Sort</label>
-    <div class="seg" id="sort-key-seg">
-      <button data-key="id" class="active">Artefact ID</button>
-      <button data-key="name">Name</button>
-    </div>
-    <div class="seg" id="sort-dir-seg">
-      <button data-dir="asc" class="active">Asc</button>
-      <button data-dir="desc">Desc</button>
-    </div>
-  </div>
-  <div class="search-wrap">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-    <input type="text" id="search" placeholder="Filter by title, slug, tag, or ID…" autocomplete="off">
-  </div>
-  <div class="result-count" id="result-count"></div>
-</div>
-
-<div class="board" id="board">
-  <div class="load-state">
-    <h2>Loading data.json…</h2>
-    <p>If this doesn't resolve, run the extractor first, then reload:</p>
-    <pre>npm run refresh -- --root /path/to/your/praxis/project</pre>
-  </div>
-</div>
-
-<div class="lower" id="lower" style="display:none">
-  <div class="panel">
-    <h2>Needs attention <span class="n" id="attn-count"></span></h2>
-    <div class="panel-body" id="attn-list"></div>
-  </div>
-  <div class="panel">
-    <h2>Open issues by severity <span class="n" id="sev-total"></span></h2>
-    <div class="sev-bar-wrap">
-      <div class="sev-bar" id="sev-bar"></div>
-      <div class="sev-legend" id="sev-legend"></div>
-    </div>
-  </div>
-</div>
+  <h2 class="home-heading">Add a project</h2>
+  <form class="add-form" id="add-form">
+    <input type="text" id="project-path" autocomplete="off" placeholder="/Users/you/Work/your-project">
+    <button type="submit">Add project</button>
+  </form>
+  <div id="add-error"></div>
+</section>
 
 <footer class="note">
-  Reads <code>dist/public/data.json</code>, produced by <code>src/scripts/extract-praxis-data.ts</code> from a project's
-  <code>prxwork/</code> frontmatter. Run <code>npm run refresh -- --root &lt;project&gt;</code> any time to pull the
-  latest state, then reload this page. “Needs attention” recomputes elapsed days from each artefact's own
-  <code>updated</code> date against your clock, so it stays accurate however long it's been since the last refresh.
+  A project is any directory containing a <code>prxwork/</code> folder. Each tile opens that project's board,
+  extracted fresh from its <code>prxwork/</code> frontmatter on every load. The list of projects is stored
+  machine-locally in <code>.praxis-projects.json</code> at this repository's root — it is never committed and
+  never leaves this machine.
 </footer>
 
-<script src="app.js"></script>
+<script src="home.js"></script>
 </body>
 </html>

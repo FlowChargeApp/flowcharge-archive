@@ -41,3 +41,14 @@ interface PraxisData {
   workstreams: PraxisWorkstream[];
   issues: PraxisIssue[];
 }
+
+interface ProjectEntry {
+  id: string;     // 8 lowercase hex chars: sha1 of `path`, truncated
+  name: string;   // path.basename(path) — display only, never an identifier
+  path: string;   // absolute, path.resolve'd
+  added: string;  // YYYY-MM-DD
+}
+
+interface ProjectList {
+  projects: ProjectEntry[];
+}

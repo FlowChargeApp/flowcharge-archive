@@ -12,5 +12,5 @@
     "noEmitOnError": true,
     "skipLibCheck": true
   },
-  "include": ["src/server.ts", "src/scripts/**/*.ts", "src/types/**/*.d.ts"]
+  "include": ["src/server.ts", "src/lib/**/*.ts", "src/scripts/**/*.ts", "src/types/**/*.d.ts"]
 }
