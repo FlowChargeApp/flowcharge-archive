@@ -8,7 +8,14 @@
     "node": ">=18"
   },
   "scripts": {
-    "start": "node src/server.js",
-    "refresh": "node src/scripts/extract-praxis-data.mjs"
+    "build": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && node tools/copy-assets.mjs",
+    "prestart": "npm run build",
+    "start": "node dist/server.js",
+    "prerefresh": "npm run build",
+    "refresh": "node dist/scripts/extract-praxis-data.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.3"
   }
 }

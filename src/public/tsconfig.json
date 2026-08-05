@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "lib": ["dom", "es2020"],
+    "module": "none",            // guarantees a classic script; an added import becomes an error
+    "types": [],                 // load-bearing: without it tsc auto-includes @types/node
+    "rootDir": "..",             // = src/, so output lands at dist/public/app.js
+    "outDir": "../../dist",
+    "strict": true,
+    "noEmitOnError": true,
+    "skipLibCheck": true
+  },
+  "include": ["app.ts", "../types/praxis-data.d.ts"]
+}

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Reads a Praxis project's prxwork/ frontmatter and writes src/public/data.json
+// Reads a Praxis project's prxwork/ frontmatter and writes dist/public/data.json
 // for the dashboard to fetch. Source of truth is always the frontmatter files
 // themselves — this script never writes back to the project it reads.
 //
 // Usage:
-//   node src/scripts/extract-praxis-data.mjs --root /path/to/project [--out src/public/data.json]
+//   npm run refresh -- --root <dir>
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,8 +12,10 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function parseArgs(argv) {
-  const args = { out: path.join(__dirname, '..', 'public', 'data.json') };
+interface Args { root?: string; out: string; help?: boolean }
+
+function parseArgs(argv: string[]): Args {
+  const args: Args = { out: path.join(__dirname, '..', 'public', 'data.json') };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--root') args.root = argv[++i];
     else if (argv[i] === '--out') args.out = argv[++i];
@@ -26,21 +28,21 @@ function usage() {
   console.log(`
 Praxis Dashboard — data extractor
 
-  node src/scripts/extract-praxis-data.mjs --root <project-dir> [--out <file.json>]
+  npm run refresh -- --root <project-dir> [--out <file.json>]
 
   --root   Path to the project containing a prxwork/ folder (required)
-  --out    Where to write the JSON payload (default: src/public/data.json)
+  --out    Where to write the JSON payload (default: dist/public/data.json)
 `);
 }
 
-function parseFrontmatter(text) {
+function parseFrontmatter(text: string): Record<string, string | string[]> {
   const m = text.match(/^---\n([\s\S]*?)\n---/);
   if (!m) return {};
-  const fm = {};
+  const fm: Record<string, string | string[]> = {};
   for (const line of m[1].split('\n')) {
     const mm = line.match(/^([a-zA-Z_]+):\s*(.*)$/);
     if (!mm) continue;
-    let val = mm[2].trim();
+    let val: string | string[] = mm[2].trim();
     if (val.startsWith('[') && val.endsWith(']')) {
       const inner = val.slice(1, -1).trim();
       val = inner ? inner.split(',').map((s) => s.trim()).filter(Boolean) : [];
@@ -52,7 +54,11 @@ function parseFrontmatter(text) {
   return fm;
 }
 
-function countChecks(text) {
+// Asserts — never coerces. The call sites below already assume these frontmatter
+// keys hold scalars; a fallback here would change what lands in the payload.
+function fmStr(v: string | string[] | undefined): string { return v as string; }
+
+function countChecks(text: string) {
   let total = 0;
   let done = 0;
   for (const line of text.split('\n')) {
@@ -65,8 +71,8 @@ function countChecks(text) {
   return { total, done };
 }
 
-function walkWorkstreams(base, archived) {
-  const out = [];
+function walkWorkstreams(base: string, archived: boolean): PraxisWorkstream[] {
+  const out: PraxisWorkstream[] = [];
   if (!fs.existsSync(base)) return out;
   for (const slug of fs.readdirSync(base)) {
     const dir = path.join(base, slug);
@@ -86,7 +92,7 @@ function walkWorkstreams(base, archived) {
       const text = fs.readFileSync(fp, 'utf8');
       const fm = parseFrontmatter(text);
       if (!fm.id) continue;
-      const entry = { id: fm.id, type: fm.type, status: fm.status, updated: fm.updated };
+      const entry: PraxisArtefact = { id: fmStr(fm.id), type: fmStr(fm.type), status: fmStr(fm.status), updated: fmStr(fm.updated) };
       if (fm.type === 'issuelist' || fm.type === 'tasklist') {
         const c = countChecks(text);
         entry.total = c.total;
@@ -107,20 +113,20 @@ function walkWorkstreams(base, archived) {
             checked: idm[1].toLowerCase() === 'x',
             severity: sevm ? sevm[1].toLowerCase() : null,
             status: statm ? statm[1].toLowerCase() : null,
-            workstream: wsFm.id,
+            workstream: fmStr(wsFm.id),
           });
         }
       }
     }
 
     out.push({
-      id: wsFm.id,
+      id: fmStr(wsFm.id),
       slug,
-      title: wsFm.title,
-      status: wsFm.status,
+      title: fmStr(wsFm.title),
+      status: fmStr(wsFm.status),
       tags: Array.isArray(wsFm.tags) ? wsFm.tags : (wsFm.tags ? [wsFm.tags] : []),
-      created: wsFm.created,
-      updated: wsFm.updated,
+      created: fmStr(wsFm.created),
+      updated: fmStr(wsFm.updated),
       depends_on: Array.isArray(wsFm.depends_on) ? wsFm.depends_on : (wsFm.depends_on ? [wsFm.depends_on] : []),
       body: body.split('\n').filter(Boolean).slice(0, 3).join(' '),
       archived,
@@ -130,7 +136,7 @@ function walkWorkstreams(base, archived) {
   return out;
 }
 
-let issuesAccumulator = [];
+let issuesAccumulator: PraxisIssue[] = [];
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -152,7 +158,7 @@ function main() {
     ...walkWorkstreams(path.join(prxwork, 'archive'), true),
   ];
 
-  const payload = {
+  const payload: PraxisData = {
     generated: new Date().toISOString().slice(0, 10),
     source: root,
     workstreams,
