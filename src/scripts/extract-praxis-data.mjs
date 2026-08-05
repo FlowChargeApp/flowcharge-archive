@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Reads a Praxis project's prxwork/ frontmatter and writes public/data.json
+// Reads a Praxis project's prxwork/ frontmatter and writes src/public/data.json
 // for the dashboard to fetch. Source of truth is always the frontmatter files
 // themselves — this script never writes back to the project it reads.
 //
 // Usage:
-//   node scripts/extract-praxis-data.mjs --root /path/to/project [--out public/data.json]
+//   node src/scripts/extract-praxis-data.mjs --root /path/to/project [--out src/public/data.json]
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,10 +26,10 @@ function usage() {
   console.log(`
 Praxis Dashboard — data extractor
 
-  node scripts/extract-praxis-data.mjs --root <project-dir> [--out <file.json>]
+  node src/scripts/extract-praxis-data.mjs --root <project-dir> [--out <file.json>]
 
   --root   Path to the project containing a prxwork/ folder (required)
-  --out    Where to write the JSON payload (default: public/data.json)
+  --out    Where to write the JSON payload (default: src/public/data.json)
 `);
 }
 

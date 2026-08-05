@@ -8,7 +8,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "start": "node server.js",
-    "refresh": "node scripts/extract-praxis-data.mjs"
+    "start": "node src/server.js",
+    "refresh": "node src/scripts/extract-praxis-data.mjs"
   }
 }

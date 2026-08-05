@@ -13,25 +13,26 @@ just a way to see the result at a glance.
 ## Quick start
 
 ```bash
-npm run refresh -- --root /path/to/your/project   # extract prxwork/ into public/data.json
+npm run refresh -- --root /path/to/your/project   # extract prxwork/ into src/public/data.json
 npm start                                          # serve the board at http://localhost:4173
 ```
 
-A snapshot of the LAD project is checked in at `public/data.json` so the board works out of
+A snapshot of the LAD project is checked in at `src/public/data.json` so the board works out of
 the box — re-run `npm run refresh` whenever you want current data.
 
 ## How it fits together
 
 ```
 Praxis-Dashboard/
-├── server.js                        zero-dependency static file server (npm start)
-├── scripts/
-│   └── extract-praxis-data.mjs      reads <project>/prxwork/ → writes public/data.json
-└── public/
-    ├── index.html                   page shell and markup
-    ├── styles.css                   all page styling
-    ├── app.js                       fetches data.json, renders KPIs, board, panels
-    └── data.json                    generated data (not hand-edited)
+└── src/
+    ├── server.js                    zero-dependency static file server (npm start)
+    ├── scripts/
+    │   └── extract-praxis-data.mjs  reads <project>/prxwork/ → writes src/public/data.json
+    └── public/
+        ├── index.html               page shell and markup
+        ├── styles.css               all page styling
+        ├── app.js                   fetches data.json, renders KPIs, board, panels
+        └── data.json                generated data (not hand-edited)
 ```
 
 `extract-praxis-data.mjs` parses each workstream's frontmatter and its linked plans, issue
@@ -42,10 +43,10 @@ skills and `prx-index.mjs` use. It never writes back to the project it reads.
 
 | Command | Does |
 |---|---|
-| `npm start` | Serves `public/` at `http://localhost:4173` (override with `PORT=xxxx npm start`) |
-| `npm run refresh -- --root <dir>` | Regenerates `public/data.json` from `<dir>/prxwork/` |
+| `npm start` | Serves `src/public/` at `http://localhost:4173` (override with `PORT=xxxx npm start`) |
+| `npm run refresh -- --root <dir>` | Regenerates `src/public/data.json` from `<dir>/prxwork/` |
 
-`npm run refresh` accepts `--out <file>` to write somewhere other than `public/data.json`.
+`npm run refresh` accepts `--out <file>` to write somewhere other than `src/public/data.json`.
 
 ## Notes
 
