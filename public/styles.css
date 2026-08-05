@@ -13,14 +13,14 @@
 
   --st-backlog: #6B7280;
   --st-ready: #2E63A6;
-  --st-progress: #A8721B;
+  --st-in-progress: #A8721B;
   --st-blocked: #AD3A48;
   --st-done: #2F8F58;
   --st-dropped: #8A7E93;
 
   --st-backlog-bg: #ECEDEF;
   --st-ready-bg: #E6EEF7;
-  --st-progress-bg: #F6ECDA;
+  --st-in-progress-bg: #F6ECDA;
   --st-blocked-bg: #F6E4E6;
   --st-done-bg: #E4F1E9;
   --st-dropped-bg: #ECE8EF;
@@ -54,14 +54,14 @@
 
     --st-backlog: #9AA3AC;
     --st-ready: #7FADE6;
-    --st-progress: #E0A83F;
+    --st-in-progress: #E0A83F;
     --st-blocked: #E2707C;
     --st-done: #6BC48C;
     --st-dropped: #B3A6C2;
 
     --st-backlog-bg: #1B1F25;
     --st-ready-bg: #17222D;
-    --st-progress-bg: #241D12;
+    --st-in-progress-bg: #241D12;
     --st-blocked-bg: #2A1518;
     --st-done-bg: #132218;
     --st-dropped-bg: #1E1922;
@@ -79,9 +79,9 @@
   --paper: #10141A; --paper-raised: #171D24; --paper-sunken: #0B0E13;
   --line: #262E36; --line-strong: #333D46;
   --accent: #4FB8B0; --accent-soft: #16292A; --accent-ink: #B9EDE8;
-  --st-backlog: #9AA3AC; --st-ready: #7FADE6; --st-progress: #E0A83F;
+  --st-backlog: #9AA3AC; --st-ready: #7FADE6; --st-in-progress: #E0A83F;
   --st-blocked: #E2707C; --st-done: #6BC48C; --st-dropped: #B3A6C2;
-  --st-backlog-bg: #1B1F25; --st-ready-bg: #17222D; --st-progress-bg: #241D12;
+  --st-backlog-bg: #1B1F25; --st-ready-bg: #17222D; --st-in-progress-bg: #241D12;
   --st-blocked-bg: #2A1518; --st-done-bg: #132218; --st-dropped-bg: #1E1922;
   --sev-critical: #E2536B; --sev-high: #E8825E; --sev-medium: #E0B24F; --sev-low: #9AA3AC;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
@@ -91,9 +91,9 @@
   --paper: #F3F5F4; --paper-raised: #FFFFFF; --paper-sunken: #E9ECEB;
   --line: #D9DFDD; --line-strong: #C3CBC8;
   --accent: #1F6F73; --accent-soft: #E1EEED; --accent-ink: #0F4548;
-  --st-backlog: #6B7280; --st-ready: #2E63A6; --st-progress: #A8721B;
+  --st-backlog: #6B7280; --st-ready: #2E63A6; --st-in-progress: #A8721B;
   --st-blocked: #AD3A48; --st-done: #2F8F58; --st-dropped: #8A7E93;
-  --st-backlog-bg: #ECEDEF; --st-ready-bg: #E6EEF7; --st-progress-bg: #F6ECDA;
+  --st-backlog-bg: #ECEDEF; --st-ready-bg: #E6EEF7; --st-in-progress-bg: #F6ECDA;
   --st-blocked-bg: #F6E4E6; --st-done-bg: #E4F1E9; --st-dropped-bg: #ECE8EF;
   --sev-critical: #8E1B31; --sev-high: #B14226; --sev-medium: #A8791C; --sev-low: #5B6472;
   --shadow: 0 1px 2px rgba(22, 27, 34, 0.06), 0 1px 1px rgba(22, 27, 34, 0.04);
