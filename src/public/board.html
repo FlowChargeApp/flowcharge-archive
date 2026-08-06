@@ -20,7 +20,8 @@
   <div class="meta">
     Data generated <strong id="gen-date">—</strong><br>
     <span id="meta-counts"></span>
-    <span id="branch-line" style="display:none"><br>Branch <strong id="branch-name"></strong></span>
+    <span id="branch-line" style="display:none"><br>Branch <strong id="branch-name"></strong></span><br>
+    <span id="live-status"></span>
   </div>
 </div>
 
@@ -67,8 +68,9 @@
 </div>
 
 <footer class="note">
-  Reads the selected project's <code>prxwork/</code> frontmatter live through the dashboard server, on every page
-  load — so a reload always shows the project's current state, with nothing to regenerate first.
+  Reads the selected project's <code>prxwork/</code> frontmatter live through the dashboard server, on load and
+  then every few seconds — so an open board keeps showing the project's current state without a reload, with
+  nothing to regenerate first.
   “Needs attention” recomputes elapsed days from each artefact's own <code>updated</code> date against your clock.
 </footer>
 
