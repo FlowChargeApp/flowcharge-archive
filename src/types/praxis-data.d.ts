@@ -42,6 +42,13 @@ interface PraxisData {
   issues: PraxisIssue[];
 }
 
+// What the board route sends: the extractor's payload plus the fields the server
+// adds at the transport layer. PraxisData itself stays exactly what
+// extractPraxisData() returns and what `npm run refresh` dumps.
+interface BoardPayload extends PraxisData {
+  branch: string | null;
+}
+
 interface ProjectEntry {
   id: string;     // 8 lowercase hex chars: sha1 of `path`, truncated
   name: string;   // path.basename(path) — display only, never an identifier

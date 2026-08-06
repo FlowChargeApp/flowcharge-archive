@@ -53,7 +53,7 @@
       });
   }
 
-  function boot(raw: PraxisData) {
+  function boot(raw: BoardPayload) {
     var workstreams = raw.workstreams || [];
     var issues = raw.issues || [];
 
@@ -63,6 +63,10 @@
       : 'Workstream state';
     byId('meta-counts').textContent =
       workstreams.length + ' workstreams · ' + issues.length + ' issues';
+    if (raw.branch) {
+      byId('branch-name').textContent = raw.branch;
+      byId('branch-line').style.display = '';
+    }
     byId('lower').style.display = '';
 
     function collectStale() {

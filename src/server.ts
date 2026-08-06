@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractPraxisData, hasPrxwork } from './lib/extract.js';
 import { readProjects, findProject, addProject } from './lib/projects.js';
+import { readBranch } from './lib/git.js';
 import { extractWorkstreamDetail } from './lib/detail.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -146,7 +147,8 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
         sendJson(res, 410, { error: `${entry.path} no longer contains a prxwork/ folder` });
         return;
       }
-      sendJson(res, 200, extractPraxisData(entry.path));
+      const payload: BoardPayload = { ...extractPraxisData(entry.path), branch: readBranch(entry.path) };
+      sendJson(res, 200, payload);
     } catch (err) {
       console.error(`GET /api/projects/${id}/data failed:`, err);
       sendJson(res, 500, { error: 'Extraction failed' });
