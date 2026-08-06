@@ -36,6 +36,7 @@ Praxis-Dashboard/
 │   ├── server.ts                    zero-dependency static server + /api/ routes (npm start)
 │   ├── lib/
 │   │   ├── extract.ts               pure extraction library — prxwork/ → PraxisData
+│   │   ├── git.ts                   current branch reader — .git/HEAD → branch name
 │   │   └── projects.ts              the project registry: read, find, add
 │   ├── scripts/
 │   │   └── extract-praxis-data.ts   thin CLI over extract.ts — standalone JSON dump
