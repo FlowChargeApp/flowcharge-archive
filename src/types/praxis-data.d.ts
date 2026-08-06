@@ -52,3 +52,41 @@ interface ProjectEntry {
 interface ProjectList {
   projects: ProjectEntry[];
 }
+
+type PraxisYamlValue = string | PraxisYamlValue[] | { [key: string]: PraxisYamlValue };
+
+interface PraxisDetailArtefact {
+  id: string;       // IL-1 / TL-5
+  file: string;     // basename, e.g. "prxtasklist-status-colour-fix.md"
+  title: string;
+  status: string;
+  updated: string;
+}
+
+interface PraxisIssueDetail {
+  id: string;       // ISS-1
+  title: string;
+  checked: boolean;
+  fields: Record<string, PraxisYamlValue>;   // {} when the item has no yaml fence
+}
+
+interface PraxisTaskDetail {
+  number: string;   // "1" or "1.1"
+  title: string;
+  checked: boolean;
+  fields: Record<string, PraxisYamlValue>;
+  children: PraxisTaskDetail[];              // always present; [] for a leaf
+}
+
+interface PraxisIssueListDetail { artefact: PraxisDetailArtefact; items: PraxisIssueDetail[]; }
+interface PraxisTaskListDetail  { artefact: PraxisDetailArtefact; tasks: PraxisTaskDetail[]; }
+
+interface PraxisWorkstreamDetail {
+  id: string;
+  slug: string;
+  title: string;
+  status: string;
+  archived: boolean;
+  issueLists: PraxisIssueListDetail[];
+  taskLists: PraxisTaskListDetail[];
+}

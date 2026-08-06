@@ -232,6 +232,9 @@
     function buildCard(w: PraxisWorkstream) {
       var card = el('div', 'card' + (w.status === 'dropped' ? ' is-dropped' : ''));
       card.tabIndex = 0;
+      card.dataset.ws = w.id;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-haspopup', 'dialog');
 
       var top = el('div', 'card-top');
       top.appendChild(el('div', 'card-id', w.id));
@@ -343,6 +346,299 @@
       query = (e.target as HTMLInputElement).value;
       renderBoard();
     });
+
+    /* ---------------- Card detail modal ---------------- */
+    // byId returns HTMLElement; showModal()/close() need the dialog type.
+    var modal = byId('ws-modal') as HTMLDialogElement;
+    var modalTabs = byId('ws-modal-tabs');
+    var tabIssues = byId('ws-tab-issues');
+    var tabTasks = byId('ws-tab-tasks');
+    var panelIssues = byId('ws-panel-issues');
+    var panelTasks = byId('ws-panel-tasks');
+
+    // aria-selected, the roving tabindex and the panels' hidden attribute always
+    // move together — the markup ships the initial state, this only toggles it.
+    function selectTab(name: string, focusTab: boolean) {
+      var isIssues = name !== 'tasks';
+      tabIssues.setAttribute('aria-selected', isIssues ? 'true' : 'false');
+      tabTasks.setAttribute('aria-selected', isIssues ? 'false' : 'true');
+      tabIssues.tabIndex = isIssues ? 0 : -1;
+      tabTasks.tabIndex = isIssues ? -1 : 0;
+      panelIssues.hidden = !isIssues;
+      panelTasks.hidden = isIssues;
+      if (focusTab) (isIssues ? tabIssues : tabTasks).focus();
+    }
+
+    function setPanelMessage(panel: HTMLElement, message: string) {
+      panel.innerHTML = '';
+      panel.appendChild(el('div', 'ws-modal-empty', message));
+    }
+
+    function setTabLabels(issueCount: number, taskCount: number) {
+      tabIssues.textContent = 'Issues (' + issueCount + ')';
+      tabTasks.textContent = 'Tasks (' + taskCount + ')';
+    }
+
+    // Presentation only — the underlying keys are never rewritten.
+    function humanise(key: string) {
+      var s = key.replace(/_/g, ' ');
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    // Generic over PraxisYamlValue and deliberately blind to field names: the
+    // Tasks tab reuses this unchanged, so a special case for `description` or
+    // `severity` would be a bug the moment the prx schema grows a key.
+    function renderValue(v: PraxisYamlValue): HTMLElement {
+      if (typeof v === 'string') return el('p', 'ws-val', v);
+      if (Array.isArray(v)) {
+        var ul = el('ul', 'ws-list');
+        v.forEach(function (entry) {
+          var li = el('li');
+          li.appendChild(renderValue(entry));
+          ul.appendChild(li);
+        });
+        return ul;
+      }
+      return renderMap(v);
+    }
+
+    function renderMap(map: { [key: string]: PraxisYamlValue }): HTMLElement {
+      var dl = el('dl', 'ws-fields');
+      Object.keys(map).forEach(function (key) {
+        // _raw is the parser's committed failure mode, not a debug affordance:
+        // a shape the grammar could not read is shown rather than hidden.
+        if (key === '_raw') {
+          var rawVal = map[key];
+          dl.appendChild(el('dt', 'ws-raw-label', 'Unparsed'));
+          var rawDd = el('dd');
+          rawDd.appendChild(el('pre', 'ws-raw', Array.isArray(rawVal) ? rawVal.join('\n') : String(rawVal)));
+          dl.appendChild(rawDd);
+          return;
+        }
+        dl.appendChild(el('dt', null, humanise(key)));
+        var dd = el('dd');
+        // A nested <dl> is valid HTML only inside a <dd>, never directly in a <dl>.
+        dd.appendChild(renderValue(map[key]));
+        dl.appendChild(dd);
+      });
+      return dl;
+    }
+
+    // `toggle` fires on every open AND every close, so the guard is the whole
+    // point: an unguarded handler rebuilds the body each time and undoes the
+    // reason <details> was chosen. Nothing is in the DOM until the first expand.
+    function lazyBody(details: HTMLElement, build: () => HTMLElement) {
+      var built = false;
+      details.addEventListener('toggle', function () {
+        if (built) return;
+        built = true;
+        details.appendChild(build());
+      });
+    }
+
+    function buildSection(artefact: PraxisDetailArtefact): HTMLElement {
+      var sec = el('section', 'ws-section');
+      var head = el('div', 'ws-section-head');
+      head.appendChild(el('span', 'ws-section-id', artefact.id));
+      head.appendChild(el('h3', 'ws-section-title', artefact.title));
+      sec.appendChild(head);
+      return sec;
+    }
+
+    // Shared summary row for every collapsible item, issue or task alike.
+    function buildItem(checked: boolean, id: string, title: string, fields: Record<string, PraxisYamlValue>): HTMLElement {
+      var d = el('details', 'ws-item');
+      var sum = el('summary', 'ws-item-summary');
+      sum.appendChild(el('span', 'ws-check' + (checked ? ' is-checked' : ''), checked ? '✓' : '○'));
+      sum.appendChild(el('span', 'ws-item-id', id));
+      sum.appendChild(el('span', 'ws-item-title', title));
+      d.appendChild(sum);
+      lazyBody(d, function () { return renderMap(fields); });
+      return d;
+    }
+
+    // Two files means two sections in the ONE Issues tab — never a third tab.
+    function renderIssuesPanel(lists: PraxisIssueListDetail[]) {
+      panelIssues.innerHTML = '';
+      // (a) No issue-list file at all — the common case, and not an error.
+      if (!lists.length) {
+        setPanelMessage(panelIssues, 'No issue list in this workstream. The modal looked for a prxissuelist file in its folder and found none.');
+        return;
+      }
+      lists.forEach(function (list) {
+        var sec = buildSection(list.artefact);
+        var body = el('div', 'ws-items');
+        // (b) The file is there but yielded nothing — worth saying plainly,
+        // because it is the signal that item recognition failed on real input.
+        if (!list.items.length) {
+          body.appendChild(el('div', 'ws-modal-empty', 'This issue list is present but produced no items — nothing in it was recognised as an issue entry.'));
+        } else {
+          list.items.forEach(function (item) {
+            body.appendChild(buildItem(item.checked, item.id, item.title, item.fields));
+          });
+        }
+        sec.appendChild(body);
+        panelIssues.appendChild(sec);
+      });
+    }
+
+    // A parent group. Its description renders inline through the same generic
+    // renderer — parents carry description only, so there is no field set to
+    // build — and its children follow as summary rows. Both are deferred to the
+    // first expand: building 27 child rows up front for a fixture nobody has
+    // opened yet is exactly what the <details> discipline exists to avoid.
+    function buildTaskGroup(task: PraxisTaskDetail): HTMLElement {
+      var d = el('details', 'ws-item ws-task-group');
+      var sum = el('summary', 'ws-item-summary');
+      sum.appendChild(el('span', 'ws-check' + (task.checked ? ' is-checked' : ''), task.checked ? '✓' : '○'));
+      sum.appendChild(el('span', 'ws-item-id', task.number));
+      sum.appendChild(el('span', 'ws-item-title', task.title));
+      d.appendChild(sum);
+      lazyBody(d, function () {
+        var body = el('div', 'ws-task-group-body');
+        var desc = task.fields.description;
+        if (desc !== undefined) {
+          var box = el('div', 'ws-task-desc');
+          box.appendChild(renderValue(desc));
+          body.appendChild(box);
+        }
+        var kids = el('div', 'ws-task-children');
+        task.children.forEach(function (child) {
+          // buildItem, unchanged — a child's own body stays unbuilt until that
+          // child is expanded, so expanding a parent costs rows, not field sets.
+          kids.appendChild(buildItem(child.checked, child.number, child.title, child.fields));
+        });
+        body.appendChild(kids);
+        return body;
+      });
+      return d;
+    }
+
+    // Two task lists in one workstream means two sections in the ONE Tasks tab.
+    function renderTasksPanel(lists: PraxisTaskListDetail[]) {
+      panelTasks.innerHTML = '';
+      // (c) No task-list file at all — the common case, and not an error.
+      if (!lists.length) {
+        setPanelMessage(panelTasks, 'No task list in this workstream. The modal looked for a prxtasklist file in its folder and found none.');
+        return;
+      }
+      lists.forEach(function (list) {
+        var sec = buildSection(list.artefact);
+        var body = el('div', 'ws-items');
+        // (d) The file is there but yielded nothing — the same diagnostic
+        // signal as (b), for the task side.
+        if (!list.tasks.length) {
+          body.appendChild(el('div', 'ws-modal-empty', 'This task list is present but produced no items — nothing in it was recognised as a task line.'));
+        } else {
+          list.tasks.forEach(function (task) {
+            // A top-level entry with no children — a flat file's task, or a
+            // promoted orphan — renders as an ordinary item so its full field
+            // set stays reachable. Only a real parent becomes a group.
+            body.appendChild(task.children.length
+              ? buildTaskGroup(task)
+              : buildItem(task.checked, task.number, task.title, task.fields));
+          });
+        }
+        sec.appendChild(body);
+        panelTasks.appendChild(sec);
+      });
+    }
+
+    // Parents and children alike, which is the same set of lines countChecks
+    // counts for the card's done/total fraction — counting only leaves would put
+    // one number in the modal and a different one on the card behind it.
+    function countTasks(lists: PraxisTaskListDetail[]): number {
+      var n = 0;
+      lists.forEach(function (list) {
+        list.tasks.forEach(function (task) { n += 1 + task.children.length; });
+      });
+      return n;
+    }
+
+    function renderDetail(detail: PraxisWorkstreamDetail) {
+      // textContent everywhere — every value here came out of a file.
+      byId('ws-modal-id').textContent = detail.id;
+      byId('ws-modal-title').textContent = detail.title;
+      byId('ws-modal-status').textContent = detail.archived ? detail.status + ' · archived' : detail.status;
+
+      var issueCount = 0;
+      (detail.issueLists || []).forEach(function (l) { issueCount += l.items.length; });
+      setTabLabels(issueCount, countTasks(detail.taskLists || []));
+
+      renderIssuesPanel(detail.issueLists || []);
+      renderTasksPanel(detail.taskLists || []);
+    }
+
+    function openModal(wsId: string) {
+      byId('ws-modal-id').textContent = wsId;
+      byId('ws-modal-title').textContent = 'Loading…';
+      byId('ws-modal-status').textContent = '';
+      setTabLabels(0, 0);
+      setPanelMessage(panelIssues, 'Loading…');
+      setPanelMessage(panelTasks, 'Loading…');
+      // Reset to Issues so a reopen never inherits the last session's tab.
+      selectTab('issues', false);
+      // showModal() supplies focus containment, an inert background,
+      // Escape-to-close, ::backdrop and focus restoration — none of it hand-rolled.
+      modal.showModal();
+
+      // Refetched on every open; no client-side caching (assumption A6).
+      // projectParam is what scopes the modal to the board's own project.
+      fetch('/api/projects/' + encodeURIComponent(projectParam!) + '/workstreams/' + encodeURIComponent(wsId) + '/detail', { cache: 'no-store' })
+        .then(function (r) {
+          if (r.ok) return r.json();
+          return r.json().then(
+            function (body) { throw new Error((body && body.error) || 'HTTP ' + r.status); },
+            function () { throw new Error('HTTP ' + r.status); }
+          );
+        })
+        .then(renderDetail)
+        .catch(function (err) {
+          byId('ws-modal-title').textContent = "Couldn't load this workstream";
+          setPanelMessage(panelIssues, err.message);
+          setPanelMessage(panelTasks, err.message);
+        });
+    }
+
+    // One delegated listener each, on #board — renderBoard() rebuilds
+    // board.innerHTML on every sort, direction and search change, so per-card
+    // listeners would be re-created continuously and leak.
+    byId('board').addEventListener('click', function (e) {
+      var card = (e.target as HTMLElement).closest('.card') as HTMLElement | null;
+      if (!card || !card.dataset.ws) return;
+      openModal(card.dataset.ws);
+    });
+    byId('board').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      var card = (e.target as HTMLElement).closest('.card') as HTMLElement | null;
+      if (!card || !card.dataset.ws) return;
+      e.preventDefault();   // Space on a focused card would otherwise scroll the page.
+      openModal(card.dataset.ws);
+    });
+
+    modalTabs.addEventListener('click', function (e) {
+      var btn = (e.target as HTMLElement).closest('button');
+      if (!btn || !btn.dataset.tab) return;
+      selectTab(btn.dataset.tab, true);
+    });
+    modalTabs.addEventListener('keydown', function (e) {
+      var onIssues = tabIssues.getAttribute('aria-selected') === 'true';
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        selectTab(onIssues ? 'tasks' : 'issues', true);   // two tabs, so either arrow wraps
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        selectTab('issues', true);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        selectTab('tasks', true);
+      }
+    });
+
+    byId('ws-modal-close').addEventListener('click', function () { modal.close(); });
+    // Backdrop dismissal: a backdrop click targets the dialog element itself,
+    // which is why #ws-modal carries no padding (styles.css).
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.close(); });
 
     renderBoard();
   }

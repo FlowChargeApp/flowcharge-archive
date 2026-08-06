@@ -71,6 +71,33 @@
   “Needs attention” recomputes elapsed days from each artefact's own <code>updated</code> date against your clock.
 </footer>
 
+<!-- Card detail modal. No `open` attribute — app.ts calls showModal(). All content
+     lives in .ws-modal-inner because #ws-modal carries no padding: backdrop
+     dismissal tests `e.target === dialog`, and padding on the dialog would make a
+     click on that padding close it too. -->
+<dialog id="ws-modal" aria-labelledby="ws-modal-title">
+  <div class="ws-modal-inner">
+    <div class="ws-modal-head">
+      <div class="ws-modal-headings">
+        <span id="ws-modal-id" class="ws-modal-id"></span>
+        <h2 id="ws-modal-title" class="ws-modal-title"></h2>
+        <span id="ws-modal-status" class="ws-modal-status"></span>
+      </div>
+      <button type="button" id="ws-modal-close" class="ws-modal-close" aria-label="Close">×</button>
+    </div>
+
+    <div class="ws-modal-tabs" id="ws-modal-tabs" role="tablist">
+      <button type="button" role="tab" id="ws-tab-issues" data-tab="issues" aria-controls="ws-panel-issues" aria-selected="true" tabindex="0">Issues</button>
+      <button type="button" role="tab" id="ws-tab-tasks" data-tab="tasks" aria-controls="ws-panel-tasks" aria-selected="false" tabindex="-1">Tasks</button>
+    </div>
+
+    <div class="ws-modal-body">
+      <div role="tabpanel" id="ws-panel-issues" aria-labelledby="ws-tab-issues"></div>
+      <div role="tabpanel" id="ws-panel-tasks" aria-labelledby="ws-tab-tasks" hidden></div>
+    </div>
+  </div>
+</dialog>
+
 <script src="app.js"></script>
 </body>
 </html>
