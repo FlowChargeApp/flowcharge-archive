@@ -309,8 +309,9 @@ button { font-family: inherit; }
   border-radius: 6px;
   padding: 9px 10px 8px;
   background: var(--paper);
-  cursor: default;
+  cursor: pointer;
 }
+.card:hover { border-color: var(--line-strong); }
 .card.is-dropped { opacity: 0.68; }
 .card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; }
 .card-id {
@@ -549,3 +550,230 @@ footer.note code {
   overflow-wrap: anywhere;
 }
 #add-error:empty { margin-top: 0; }
+
+/* ---------- Card detail modal ---------- */
+
+/* padding: 0 is load-bearing, not cosmetic — backdrop dismissal is
+   `if (e.target === dialog) dialog.close()`, and a click on dialog padding also
+   targets the dialog. All padding lives on .ws-modal-inner instead. */
+#ws-modal {
+  padding: 0;
+  width: min(880px, calc(100vw - 48px));
+  max-width: min(880px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+#ws-modal::backdrop { background: color-mix(in srgb, var(--ink) 46%, transparent); }
+
+/* The dialog caps its own height; the scroll sits on .ws-modal-body so the
+   header and tablist stay pinned rather than scrolling away. */
+.ws-modal-inner {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 64px);
+}
+
+.ws-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.ws-modal-headings { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ws-modal-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.ws-modal-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.ws-modal-status {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+.ws-modal-close {
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  width: 26px;
+  height: 26px;
+  line-height: 1;
+  font-size: 15px;
+  cursor: pointer;
+}
+.ws-modal-close:hover { border-color: var(--line-strong); color: var(--ink); }
+.ws-modal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Underlined labels, not .seg's joined pills — .seg is a behavioural precedent
+   for the delegated tab handler, not a visual one. */
+.ws-modal-tabs {
+  display: flex;
+  gap: 18px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+.ws-modal-tabs button {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--ink-soft);
+  padding: 9px 1px;
+  margin-bottom: -1px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.ws-modal-tabs button:hover { color: var(--ink); }
+.ws-modal-tabs button[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.ws-modal-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ws-modal-body {
+  overflow: auto;
+  padding: 14px 18px 18px;
+  font-size: 12.5px;
+}
+.ws-modal-empty {
+  padding: 22px 4px;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 12.5px;
+}
+
+/* Per-file sections: N artefact files become N sections within ONE tab. */
+.ws-section + .ws-section { margin-top: 20px; }
+.ws-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.ws-section-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.ws-section-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Collapsed rows. The default disclosure marker is kept deliberately — it is
+   the platform affordance this feature reuses rather than reimplements. */
+.ws-item {
+  border-bottom: 1px solid var(--line);
+}
+.ws-item:last-child { border-bottom: none; }
+.ws-item-summary {
+  display: list-item;
+  padding: 7px 2px 7px 0;
+  cursor: pointer;
+  color: var(--ink);
+}
+.ws-item-summary:hover { color: var(--accent); }
+.ws-item-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ws-check {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.ws-check.is-checked { color: var(--st-done); }
+.ws-item-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 0 6px 0 4px;
+}
+.ws-item-title { overflow-wrap: anywhere; }
+
+/* Value tree. Nesting is carried by the indent on each nested <dl>, which sits
+   inside its <dd> — the only place a nested definition list is valid. */
+.ws-fields {
+  margin: 2px 0 10px;
+  padding: 0 0 0 18px;
+}
+.ws-fields dt {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+.ws-fields dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+}
+.ws-fields dd .ws-fields {
+  margin-bottom: 0;
+  border-left: 1px solid var(--line);
+  padding-left: 12px;
+}
+.ws-val {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ws-list {
+  margin: 0;
+  padding-left: 16px;
+}
+.ws-list li { margin: 2px 0; }
+
+/* The parser's committed failure mode, shown rather than hidden. */
+.ws-fields dt.ws-raw-label { color: var(--sev-medium); }
+.ws-raw {
+  margin: 0;
+  background: var(--paper-sunken);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* Two-level task tree. A parent group is a .ws-item that opens onto its own
+   description and its children's rows, so the summary-row, value-tree and _raw
+   styling above carries over unchanged — the two tabs are one component. */
+.ws-task-group-body {
+  padding: 0 0 8px 18px;
+}
+.ws-task-desc {
+  margin: 2px 0 6px;
+  color: var(--ink-soft);
+}
+/* A small indent per level, deliberately: nesting compounds, and a long value
+   inside a child inside a group has little width left to give away. */
+.ws-task-children {
+  border-left: 1px solid var(--line);
+  padding-left: 10px;
+}
+.ws-task-children .ws-item:last-child { border-bottom: none; }
+/* The number reads as an identifier, consistent with .card-id and .a-id. */
+.ws-task-group > .ws-item-summary .ws-item-id { color: var(--accent); }

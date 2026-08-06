@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-function parseFrontmatter(text: string): Record<string, string | string[]> {
+export function parseFrontmatter(text: string): Record<string, string | string[]> {
   const m = text.match(/^---\n([\s\S]*?)\n---/);
   if (!m) return {};
   const fm: Record<string, string | string[]> = {};

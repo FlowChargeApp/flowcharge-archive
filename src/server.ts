@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractPraxisData, hasPrxwork } from './lib/extract.js';
 import { readProjects, findProject, addProject } from './lib/projects.js';
+import { extractWorkstreamDetail } from './lib/detail.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, 'public');
@@ -149,6 +150,44 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
     } catch (err) {
       console.error(`GET /api/projects/${id}/data failed:`, err);
       sendJson(res, 500, { error: 'Extraction failed' });
+    }
+    return;
+  }
+
+  const detailMatch = reqPath.match(/^\/api\/projects\/([^/]+)\/workstreams\/([^/]+)\/detail$/);
+  if (detailMatch) {
+    if (method !== 'GET') {
+      sendJson(res, 405, { error: 'Method not allowed' });
+      return;
+    }
+    const id = detailMatch[1];
+    const wsId = detailMatch[2];
+    // Shape check before any filesystem work: reqPath is already
+    // decodeURIComponent'd, so a decoded single segment such as `../etc` reaches
+    // here and is rejected on shape rather than on where it would have pointed.
+    if (!/^WS-\d+$/.test(wsId)) {
+      sendJson(res, 400, { error: `Malformed workstream id ${wsId}` });
+      return;
+    }
+    try {
+      const entry = findProject(id);
+      if (!entry) {
+        sendJson(res, 404, { error: `Unknown project ${id}` });
+        return;
+      }
+      if (!hasPrxwork(entry.path)) {
+        sendJson(res, 410, { error: `${entry.path} no longer contains a prxwork/ folder` });
+        return;
+      }
+      const detail = extractWorkstreamDetail(entry.path, wsId);
+      if (!detail) {
+        sendJson(res, 404, { error: `Unknown workstream ${wsId}` });
+        return;
+      }
+      sendJson(res, 200, detail);
+    } catch (err) {
+      console.error(`GET /api/projects/${id}/workstreams/${wsId}/detail failed:`, err);
+      sendJson(res, 500, { error: 'Detail extraction failed' });
     }
     return;
   }
