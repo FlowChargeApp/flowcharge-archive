@@ -85,11 +85,19 @@
   <div class="ws-modal-inner">
     <div class="ws-modal-head">
       <div class="ws-modal-headings">
-        <span id="ws-modal-id" class="ws-modal-id"></span>
+        <div class="ws-modal-id-row">
+          <span id="ws-modal-sev-dot" class="dot-sm" hidden aria-hidden="true"></span>
+          <span id="ws-modal-id" class="ws-modal-id"></span>
+        </div>
         <h2 id="ws-modal-title" class="ws-modal-title"></h2>
         <span id="ws-modal-status" class="ws-modal-status"></span>
       </div>
       <button type="button" id="ws-modal-close" class="ws-modal-close" aria-label="Close">×</button>
+    </div>
+
+    <div class="ws-modal-meta" id="ws-modal-meta">
+      <div class="card-tags" id="ws-modal-tags" hidden></div>
+      <div class="ws-modal-dates" id="ws-modal-dates"></div>
     </div>
 
     <div class="ws-modal-tabs" id="ws-modal-tabs" role="tablist">
