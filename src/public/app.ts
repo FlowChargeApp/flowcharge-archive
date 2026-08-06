@@ -13,6 +13,8 @@
   var issues: PraxisIssue[] = [];
   var lastBody: string | null = null;   // raw response text of the last applied payload
   var polling = false;                  // a request is in flight
+  type SevMix = { critical: number; high: number; medium: number; low: number };
+  var sevMix: Record<string, SevMix> | null = null;
 
   function el(tag: string, cls?: string | null, text?: string | null): HTMLElement {
     var e = document.createElement(tag);
@@ -44,6 +46,10 @@
 
   /* ---------------- Board ---------------- */
   function wsIdNum(id: string) { return parseInt(String(id).replace(/\D+/g, ''), 10) || 0; }
+
+  function severityCmp(x: SevMix, y: SevMix) {
+    return (y.critical - x.critical) || (y.high - x.high) || (y.medium - x.medium) || (y.low - x.low);
+  }
 
   function matches(w: PraxisWorkstream, q: string) {
     if (!q) return true;
@@ -122,6 +128,16 @@
     STATUS_ORDER.forEach(function (s) { byStatus[s] = []; });
     workstreams.forEach(function (w) { (byStatus[w.status] || byStatus.backlog).push(w); });
 
+    if (sortKey === 'severity') {
+      sevMix = {};
+      workstreams.forEach(function (w) { sevMix![w.id] = { critical: 0, high: 0, medium: 0, low: 0 }; });
+      issues.forEach(function (i) {
+        if (i.status !== 'ready' && i.status !== 'in-progress') return;
+        var mix = i.severity != null ? sevMix![i.workstream] : null;
+        if (mix && mix[i.severity as keyof SevMix] !== undefined) mix[i.severity as keyof SevMix]++;
+      });
+    }
+
     STATUS_ORDER.forEach(function (status) {
       var items = byStatus[status].filter(function (w) { return matches(w, q); });
       visibleTotal += items.length;
@@ -129,7 +145,8 @@
       items.sort(function (a, b) {
         var cmp;
         if (sortKey === 'id') cmp = wsIdNum(a.id) - wsIdNum(b.id);
-        else cmp = a.title.localeCompare(b.title);
+        else if (sortKey === 'name') cmp = a.title.localeCompare(b.title);
+        else cmp = severityCmp(sevMix![a.id], sevMix![b.id]);
         return sortDir === 'asc' ? cmp : -cmp;
       });
 
