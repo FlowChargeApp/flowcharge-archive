@@ -51,6 +51,11 @@
     return (y.critical - x.critical) || (y.high - x.high) || (y.medium - x.medium) || (y.low - x.low);
   }
 
+  function dominantSeverity(mix: SevMix): string | null {
+    var found = SEV_ORDER.find(function (s) { return mix[s as keyof SevMix] > 0; });
+    return found || null;
+  }
+
   function matches(w: PraxisWorkstream, q: string) {
     if (!q) return true;
     var hay = (w.id + ' ' + w.title + ' ' + w.slug + ' ' + (w.tags || []).join(' ')).toLowerCase();
@@ -69,7 +74,19 @@
     card.setAttribute('aria-haspopup', 'dialog');
 
     var top = el('div', 'card-top');
-    top.appendChild(el('div', 'card-id', w.id));
+    var idWrap = el('div', 'card-id');
+    idWrap.style.display = 'flex';
+    idWrap.style.alignItems = 'center';
+    idWrap.style.gap = '4px';
+    var dominant = dominantSeverity(sevMix![w.id]);
+    if (dominant) {
+      var sevDot = el('span', 'dot-sm');
+      sevDot.style.background = 'var(--sev-' + dominant + ')';
+      sevDot.title = SEV_LABEL[dominant] + ' severity (open issues)';
+      idWrap.appendChild(sevDot);
+    }
+    idWrap.appendChild(document.createTextNode(w.id));
+    top.appendChild(idWrap);
     var upd = el('div', 'card-id', fmtDate(w.updated));
     upd.style.fontWeight = '400';
     upd.style.color = 'var(--ink-faint)';
@@ -128,15 +145,13 @@
     STATUS_ORDER.forEach(function (s) { byStatus[s] = []; });
     workstreams.forEach(function (w) { (byStatus[w.status] || byStatus.backlog).push(w); });
 
-    if (sortKey === 'severity') {
-      sevMix = {};
-      workstreams.forEach(function (w) { sevMix![w.id] = { critical: 0, high: 0, medium: 0, low: 0 }; });
-      issues.forEach(function (i) {
-        if (i.status !== 'ready' && i.status !== 'in-progress') return;
-        var mix = i.severity != null ? sevMix![i.workstream] : null;
-        if (mix && mix[i.severity as keyof SevMix] !== undefined) mix[i.severity as keyof SevMix]++;
-      });
-    }
+    sevMix = {};
+    workstreams.forEach(function (w) { sevMix![w.id] = { critical: 0, high: 0, medium: 0, low: 0 }; });
+    issues.forEach(function (i) {
+      if (i.status !== 'ready' && i.status !== 'in-progress') return;
+      var mix = i.severity != null ? sevMix![i.workstream] : null;
+      if (mix && mix[i.severity as keyof SevMix] !== undefined) mix[i.severity as keyof SevMix]++;
+    });
 
     STATUS_ORDER.forEach(function (status) {
       var items = byStatus[status].filter(function (w) { return matches(w, q); });

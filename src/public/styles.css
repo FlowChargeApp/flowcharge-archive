@@ -349,7 +349,7 @@ button { font-family: inherit; }
 .artefact-row .a-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--paper-sunken); overflow: hidden; }
 .artefact-row .a-bar span { display: block; height: 100%; background: var(--st-done); }
 .artefact-row .a-frac { font-family: var(--font-mono); color: var(--ink-faint); flex: none; min-width: 28px; text-align: right; }
-.artefact-row .dot-sm { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.dot-sm { width: 6px; height: 6px; border-radius: 50%; flex: none; }
 .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 4px; border-top: 1px dashed var(--line); }
 .card-foot .updated { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
 .card-foot .deps { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
