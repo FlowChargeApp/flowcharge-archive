@@ -126,7 +126,7 @@
     }
 
     var foot = el('div', 'card-foot');
-    foot.appendChild(el('span', 'updated', 'updated ' + fmtDate(w.updated)));
+    foot.appendChild(el('span', 'updated', 'created ' + fmtDate(w.created) + ' · updated ' + fmtDate(w.updated)));
     if (w.depends_on && w.depends_on.length) {
       foot.appendChild(el('span', 'deps', '⤷ ' + w.depends_on.join(', ')));
     }
@@ -161,6 +161,8 @@
         var cmp;
         if (sortKey === 'id') cmp = wsIdNum(a.id) - wsIdNum(b.id);
         else if (sortKey === 'name') cmp = a.title.localeCompare(b.title);
+        else if (sortKey === 'created') cmp = a.created.localeCompare(b.created);
+        else if (sortKey === 'updated') cmp = a.updated.localeCompare(b.updated);
         else cmp = severityCmp(sevMix![a.id], sevMix![b.id]);
         return sortDir === 'asc' ? cmp : -cmp;
       });
