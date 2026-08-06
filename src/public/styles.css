@@ -248,6 +248,7 @@ button { font-family: inherit; }
 .seg button:last-child { border-right: none; }
 .seg button:hover { background: var(--paper-sunken); }
 .seg button.active { background: var(--accent); color: #fff; }
+.seg button[data-key="severity"] { display: inline-flex; align-items: center; gap: 4px; }
 .seg button:focus-visible, input:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 340px; }

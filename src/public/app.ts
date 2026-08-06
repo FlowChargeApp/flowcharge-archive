@@ -51,8 +51,8 @@
     return (y.critical - x.critical) || (y.high - x.high) || (y.medium - x.medium) || (y.low - x.low);
   }
 
-  function dominantSeverity(mix: SevMix): string | null {
-    var found = SEV_ORDER.find(function (s) { return mix[s as keyof SevMix] > 0; });
+  function dominantSeverity(mix: Record<string, number>): string | null {
+    var found = SEV_ORDER.find(function (s) { return mix[s] > 0; });
     return found || null;
   }
 
@@ -729,6 +729,24 @@
       var counts: Record<string, number> = {};
       SEV_ORDER.forEach(function (s) { counts[s] = 0; });
       openIssues.forEach(function (i) { if (i.severity != null && counts[i.severity] != null) counts[i.severity]++; });
+
+      var sevBtn = document.querySelector('#sort-key-seg button[data-key="severity"]') as HTMLElement | null;
+      if (sevBtn) {
+        var dominant = dominantSeverity(counts);
+        var dot = sevBtn.querySelector('.dot-sm') as HTMLElement | null;
+        if (dominant) {
+          if (!dot) {
+            dot = el('span', 'dot-sm');
+            sevBtn.insertBefore(dot, sevBtn.firstChild);
+          }
+          dot.style.background = 'var(--sev-' + dominant + ')';
+          sevBtn.title = 'Worst open severity, board-wide: ' + SEV_LABEL[dominant];
+        } else if (dot) {
+          dot.remove();
+          sevBtn.removeAttribute('title');
+        }
+      }
+
       var bar = byId('sev-bar');
       var legend = byId('sev-legend');
       bar.innerHTML = '';
