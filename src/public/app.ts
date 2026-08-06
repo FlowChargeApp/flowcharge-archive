@@ -436,7 +436,38 @@
     renderTasksPanel(detail.taskLists || []);
   }
 
+  function renderModalMeta(w: PraxisWorkstream | undefined) {
+    var sevDot = byId('ws-modal-sev-dot');
+    var tagsEl = byId('ws-modal-tags');
+    var datesEl = byId('ws-modal-dates');
+    tagsEl.innerHTML = '';
+    if (!w) {
+      sevDot.hidden = true;
+      sevDot.removeAttribute('title');
+      tagsEl.hidden = true;
+      datesEl.textContent = '';
+      return;
+    }
+    var dominant = dominantSeverity(sevMix![w.id]);
+    if (dominant) {
+      sevDot.style.background = 'var(--sev-' + dominant + ')';
+      sevDot.title = SEV_LABEL[dominant] + ' severity (open issues)';
+      sevDot.hidden = false;
+    } else {
+      sevDot.hidden = true;
+      sevDot.removeAttribute('title');
+    }
+    if (w.tags && w.tags.length) {
+      w.tags.forEach(function (t) { tagsEl.appendChild(el('span', 'tag', t)); });
+      tagsEl.hidden = false;
+    } else {
+      tagsEl.hidden = true;
+    }
+    datesEl.textContent = 'created ' + fmtDate(w.created) + ' · updated ' + fmtDate(w.updated);
+  }
+
   function openModal(wsId: string) {
+    renderModalMeta(workstreams.find(function (ws) { return ws.id === wsId; }));
     byId('ws-modal-id').textContent = wsId;
     byId('ws-modal-title').textContent = 'Loading…';
     byId('ws-modal-status').textContent = '';
