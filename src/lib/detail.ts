@@ -22,7 +22,10 @@ const TASK_ITEM = /^(\s*)-\s*\[([ xX])\]\s*(\d+(?:\.\d+)*)\.?\s+(.*)$/;
 
 // A fence opener is matched loosely (trailing whitespace is common); its closer
 // must be a bare ``` at the fence's own indentation, or a nested fence inside a
-// description string would end the block early.
+// description string would end the block early. An opener whose closer never
+// appears at its own indentation is not treated as a fence at all. The search
+// for that closer also stops at a fence OPENER at the same indentation, because
+// a well-formed block closes before another block opens beside it.
 const FENCE = /^(\s*)```(.*)$/;
 
 interface CollectedItem {
@@ -45,6 +48,12 @@ function stripCommonIndent(lines: string[]): string[] {
 // Walks a file body once, pairing each item line with the FIRST ```yaml fence
 // that follows it before the next item line. Item lines are never looked for
 // inside a fence, so a checkbox bullet in an item's own body is not an item.
+// An opener whose closer never appears at its own indentation is not treated as
+// a fence: the walk resumes on the very next line rather than ending the file,
+// and that opener's block attaches no fields, because its extent is unknown.
+// That applies to both unterminated shapes — an opener that reaches end of file,
+// and an opener met by a later fence opener at its own indentation, which can
+// therefore never adopt a closer belonging to a later block.
 // Shared by the issue and task paths — if the two ever attach fences
 // differently, that is a bug in one of them.
 function collectItems(text: string, itemRe: RegExp): CollectedItem[] {
@@ -59,12 +68,34 @@ function collectItems(text: string, itemRe: RegExp): CollectedItem[] {
     if (fm) {
       const closer = fm[1] + '```';
       let j = i + 1;
-      while (j < lines.length && lines[j].replace(/\s+$/, '') !== closer) j++;
+      let unclosed = false;
+      while (j < lines.length && lines[j].replace(/\s+$/, '') !== closer) {
+        // A fence OPENER at this opener's own indentation ends the search: a
+        // well-formed block closes before another block opens beside it. The
+        // closer comparison above is evaluated first, so a bare closer written
+        // with trailing whitespace can never be mistaken for an opener. The
+        // indentation is compared as an exact string, the way `closer` itself is
+        // built, so a tab-indented opener never matches a space-indented one.
+        const g = FENCE.exec(lines[j]);
+        if (g && g[1] === fm[1] && g[2].trim() !== '') {
+          unclosed = true;
+          break;
+        }
+        j++;
+      }
+      // No closer below, or another opener beside it: this opener is not a
+      // fence. Step over it as ordinary text so the remaining item lines are
+      // still examined, and attach nothing — lines.slice(i + 1, j) is not a
+      // block body here.
+      if (unclosed || j >= lines.length) {
+        i++;
+        continue;
+      }
       if (fm[2].trim() === 'yaml' && current && !attached) {
         current.fields = parseYamlBlock(stripCommonIndent(lines.slice(i + 1, j)));
         attached = true;
       }
-      i = j < lines.length ? j + 1 : lines.length;
+      i = j + 1;
       continue;
     }
 
