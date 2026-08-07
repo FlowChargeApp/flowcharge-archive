@@ -360,6 +360,11 @@
     sum.appendChild(el('span', 'ws-check' + (task.checked ? ' is-checked' : ''), task.checked ? '✓' : '○'));
     sum.appendChild(el('span', 'ws-item-id', task.number));
     sum.appendChild(el('span', 'ws-item-title', task.title));
+    // renderTasksPanel is the only caller and reaches here only when
+    // task.children.length is non-zero, so the cue never reads '0 subtasks'
+    // and needs no guard of its own.
+    var n = task.children.length;
+    sum.appendChild(el('span', 'ws-task-count', n + (n === 1 ? ' subtask' : ' subtasks')));
     d.appendChild(sum);
     lazyBody(d, function () {
       var body = el('div', 'ws-task-group-body');
