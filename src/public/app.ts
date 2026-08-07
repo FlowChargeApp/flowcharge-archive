@@ -48,7 +48,7 @@
   function wsIdNum(id: string) { return parseInt(String(id).replace(/\D+/g, ''), 10) || 0; }
 
   function severityCmp(x: SevMix, y: SevMix) {
-    return (y.critical - x.critical) || (y.high - x.high) || (y.medium - x.medium) || (y.low - x.low);
+    return (x.critical - y.critical) || (x.high - y.high) || (x.medium - y.medium) || (x.low - y.low);
   }
 
   function dominantSeverity(mix: Record<string, number>): string | null {
