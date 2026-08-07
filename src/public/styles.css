@@ -791,3 +791,10 @@ footer.note code {
 .ws-task-children .ws-item:last-child { border-bottom: none; }
 /* The number reads as an identifier, consistent with .card-id and .a-id. */
 .ws-task-group > .ws-item-summary .ws-item-id { color: var(--accent); }
+.ws-task-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-left: 8px;
+  white-space: nowrap;
+}
