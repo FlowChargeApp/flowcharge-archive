@@ -6,19 +6,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseFrontmatter } from './extract.js';
+import { ISSUE_ITEM, TASK_ITEM, parseFrontmatter } from './extract.js';
 import { parseYamlBlock } from './yaml-block.js';
-
-// Character-identical in shape to the pattern src/lib/extract.ts:76 already
-// matches, so the modal and the board's shallow issues[] array cannot disagree
-// about what counts as an issue.
-const ISSUE_ITEM = /^-\s*\[([ xX])\]\s*(ISS-\d+)\.\s*(.*)$/;
-
-// The trailing period is OPTIONAL because both forms are in use: parents are
-// written `- [x] 1. Phase 1 — …` and children `- [x] 1.1 Capture the …`.
-// Capture 1 is the leading whitespace, captured but deliberately unused —
-// nesting comes from the number's dot depth, never from indentation.
-const TASK_ITEM = /^(\s*)-\s*\[([ xX])\]\s*(\d+(?:\.\d+)*)\.?\s+(.*)$/;
 
 // A fence opener is matched loosely (trailing whitespace is common); its closer
 // must be a bare ``` at the fence's own indentation, or a nested fence inside a

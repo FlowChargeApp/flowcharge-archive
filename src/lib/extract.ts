@@ -28,14 +28,29 @@ export function parseFrontmatter(text: string): Record<string, string | string[]
 // keys hold scalars; a fallback here would change what lands in the payload.
 function fmStr(v: string | string[] | undefined): string { return v as string; }
 
-function countChecks(text: string) {
+// Character-identical in shape to the pattern the issues[] block below already
+// matches, so the modal and the board's shallow issues[] array cannot disagree
+// about what counts as an issue.
+// The checkbox mark is capture group 1.
+export const ISSUE_ITEM = /^-\s*\[([ xX])\]\s*(ISS-\d+)\.\s*(.*)$/;
+
+// The trailing period is OPTIONAL because both forms are in use: parents are
+// written `- [x] 1. Phase 1 — …` and children `- [x] 1.1 Capture the …`.
+// Capture 1 is the leading whitespace, captured but deliberately unused —
+// nesting comes from the number's dot depth, never from indentation.
+// The checkbox mark is capture group 2, NOT group 1.
+export const TASK_ITEM = /^(\s*)-\s*\[([ xX])\]\s*(\d+(?:\.\d+)*)\.?\s+(.*)$/;
+
+// The mark's capture index differs between the two shapes, so it is passed in
+// rather than assumed: ISSUE_ITEM holds it in group 1 and TASK_ITEM in group 2.
+function countChecks(text: string, itemRe: RegExp, markGroup: number) {
   let total = 0;
   let done = 0;
   for (const line of text.split('\n')) {
-    const m = line.match(/^\s*-\s*\[( |x|X)\]/);
+    const m = line.match(itemRe);
     if (m) {
       total++;
-      if (m[1].toLowerCase() === 'x') done++;
+      if (m[markGroup].toLowerCase() === 'x') done++;
     }
   }
   return { total, done };
@@ -64,7 +79,7 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
       if (!fm.id) continue;
       const entry: PraxisArtefact = { id: fmStr(fm.id), type: fmStr(fm.type), status: fmStr(fm.status), updated: fmStr(fm.updated) };
       if (fm.type === 'issuelist' || fm.type === 'tasklist') {
-        const c = countChecks(text);
+        const c = fm.type === 'issuelist' ? countChecks(text, ISSUE_ITEM, 1) : countChecks(text, TASK_ITEM, 2);
         entry.total = c.total;
         entry.done = c.done;
       }
