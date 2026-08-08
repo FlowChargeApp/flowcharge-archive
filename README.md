@@ -37,7 +37,7 @@ Praxis-Dashboard/
 │   ├── lib/
 │   │   ├── extract.ts               pure extraction library — prxwork/ → PraxisData
 │   │   ├── git.ts                   current branch reader — .git/HEAD → branch name
-│   │   └── projects.ts              the project registry: read, find, add
+│   │   └── projects.ts              the project registry: read, find, add, rename, remove
 │   ├── scripts/
 │   │   └── extract-praxis-data.ts   thin CLI over extract.ts — standalone JSON dump
 │   ├── types/

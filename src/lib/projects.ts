@@ -1,5 +1,5 @@
 // Project registry library: owns .praxis-projects.json at the repo root and the
-// four operations over it. Knows the registry and its shape; knows nothing about
+// six operations over it. Knows the registry and its shape; knows nothing about
 // the transport layer, prxwork parsing, or the board payload.
 
 import fs from 'node:fs';
@@ -29,6 +29,21 @@ function selfEntry(): ProjectEntry {
     path: resolved,
     added: new Date().toISOString().slice(0, 10),
   };
+}
+
+// The one writer for the registry file. Every write goes to a sibling temporary
+// file first and is then renamed over registryPath, because fs.writeFileSync
+// truncates the target before it writes: a failure half way through would leave a
+// truncated registry, readProjects would then fail to parse it and return [], and
+// the user would silently lose the whole project list. The temporary file must be
+// a sibling of registryPath — fs.renameSync is only atomic within one filesystem,
+// so a temporary file under the OS temp directory can cross a device boundary and
+// fail with EXDEV.
+function writeProjects(projects: ProjectEntry[]): void {
+  const list: ProjectList = { projects };
+  const tmpPath = `${registryPath}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpPath, JSON.stringify(list, null, 2));
+  fs.renameSync(tmpPath, registryPath);
 }
 
 // A corrupted registry costs the user their list, never their ability to start
@@ -70,7 +85,33 @@ export function addProject(absPath: string): { entry: ProjectEntry; created: boo
     added: new Date().toISOString().slice(0, 10),
   };
   projects.push(entry);
-  const list: ProjectList = { projects };
-  fs.writeFileSync(registryPath, JSON.stringify(list, null, 2));
+  writeProjects(projects);
   return { entry, created: true };
+}
+
+// Removes the registry row only: nothing inside the project's own directory is
+// read, moved, or deleted. An unknown id is not an error here — the library does
+// not know what a 404 is, so it returns undefined and the caller decides.
+export function removeProject(id: string): ProjectEntry | undefined {
+  const projects = readProjects();
+  const index = projects.findIndex((p) => p.id === id);
+  if (index === -1) return undefined;
+  const [removed] = projects.splice(index, 1);
+  writeProjects(projects);
+  return removed;
+}
+
+// Changes the stored display name only: `id` is the hash of `path`, so a rename
+// moves neither, and `added` records when the row appeared, not when it changed.
+// `name` arrives already validated — trimming, the length cap and the single-line
+// check all live at the HTTP boundary, the way addProject already receives an
+// already-validated path — so a future second caller must validate for itself.
+// An unknown id returns undefined here; the 404 decision belongs to the caller.
+export function renameProject(id: string, name: string): ProjectEntry | undefined {
+  const projects = readProjects();
+  const entry = projects.find((p) => p.id === id);
+  if (!entry) return undefined;
+  entry.name = name;
+  writeProjects(projects);
+  return entry;
 }
