@@ -6,7 +6,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { ISSUE_ITEM, TASK_ITEM, artefactIdNumber, parseFrontmatter } from './extract.js';
+import { ISSUE_ITEM, TASK_ITEM, artefactIdNumber, parseFrontmatter, stripFrontmatter } from './extract.js';
 import { parseYamlBlock } from './yaml-block.js';
 
 // A fence opener is matched loosely (trailing whitespace is common); its closer
@@ -210,6 +210,7 @@ export function extractWorkstreamDetail(root: string, workstreamId: string): Pra
     locateWorkstream(path.join(prxwork, 'archive'), true, workstreamId);
   if (!found) return null;
 
+  const plans: PraxisPlanDetail[] = [];
   const issueLists: PraxisIssueListDetail[] = [];
   const taskLists: PraxisTaskListDetail[] = [];
 
@@ -226,7 +227,7 @@ export function extractWorkstreamDetail(root: string, workstreamId: string): Pra
     // Frontmatter `type` is the sole source of truth — same decision
     // walkWorkstreams already makes. Filename is ordering and display only.
     const type = str(fm.type);
-    if (type !== 'issuelist' && type !== 'tasklist') continue;
+    if (type !== 'plan' && type !== 'issuelist' && type !== 'tasklist') continue;
 
     const artefact: PraxisDetailArtefact = {
       id: str(fm.id),
@@ -236,13 +237,17 @@ export function extractWorkstreamDetail(root: string, workstreamId: string): Pra
       updated: str(fm.updated),
     };
 
-    if (type === 'issuelist') issueLists.push({ artefact, items: parseIssueItems(text) });
+    // The plan's body crosses the wire raw. Nothing here reads it — the browser
+    // owns every decision about how it is rendered.
+    if (type === 'plan') plans.push({ artefact, body: stripFrontmatter(text) });
+    else if (type === 'issuelist') issueLists.push({ artefact, items: parseIssueItems(text) });
     else taskLists.push({ artefact, tasks: parseTaskItems(text) });
   }
 
   // The section header prints the artefact id, so the reader sees ids, never
   // filenames. Order each list by its id number, ascending. The two lists stay
   // separate collections feeding two separate tabs.
+  plans.sort((a, b) => artefactIdNumber(a.artefact.id) - artefactIdNumber(b.artefact.id));
   issueLists.sort((a, b) => artefactIdNumber(a.artefact.id) - artefactIdNumber(b.artefact.id));
   taskLists.sort((a, b) => artefactIdNumber(a.artefact.id) - artefactIdNumber(b.artefact.id));
 
@@ -252,6 +257,7 @@ export function extractWorkstreamDetail(root: string, workstreamId: string): Pra
     title: str(found.fm.title),
     status: str(found.fm.status),
     archived: found.archived,
+    plans,
     issueLists,
     taskLists,
   };

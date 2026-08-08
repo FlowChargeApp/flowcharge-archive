@@ -872,3 +872,64 @@ footer.note code {
   margin-left: 8px;
   white-space: nowrap;
 }
+
+/* ---------- Plan body ---------- */
+/* The rendered plan body. Everything here targets a container INSIDE the tab
+   panel, never the panel div itself: the panels rely entirely on the `hidden`
+   attribute and the user-agent `display: none` that comes with it, and this
+   file carries no [hidden] rule, so any display rule reaching a panel would
+   make a hidden panel visible. No scroll container either — .ws-modal-body
+   already sets overflow: auto and .ws-modal-inner already caps the height. */
+.ws-plan {
+  color: var(--ink);
+  /* Long paths, URLs and 978-character source lines must reflow rather than
+     push the modal sideways. .ws-val and .ws-section-title are the precedent. */
+  overflow-wrap: anywhere;
+}
+.ws-plan > :first-child { margin-top: 0; }
+/* Three source levels, three sizes, all below .ws-section-title's 14px so a
+   plan heading never out-shouts the section header above it. */
+.ws-plan h4 {
+  margin: 16px 0 6px;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.ws-plan h5 {
+  margin: 14px 0 5px;
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.ws-plan h6 {
+  margin: 12px 0 4px;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+}
+.ws-plan p {
+  margin: 0 0 8px;
+  line-height: 1.55;
+}
+.ws-plan ul,
+.ws-plan ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.ws-plan li {
+  margin: 2px 0;
+  line-height: 1.55;
+}
+.ws-plan hr {
+  margin: 14px 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+/* The plan's code blocks carry .ws-raw, so the background, border, radius,
+   mono face, pre-wrap and overflow-x above are reused verbatim rather than
+   restated as a second code style. Only the spacing between blocks is new. */
+.ws-plan pre.ws-raw { margin: 0 0 10px; }

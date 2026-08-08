@@ -101,11 +101,13 @@
     </div>
 
     <div class="ws-modal-tabs" id="ws-modal-tabs" role="tablist">
+      <button type="button" role="tab" id="ws-tab-plan" data-tab="plan" aria-controls="ws-panel-plan" aria-selected="false" tabindex="-1">Plan</button>
       <button type="button" role="tab" id="ws-tab-issues" data-tab="issues" aria-controls="ws-panel-issues" aria-selected="true" tabindex="0">Issues</button>
       <button type="button" role="tab" id="ws-tab-tasks" data-tab="tasks" aria-controls="ws-panel-tasks" aria-selected="false" tabindex="-1">Tasks</button>
     </div>
 
     <div class="ws-modal-body">
+      <div role="tabpanel" id="ws-panel-plan" aria-labelledby="ws-tab-plan" hidden></div>
       <div role="tabpanel" id="ws-panel-issues" aria-labelledby="ws-tab-issues"></div>
       <div role="tabpanel" id="ws-panel-tasks" aria-labelledby="ws-tab-tasks" hidden></div>
     </div>

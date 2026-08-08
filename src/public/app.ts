@@ -105,6 +105,10 @@
       var arts = el('div', 'card-artefacts');
       w.artefacts.forEach(function (a) {
         var row = el('div', 'artefact-row');
+        // The only new data the deep link needs. The row stays non-interactive:
+        // no listener, no role and no tabIndex — the board's one delegated click
+        // listener reads this attribute after it has resolved the card.
+        row.dataset.artefactType = a.type;
         row.appendChild(el('span', 'a-id', artefactTypeLabel(a.type) + '·' + a.id.split('-')[1]));
         if (a.type === 'issuelist' || a.type === 'tasklist') {
           var barWrap = el('div', 'a-bar');
@@ -218,22 +222,45 @@
   // byId returns HTMLElement; showModal()/close() need the dialog type.
   var modal = byId('ws-modal') as HTMLDialogElement;
   var modalTabs = byId('ws-modal-tabs');
-  var tabIssues = byId('ws-tab-issues');
-  var tabTasks = byId('ws-tab-tasks');
-  var panelIssues = byId('ws-panel-issues');
-  var panelTasks = byId('ws-panel-tasks');
+  // The tabs are declared exactly once, here, in tablist order. selectTab and
+  // the tablist keydown handler both drive off this list, so neither carries a
+  // literal tab name and neither is tied to a fixed number of tabs.
+  var TABS = [
+    { name: 'plan',   btn: byId('ws-tab-plan'),   panel: byId('ws-panel-plan') },
+    { name: 'issues', btn: byId('ws-tab-issues'), panel: byId('ws-panel-issues') },
+    { name: 'tasks',  btn: byId('ws-tab-tasks'),  panel: byId('ws-panel-tasks') }
+  ];
+  // Mirrors the initial ARIA state shipped in board.html: Issues is the default
+  // selection even though Plan is first in the tablist.
+  var currentTab = 'issues';
+  var tabIssues = TABS[1].btn;
+  var tabTasks = TABS[2].btn;
+  var panelPlan = TABS[0].panel;
+  var panelIssues = TABS[1].panel;
+  var panelTasks = TABS[2].panel;
 
   // aria-selected, the roving tabindex and the panels' hidden attribute always
   // move together — the markup ships the initial state, this only toggles it.
+  // One loop body sets all three, so that invariant is structural rather than
+  // three pairs of assignments that can drift apart.
+  // An unknown name falls back to index 0, which is now Plan rather than Issues.
+  // No caller passes an unknown name, so no reachable behaviour changes.
   function selectTab(name: string, focusTab: boolean) {
-    var isIssues = name !== 'tasks';
-    tabIssues.setAttribute('aria-selected', isIssues ? 'true' : 'false');
-    tabTasks.setAttribute('aria-selected', isIssues ? 'false' : 'true');
-    tabIssues.tabIndex = isIssues ? 0 : -1;
-    tabTasks.tabIndex = isIssues ? -1 : 0;
-    panelIssues.hidden = !isIssues;
-    panelTasks.hidden = isIssues;
-    if (focusTab) (isIssues ? tabIssues : tabTasks).focus();
+    var idx = 0;
+    for (var i = 0; i < TABS.length; i++) {
+      if (TABS[i].name === name) { idx = i; break; }
+    }
+    for (var j = 0; j < TABS.length; j++) {
+      var on = j === idx;
+      TABS[j].btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      TABS[j].btn.tabIndex = on ? 0 : -1;
+      TABS[j].panel.hidden = !on;
+    }
+    currentTab = TABS[idx].name;
+    if (focusTab) TABS[idx].btn.focus();
+    // A deep link selects the tab before the fetch resolves; this is the call
+    // site that covers that ordering.
+    maybeBuildPlan();
   }
 
   function setPanelMessage(panel: HTMLElement, message: string) {
@@ -322,6 +349,161 @@
     d.appendChild(sum);
     lazyBody(d, function () { return renderMap(fields); });
     return d;
+  }
+
+  // Deferred build. A plan body is the largest thing this modal can hold, so it
+  // is built only once the Plan tab is actually shown. null means the detail has
+  // not been fetched yet; [] means it was fetched and held no plan.
+  var planData: PraxisPlanDetail[] | null = null;
+  var planBuilt = false;
+
+  // Called from both renderDetail and selectTab, because either can happen
+  // first. The planBuilt guard makes it build exactly once per modal open.
+  function maybeBuildPlan() {
+    if (planBuilt || planData === null || currentTab !== 'plan') return;
+    planBuilt = true;
+    renderPlanPanel(planData);
+  }
+
+  // A block-level Markdown SUBSET, and nothing more. It takes a string and
+  // returns one element: it knows nothing about tabs, panels, artefacts,
+  // fetching or the modal. Every node is emitted through el(), so textContent
+  // stays the only path from file content to the DOM — there is no innerHTML
+  // content write and no string-built markup anywhere below.
+  // Deliberately NOT parsed: inline markup, so backticks, `**` pairs and link
+  // brackets survive as literal characters; and pipe tables, which fall through
+  // as one paragraph per row rather than becoming a real <table>.
+  // One forward pass, no backtracking, so it stays linear in file size — the
+  // corpus maximum is 1570 lines and 90 KB. collectItems() in
+  // src/lib/detail.ts is the precedent for the walk.
+  function renderPlanBlocks(body: string): HTMLElement {
+    var root = el('div', 'ws-plan');
+    var lines = body.split('\n');
+    var para: string[] = [];              // the open paragraph run, if any
+    var list: HTMLElement | null = null;  // the open <ul> or <ol>, if any
+
+    // Plan prose is hard-wrapped near 100 characters, so the source line ends
+    // are presentational. Joining with a single space lets the panel width
+    // decide where the text breaks instead.
+    function flushPara() {
+      if (!para.length) return;
+      root.appendChild(el('p', null, para.join(' ')));
+      para = [];
+    }
+    function flushAll() { flushPara(); list = null; }
+
+    var i = 0;
+    while (i < lines.length) {
+      var line = lines[i];
+
+      // Fence state is tested BEFORE anything else. Inside a fence no line is
+      // interpreted, which is the whole defence against a bash `# comment` in a
+      // code block reading as a heading.
+      if (/^\s*```/.test(line)) {
+        flushAll();
+        var start = i + 1;
+        var end = start;
+        while (end < lines.length && !/^\s*```\s*$/.test(lines[end])) end++;
+        // The fence info string is dropped rather than written to a class: a
+        // language tag is file content, and file content must never reach an
+        // attribute — it would also collide with the page's own CSS names.
+        // .ws-raw is the code treatment this file already ships; the plan body
+        // reuses it rather than inventing a second one.
+        root.appendChild(el('pre', 'ws-raw', lines.slice(start, end).join('\n')));
+        // An unterminated fence runs to the end of the body. collectItems() in
+        // src/lib/detail.ts deliberately does the opposite and treats such an
+        // opener as ordinary text; that rule exists there to stop an opener
+        // swallowing item lines, and there are no item lines here. Running to
+        // the end matches CommonMark. Both rules are lossless.
+        i = end + 1;
+        continue;
+      }
+
+      // A blank line closes any open run.
+      if (!line.trim()) { flushAll(); i++; continue; }
+
+      // Headings start at <h4>: the section header above is already an <h3>
+      // inside the modal's <h2>. Three source levels map to three output
+      // levels, so the visual hierarchy survives.
+      var h = /^\s*(#{1,6})\s+(.*)$/.exec(line);
+      if (h) {
+        flushAll();
+        var tag = h[1].length <= 2 ? 'h4' : (h[1].length === 3 ? 'h5' : 'h6');
+        root.appendChild(el(tag, null, h[2].trim()));
+        i++;
+        continue;
+      }
+
+      // The rule is tested BEFORE the list rules, so `* * *` cannot be read as
+      // a list item. `---` could not match a list rule anyway, because the list
+      // rules below require a space after the marker.
+      if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.replace(/\s+/g, ''))) {
+        flushAll();
+        root.appendChild(el('hr'));
+        i++;
+        continue;
+      }
+
+      // Nested list indentation is flattened: a run becomes ONE flat list, and
+      // only 73 of 1559 corpus list lines are indented at all.
+      var ul = /^\s*[-*+]\s+(.*)$/.exec(line);
+      if (ul) {
+        flushPara();
+        if (!list || list.tagName !== 'UL') { list = el('ul'); root.appendChild(list); }
+        list.appendChild(el('li', null, ul[1].trim()));
+        i++;
+        continue;
+      }
+      var ol = /^\s*(\d+)[.)]\s+(.*)$/.exec(line);
+      if (ol) {
+        flushPara();
+        if (!list || list.tagName !== 'OL') {
+          list = el('ol');
+          // start comes from the first number, or a list that does not begin at
+          // 1 is silently renumbered.
+          (list as HTMLOListElement).start = parseInt(ol[1], 10) || 1;
+          root.appendChild(list);
+        }
+        list.appendChild(el('li', null, ol[2].trim()));
+        i++;
+        continue;
+      }
+
+      // A pipe line ends the current run and becomes its own paragraph.
+      // Without this break the paragraph joiner fuses a whole table into one
+      // unreadable line of pipes.
+      if (line.trim().charAt(0) === '|') {
+        flushAll();
+        root.appendChild(el('p', null, line.trim()));
+        i++;
+        continue;
+      }
+
+      // Everything else joins the paragraph run. A `> ` blockquote line lands
+      // here too and keeps its literal `> `.
+      list = null;
+      para.push(line.trim());
+      i++;
+    }
+
+    flushAll();
+    return root;
+  }
+
+  // Two plan files means two sections in the ONE Plan tab, matching the Issues
+  // and Tasks panels.
+  function renderPlanPanel(plans: PraxisPlanDetail[]) {
+    panelPlan.innerHTML = '';
+    // No plan file at all — the majority case, and not an error.
+    if (!plans.length) {
+      setPanelMessage(panelPlan, 'No plan in this workstream. The modal looked for a prxplan file in its folder and found none.');
+      return;
+    }
+    plans.forEach(function (item) {
+      var sec = buildSection(item.artefact);
+      sec.appendChild(renderPlanBlocks(item.body));
+      panelPlan.appendChild(sec);
+    });
   }
 
   // Two files means two sections in the ONE Issues tab — never a third tab.
@@ -439,6 +621,11 @@
 
     renderIssuesPanel(detail.issueLists || []);
     renderTasksPanel(detail.taskLists || []);
+
+    // A plain open resolves the fetch before the Plan tab is ever selected;
+    // this is the call site that covers that ordering.
+    planData = detail.plans || [];
+    maybeBuildPlan();
   }
 
   function renderModalMeta(w: PraxisWorkstream | undefined) {
@@ -471,16 +658,26 @@
     datesEl.textContent = 'created ' + fmtDate(w.created) + ' · updated ' + fmtDate(w.updated);
   }
 
-  function openModal(wsId: string) {
+  // initialTab is the tab this open lands on. Every caller states it, so a
+  // reopen still never inherits the last session's tab.
+  function openModal(wsId: string, initialTab: string) {
     renderModalMeta(workstreams.find(function (ws) { return ws.id === wsId; }));
     byId('ws-modal-id').textContent = wsId;
     byId('ws-modal-title').textContent = 'Loading…';
     byId('ws-modal-status').textContent = '';
     setTabLabels(0, 0);
+    // Reset the deferred plan state before anything can call maybeBuildPlan,
+    // so a second card never shows the first card's plan.
+    planData = null;
+    planBuilt = false;
+    setPanelMessage(panelPlan, 'Loading…');
     setPanelMessage(panelIssues, 'Loading…');
     setPanelMessage(panelTasks, 'Loading…');
-    // Reset to Issues so a reopen never inherits the last session's tab.
-    selectTab('issues', false);
+    // Set from the caller, never from the last session's tab, so a reopen
+    // never inherits it. The plan state was reset just above, so the
+    // planBuilt guard still lets the panel build exactly once per open,
+    // whichever tab this selects first.
+    selectTab(initialTab, false);
     // showModal() supplies focus containment, an inert background,
     // Escape-to-close, ::backdrop and focus restoration — none of it hand-rolled.
     modal.showModal();
@@ -498,6 +695,7 @@
       .then(renderDetail)
       .catch(function (err) {
         byId('ws-modal-title').textContent = "Couldn't load this workstream";
+        setPanelMessage(panelPlan, err.message);
         setPanelMessage(panelIssues, err.message);
         setPanelMessage(panelTasks, err.message);
       });
@@ -509,14 +707,20 @@
   byId('board').addEventListener('click', function (e) {
     var card = (e.target as HTMLElement).closest('.card') as HTMLElement | null;
     if (!card || !card.dataset.ws) return;
-    openModal(card.dataset.ws);
+    // A click on the PLN row deep-links to the Plan tab. Anywhere else on the
+    // card keeps the Issues default. The row itself has no listener.
+    var row = (e.target as HTMLElement).closest('.artefact-row') as HTMLElement | null;
+    openModal(card.dataset.ws, row && row.dataset.artefactType === 'plan' ? 'plan' : 'issues');
   });
   byId('board').addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
     var card = (e.target as HTMLElement).closest('.card') as HTMLElement | null;
     if (!card || !card.dataset.ws) return;
     e.preventDefault();   // Space on a focused card would otherwise scroll the page.
-    openModal(card.dataset.ws);
+    // The card is the focus target and the row is not, so there is no row
+    // context to read here. A keyboard reader reaches the plan with one Tab
+    // and one ArrowLeft inside the modal.
+    openModal(card.dataset.ws, 'issues');
   });
 
   modalTabs.addEventListener('click', function (e) {
@@ -525,16 +729,22 @@
     selectTab(btn.dataset.tab, true);
   });
   modalTabs.addEventListener('keydown', function (e) {
-    var onIssues = tabIssues.getAttribute('aria-selected') === 'true';
+    var idx = 0;
+    for (var i = 0; i < TABS.length; i++) {
+      if (TABS[i].name === currentTab) { idx = i; break; }
+    }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
-      selectTab(onIssues ? 'tasks' : 'issues', true);   // two tabs, so either arrow wraps
+      // + (TABS.length - 1) is a left step that stays non-negative, so one
+      // modulo wraps in both directions for any number of tabs.
+      var step = e.key === 'ArrowRight' ? 1 : TABS.length - 1;
+      selectTab(TABS[(idx + step) % TABS.length].name, true);
     } else if (e.key === 'Home') {
       e.preventDefault();
-      selectTab('issues', true);
+      selectTab(TABS[0].name, true);
     } else if (e.key === 'End') {
       e.preventDefault();
-      selectTab('tasks', true);
+      selectTab(TABS[TABS.length - 1].name, true);
     }
   });
 
