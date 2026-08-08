@@ -477,6 +477,7 @@ footer.note code {
 /* The card box only. The link-only declarations moved to .tile-link below, because
    the tile is no longer an <a> — a button cannot sit inside a link. */
 .tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -494,16 +495,21 @@ footer.note code {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  /* Gutter for the absolutely positioned corner buttons: they intrude
+     68 - 16 = 52px into the link's content area, so 60px adds 8px of room. */
+  padding-right: 60px;
   text-decoration: none;
   color: inherit;
   border-radius: 4px;
 }
 .tile-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tile-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
-  margin-top: 6px;
 }
 .tile-action {
   border: 1px solid var(--line-strong);
@@ -516,6 +522,16 @@ footer.note code {
 }
 .tile-action:hover { border-color: var(--accent); color: var(--accent); }
 .tile-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Scoped to .tile-actions so the text Save and Cancel buttons, which live in
+   .tile-edit and share the .tile-action class, keep their word size. */
+.tile-actions .tile-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
 /* Inline rename edit mode: the input flexes and the two buttons keep their size,
    so the row fits the narrowest 280px grid column instead of overflowing it. */
 .tile-edit {
