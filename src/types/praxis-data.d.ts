@@ -85,6 +85,13 @@ interface PraxisTaskDetail {
   children: PraxisTaskDetail[];              // always present; [] for a leaf
 }
 
+// `body` is the plan file's text with its frontmatter block removed. It is raw
+// markdown, and nothing on the Node side reads it — the browser owns rendering.
+// An ARRAY, not a nullable single object: the detail walk loops on frontmatter
+// `type`, not on filename, so a second file declaring `type: plan` would
+// otherwise be left at readdir's mercy. The array also makes this the third
+// collection of the same shape as the two below.
+interface PraxisPlanDetail      { artefact: PraxisDetailArtefact; body: string; }
 interface PraxisIssueListDetail { artefact: PraxisDetailArtefact; items: PraxisIssueDetail[]; }
 interface PraxisTaskListDetail  { artefact: PraxisDetailArtefact; tasks: PraxisTaskDetail[]; }
 
@@ -94,6 +101,7 @@ interface PraxisWorkstreamDetail {
   title: string;
   status: string;
   archived: boolean;
+  plans: PraxisPlanDetail[];
   issueLists: PraxisIssueListDetail[];
   taskLists: PraxisTaskListDetail[];
 }

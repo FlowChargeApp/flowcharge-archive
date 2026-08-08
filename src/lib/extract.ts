@@ -5,8 +5,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+// One definition of "frontmatter" for both readers below. Two load-bearing
+// facts. First, the pattern carries NO `g` flag, so `match` is not stateful and
+// the shared constant cannot develop a `lastIndex` bug between its two callers.
+// Second, the `^` anchor plus a slice from the match END is the whole defence
+// against a `split('---')` implementation: 19 plan files in the corpus hold body
+// lines that start `---`, up to 31 of them in one file, and splitting would
+// corrupt every one of them.
+const FRONTMATTER = /^---\n([\s\S]*?)\n---/;
+
 export function parseFrontmatter(text: string): Record<string, string | string[]> {
-  const m = text.match(/^---\n([\s\S]*?)\n---/);
+  const m = text.match(FRONTMATTER);
   if (!m) return {};
   const fm: Record<string, string | string[]> = {};
   for (const line of m[1].split('\n')) {
@@ -22,6 +31,15 @@ export function parseFrontmatter(text: string): Record<string, string | string[]
     fm[mm[1]] = val;
   }
   return fm;
+}
+
+// The body of a file, with its frontmatter block removed. Slices from the END of
+// the anchored match, so a body line that starts `---` is never a delimiter. A
+// file with no frontmatter comes back unchanged, never empty.
+export function stripFrontmatter(text: string): string {
+  const m = text.match(FRONTMATTER);
+  if (!m) return text;
+  return text.slice(m[0].length).replace(/^\n+/, '');
 }
 
 // Asserts — never coerces. The call sites below already assume these frontmatter
