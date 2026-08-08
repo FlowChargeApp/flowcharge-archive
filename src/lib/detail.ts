@@ -6,7 +6,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { ISSUE_ITEM, TASK_ITEM, parseFrontmatter } from './extract.js';
+import { ISSUE_ITEM, TASK_ITEM, artefactIdNumber, parseFrontmatter } from './extract.js';
 import { parseYamlBlock } from './yaml-block.js';
 
 // A fence opener is matched loosely (trailing whitespace is common); its closer
@@ -174,17 +174,6 @@ function str(v: string | string[] | undefined): string {
   if (typeof v === 'string') return v;
   if (Array.isArray(v)) return v.join(', ');
   return '';
-}
-
-// Sort key for an artefact id such as 'IL-84' or 'TL-175': the number after the
-// final hyphen. Every id inside one result array shares a prefix, so the number
-// alone orders that array; a general natural sort is not needed. String order
-// would put IL-9 after IL-85, which is the defect this exists to avoid. An id
-// that carries no number (str() yields '' when frontmatter has none) falls back
-// to 0 rather than NaN, because a NaN key makes sort order implementation-defined.
-function artefactIdNumber(id: string): number {
-  const n = Number(id.slice(id.lastIndexOf('-') + 1));
-  return Number.isFinite(n) ? n : 0;
 }
 
 interface WorkstreamLocation {

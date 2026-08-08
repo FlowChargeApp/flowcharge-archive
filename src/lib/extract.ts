@@ -41,6 +41,19 @@ export const ISSUE_ITEM = /^-\s*\[([ xX])\]\s*(ISS-\d+)\.\s*(.*)$/;
 // The checkbox mark is capture group 2, NOT group 1.
 export const TASK_ITEM = /^(\s*)-\s*\[([ xX])\]\s*(\d+(?:\.\d+)*)\.?\s+(.*)$/;
 
+// Sort key for an artefact id such as 'IL-84' or 'TL-175': the number after the
+// final hyphen. Exported for detail.ts, so one rule serves both surfaces. The
+// number alone orders a set of ids that ALREADY share a prefix; on the board
+// side, grouping by artefact type is what supplies that precondition, because a
+// workstream's artefacts array mixes PLN, IL and TL ids. String order would put
+// IL-9 after IL-85, which is the defect this exists to avoid. An id that carries
+// no parsable number falls back to 0, never NaN, because a NaN sort key makes
+// sort order implementation-defined.
+export function artefactIdNumber(id: string): number {
+  const n = Number(id.slice(id.lastIndexOf('-') + 1));
+  return Number.isFinite(n) ? n : 0;
+}
+
 // The mark's capture index differs between the two shapes, so it is passed in
 // rather than assumed: ISSUE_ITEM holds it in group 1 and TASK_ITEM in group 2.
 function countChecks(text: string, itemRe: RegExp, markGroup: number) {
@@ -55,6 +68,16 @@ function countChecks(text: string, itemRe: RegExp, markGroup: number) {
   }
   return { total, done };
 }
+
+// Reading order for a card's artefact rows: plan, then issue list, then task
+// list. That is the causal chain, and it is deliberately NOT alphabetical —
+// neither the labels (IL, PLN, TL) nor the frontmatter keys (issuelist, plan,
+// tasklist) sort into that order, and both would put the plan second, between
+// the issues and the tasks. 'workstream' is deliberately absent: prxworkstream.md
+// is skipped by filename inside the walk, so a workstream-typed file only reaches
+// the array under some other name, and the trailing bucket is where it belongs.
+const ARTEFACT_TYPE_RANK: Record<string, number> = { plan: 0, issuelist: 1, tasklist: 2 };
+const UNRANKED_TYPE = 3;
 
 function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[]): PraxisWorkstream[] {
   const out: PraxisWorkstream[] = [];
@@ -103,6 +126,24 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
         }
       }
     }
+
+    // Sorted here, after the loop closes, so the array is complete — sorting
+    // inside the loop would re-sort a partial array on every file.
+    // The id-string tie-break is what makes this comparator TOTAL, and that is
+    // load-bearing rather than tidy: a stable sort only preserves readdirSync
+    // order, and this walk never sorts its listing, unlike detail.ts which sorts
+    // its listing explicitly. Plain < and > are used, never a locale-aware
+    // string comparison, which depends on the runtime's locale and ICU build —
+    // the very machine dependence the tie-break exists to remove.
+    artefacts.sort((a, b) => {
+      const ra = ARTEFACT_TYPE_RANK[a.type] ?? UNRANKED_TYPE;
+      const rb = ARTEFACT_TYPE_RANK[b.type] ?? UNRANKED_TYPE;
+      if (ra !== rb) return ra - rb;
+      const na = artefactIdNumber(a.id);
+      const nb = artefactIdNumber(b.id);
+      if (na !== nb) return na - nb;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
 
     out.push({
       id: fmStr(wsFm.id),
