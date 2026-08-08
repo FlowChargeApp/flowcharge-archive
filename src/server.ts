@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractPraxisData, hasPrxwork } from './lib/extract.js';
-import { readProjects, findProject, addProject } from './lib/projects.js';
+import { readProjects, findProject, addProject, removeProject, renameProject } from './lib/projects.js';
 import { readBranch } from './lib/git.js';
 import { extractWorkstreamDetail } from './lib/detail.js';
 
@@ -24,16 +24,22 @@ const MIME: Record<string, string> = {
 // the expected size — and it is the one unbounded input this server accepts.
 const MAX_BODY_BYTES = 8192;
 
+// The one place the display-name cap lives, so it can be widened in one edit.
+const MAX_NAME_LENGTH = 100;
+
 function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(body));
 }
 
 // Collects the request body, refusing anything over MAX_BODY_BYTES with a 413
-// and destroying the request so the client stops streaming into a void.
+// and destroying the request so the client stops streaming into a void. The log
+// label is a parameter because more than one route reads a body: a hardcoded
+// label would name the wrong method for every caller but the first.
 function readRequestBody(
   req: http.IncomingMessage,
   res: http.ServerResponse,
+  logLabel: string,
   onBody: (raw: string) => void,
 ): void {
   const chunks: Buffer[] = [];
@@ -61,13 +67,13 @@ function readRequestBody(
   req.on('error', (err) => {
     if (settled) return;
     settled = true;
-    console.error('POST /api/projects — request stream error:', err);
+    console.error(logLabel, err);
     sendJson(res, 400, { error: 'Could not read the request body' });
   });
 }
 
 function handleAddProject(req: http.IncomingMessage, res: http.ServerResponse): void {
-  readRequestBody(req, res, (raw) => {
+  readRequestBody(req, res, 'POST /api/projects — request stream error:', (raw) => {
     try {
       let body: unknown;
       try {
@@ -106,6 +112,54 @@ function handleAddProject(req: http.IncomingMessage, res: http.ServerResponse): 
   });
 }
 
+// Validation lives here at the route boundary, never in the registry library,
+// exactly as handleAddProject validates the path before addProject sees it. The
+// trimmed value is what is length-checked and what is stored, so it is computed
+// once and reused. The character class covers the C0 range (which includes \n,
+// \r and \t), DEL, and the C1 range: a display name is a single line of text.
+const CONTROL_CHARS = /[\u0000-\u001F\u007F-\u009F]/;
+
+function handleRenameProject(req: http.IncomingMessage, res: http.ServerResponse, id: string): void {
+  readRequestBody(req, res, `PATCH /api/projects/${id} — request stream error:`, (raw) => {
+    try {
+      let body: unknown;
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        sendJson(res, 400, { error: 'Request body must be valid JSON of the form {"name": "New name"}' });
+        return;
+      }
+
+      const candidate = (body as { name?: unknown } | null)?.name;
+      // typeof first: a `name` of 42 has no .trim() to call.
+      if (typeof candidate !== 'string' || candidate.trim() === '') {
+        sendJson(res, 400, { error: 'Missing `name` — send a JSON body of the form {"name": "New name"}' });
+        return;
+      }
+
+      const name = candidate.trim();
+      if (name.length > MAX_NAME_LENGTH) {
+        sendJson(res, 400, { error: `Name must be ${MAX_NAME_LENGTH} characters or fewer` });
+        return;
+      }
+      if (CONTROL_CHARS.test(name)) {
+        sendJson(res, 400, { error: 'Name must be a single line of plain text' });
+        return;
+      }
+
+      const entry = renameProject(id, name);
+      if (!entry) {
+        sendJson(res, 404, { error: `Unknown project ${id}` });
+        return;
+      }
+      sendJson(res, 200, { project: entry });
+    } catch (err) {
+      console.error(`PATCH /api/projects/${id} failed:`, err);
+      sendJson(res, 500, { error: 'Could not write the project registry' });
+    }
+  });
+}
+
 // Every branch below answers with JSON and swallows its own throws: an uncaught
 // exception inside an http.createServer handler takes the whole process down.
 function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath: string): void {
@@ -124,6 +178,36 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
     }
     if (method === 'POST') {
       handleAddProject(req, res);
+      return;
+    }
+    sendJson(res, 405, { error: 'Method not allowed' });
+    return;
+  }
+
+  // End-anchored on purpose: without the $ this pattern would also swallow
+  // /api/projects/<id>/data and the .../workstreams/.../detail route below.
+  const entryMatch = reqPath.match(/^\/api\/projects\/([^/]+)$/);
+  if (entryMatch) {
+    const id = entryMatch[1];
+    if (method === 'DELETE') {
+      // The id is only ever compared against strings already in the registry and
+      // never becomes a filesystem path, so it needs no shape check — the same
+      // reasoning the .../data route already relies on.
+      try {
+        const entry = removeProject(id);
+        if (!entry) {
+          sendJson(res, 404, { error: `Unknown project ${id}` });
+          return;
+        }
+        sendJson(res, 200, { deleted: entry });
+      } catch (err) {
+        console.error(`DELETE /api/projects/${id} failed:`, err);
+        sendJson(res, 500, { error: 'Could not write the project registry' });
+      }
+      return;
+    }
+    if (method === 'PATCH') {
+      handleRenameProject(req, res, id);
       return;
     }
     sendJson(res, 405, { error: 'Method not allowed' });

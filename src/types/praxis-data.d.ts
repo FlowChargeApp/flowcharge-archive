@@ -51,7 +51,7 @@ interface BoardPayload extends PraxisData {
 
 interface ProjectEntry {
   id: string;     // 8 lowercase hex chars: sha1 of `path`, truncated
-  name: string;   // path.basename(path) — display only, never an identifier
+  name: string;   // display only, never an identifier: path.basename(path) at add time, then whatever a rename sets
   path: string;   // absolute, path.resolve'd
   added: string;  // YYYY-MM-DD
 }
