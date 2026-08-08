@@ -176,6 +176,17 @@ function str(v: string | string[] | undefined): string {
   return '';
 }
 
+// Sort key for an artefact id such as 'IL-84' or 'TL-175': the number after the
+// final hyphen. Every id inside one result array shares a prefix, so the number
+// alone orders that array; a general natural sort is not needed. String order
+// would put IL-9 after IL-85, which is the defect this exists to avoid. An id
+// that carries no number (str() yields '' when frontmatter has none) falls back
+// to 0 rather than NaN, because a NaN key makes sort order implementation-defined.
+function artefactIdNumber(id: string): number {
+  const n = Number(id.slice(id.lastIndexOf('-') + 1));
+  return Number.isFinite(n) ? n : 0;
+}
+
 interface WorkstreamLocation {
   dir: string;
   slug: string;
@@ -214,7 +225,8 @@ export function extractWorkstreamDetail(root: string, workstreamId: string): Pra
   const taskLists: PraxisTaskListDetail[] = [];
 
   // readdirSync order is not guaranteed sorted on every platform; sort explicitly
-  // so both lists come back in filename-ascending order everywhere.
+  // so the walk visits the files in the same order everywhere. Display order is
+  // set after the walk, by artefact id.
   for (const file of fs.readdirSync(found.dir).sort()) {
     if (file === 'prxworkstream.md') continue;
     const filePath = path.join(found.dir, file);
@@ -238,6 +250,12 @@ export function extractWorkstreamDetail(root: string, workstreamId: string): Pra
     if (type === 'issuelist') issueLists.push({ artefact, items: parseIssueItems(text) });
     else taskLists.push({ artefact, tasks: parseTaskItems(text) });
   }
+
+  // The section header prints the artefact id, so the reader sees ids, never
+  // filenames. Order each list by its id number, ascending. The two lists stay
+  // separate collections feeding two separate tabs.
+  issueLists.sort((a, b) => artefactIdNumber(a.artefact.id) - artefactIdNumber(b.artefact.id));
+  taskLists.sort((a, b) => artefactIdNumber(a.artefact.id) - artefactIdNumber(b.artefact.id));
 
   return {
     id: str(found.fm.id),
