@@ -2,11 +2,49 @@
   var ABSOLUTE_PATH_MESSAGE = 'Path must be absolute — enter a full path starting with /';
   var TILDE_MESSAGE = '~ is not expanded — enter the full absolute path instead';
 
+  // Lucide square-pen, drawn as path data only.
+  var SQUARE_PEN_PATHS = [
+    'M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7',
+    'M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z'
+  ];
+  // Lucide trash-2, drawn as path data only.
+  var TRASH_2_PATHS = [
+    'M10 11v6',
+    'M14 11v6',
+    'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6',
+    'M3 6h18',
+    'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'
+  ];
+
   function el(tag: string, cls?: string | null, text?: string | null): HTMLElement {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
     if (text != null) e.textContent = text;
     return e;
+  }
+
+  // el() cannot build this: document.createElement cannot make an SVG element, it returns
+  // an HTMLUnknownElement that never renders. Every node in an SVG subtree therefore needs
+  // document.createElementNS. The namespace stays a string literal at each call site,
+  // because the typed overload keys on that literal and a variable widens it to string.
+  function iconSvg(paths: string[]): SVGSVGElement {
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '14');
+    svg.setAttribute('height', '14');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    paths.forEach(function (d) {
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      svg.appendChild(path);
+    });
+    return svg;
   }
   function byId(id: string): HTMLElement { return document.getElementById(id)!; }
 
@@ -51,12 +89,16 @@
       tile.appendChild(link);
 
       var actions = el('div', 'tile-actions');
-      var renameButton = el('button', 'tile-action', 'Rename') as HTMLButtonElement;
+      var renameButton = el('button', 'tile-action') as HTMLButtonElement;
       renameButton.type = 'button';
       renameButton.setAttribute('aria-label', 'Rename ' + p.name);
-      var deleteButton = el('button', 'tile-action', 'Delete') as HTMLButtonElement;
+      renameButton.title = 'Rename ' + p.name;
+      renameButton.appendChild(iconSvg(SQUARE_PEN_PATHS));
+      var deleteButton = el('button', 'tile-action') as HTMLButtonElement;
       deleteButton.type = 'button';
       deleteButton.setAttribute('aria-label', 'Delete ' + p.name);
+      deleteButton.title = 'Delete ' + p.name;
+      deleteButton.appendChild(iconSvg(TRASH_2_PATHS));
       actions.appendChild(renameButton);
       actions.appendChild(deleteButton);
       tile.appendChild(actions);
