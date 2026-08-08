@@ -10,6 +10,7 @@ import { extractWorkstreamDetail } from './lib/detail.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, 'public');
 const port = process.env.PORT ? Number(process.env.PORT) : 4173;
+const host = process.env.HOST || '127.0.0.1';
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -26,6 +27,12 @@ const MAX_BODY_BYTES = 8192;
 
 // The one place the display-name cap lives, so it can be widened in one edit.
 const MAX_NAME_LENGTH = 100;
+
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
+
+function isLoopbackHost(candidate: string): boolean {
+  return LOOPBACK_HOSTS.has(candidate);
+}
 
 function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -315,6 +322,16 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(port, '127.0.0.1', () => {
-  console.log(`Praxis Dashboard running at http://localhost:${port}`);
+server.listen(port, host, () => {
+  console.log(`Praxis Dashboard running at http://${host}:${port}`);
+  if (!isLoopbackHost(host)) {
+    console.warn(
+      `WARNING: bound to ${host}, which is not loopback-only — this dashboard is now ` +
+      `reachable from other devices on the network. There is no authentication: any ` +
+      `device that can reach ${host}:${port} can read every registered project's ` +
+      `prxwork/ content and can add, rename, or remove project registry entries. ` +
+      `Registered project paths are resolved on THIS machine's filesystem regardless ` +
+      `of which machine's browser makes the request.`
+    );
+  }
 });

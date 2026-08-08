@@ -86,9 +86,12 @@ write somewhere other than its `dist/public/data.json` default.
   is extracted live on request, so the next build restores everything the pages need. Your
   project list is unaffected — it lives in `.praxis-projects.json` at the repo root, outside
   `dist/`.
-- The server binds `127.0.0.1`, so it is reachable only from this machine. That matters because
-  the API reads any registered project's directory and will register any absolute path posted to
-  it — it is a local single-user tool, not something to expose on a network.
+- The server binds `127.0.0.1` by default, so it is reachable only from this machine unless you
+  set `HOST` (for example `HOST=0.0.0.0`) to open it to the network. There is no authentication,
+  so once opened, any device that can reach it can read every registered project's content and
+  can add, rename, or remove registry entries — and registered project paths still resolve on
+  this machine's filesystem regardless of which machine's browser makes the request. The server
+  logs a startup warning whenever it is bound to a non-loopback host.
 - "Needs attention" (artefacts `in-progress` for 14+ days) is computed in the browser
   against the *viewer's* clock from each artefact's own `updated` date, so it stays
   accurate no matter how long ago the data was last refreshed.
