@@ -4,6 +4,12 @@
   var SEV_ORDER = ['critical', 'high', 'medium', 'low'];
   var SEV_LABEL: Record<string, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
   var POLL_MS = 5000;
+  // A plan body shows PLAN_BLOCK_LIMIT blocks before the Show more button, and
+  // truncates only when it renders MORE than PLAN_TRUNCATE_THRESHOLD blocks.
+  // The gap between the two guarantees at least 5 hidden blocks, so the count
+  // cue never reads '1 more blocks' and needs no singular form.
+  var PLAN_BLOCK_LIMIT = 12;
+  var PLAN_TRUNCATE_THRESHOLD = 16;
 
   // module (IIFE) scope — survives every re-render
   var sortKey: string | undefined = 'id';
@@ -490,6 +496,31 @@
     return root;
   }
 
+  // Truncation lives here and not in renderPlanBlocks, so the renderer keeps
+  // its single responsibility. This helper knows only a section and a .ws-plan
+  // root — nothing about plans, markdown, tabs, panels or the modal.
+  function appendPlanBody(sec: HTMLElement, root: HTMLElement): void {
+    sec.appendChild(root);
+    // A short plan renders whole and gets no button.
+    if (root.children.length <= PLAN_TRUNCATE_THRESHOLD) return;
+    // root.children is a live HTMLCollection. Collect the surplus in one loop,
+    // then remove it in a second one — removing while reading skips nodes.
+    var held: Element[] = [];
+    var k = 0;
+    for (k = PLAN_BLOCK_LIMIT; k < root.children.length; k++) held.push(root.children[k]);
+    for (k = 0; k < held.length; k++) root.removeChild(held[k]);
+    var more = el('button', 'ws-plan-more', 'Show more');
+    more.setAttribute('type', 'button');
+    more.appendChild(el('span', 'ws-plan-more-count', held.length + ' more blocks'));
+    // One shot: the held nodes go back into root, never into sec, because every
+    // plan-body rule in styles.css is scoped under .ws-plan.
+    more.addEventListener('click', function () {
+      for (var j = 0; j < held.length; j++) root.appendChild(held[j]);
+      more.remove();
+    });
+    sec.appendChild(more);
+  }
+
   // Two plan files means two sections in the ONE Plan tab, matching the Issues
   // and Tasks panels.
   function renderPlanPanel(plans: PraxisPlanDetail[]) {
@@ -501,7 +532,7 @@
     }
     plans.forEach(function (item) {
       var sec = buildSection(item.artefact);
-      sec.appendChild(renderPlanBlocks(item.body));
+      appendPlanBody(sec, renderPlanBlocks(item.body));
       panelPlan.appendChild(sec);
     });
   }

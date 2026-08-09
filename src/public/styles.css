@@ -933,3 +933,26 @@ footer.note code {
    mono face, pre-wrap and overflow-x above are reused verbatim rather than
    restated as a second code style. Only the spacing between blocks is new. */
 .ws-plan pre.ws-raw { margin: 0 0 10px; }
+/* The one-shot reveal control. It is a quiet text button in the same family as
+   the modal's tab labels, and it lives inside .ws-section beside .ws-plan, so
+   no selector here reaches a tab panel. */
+.ws-plan-more {
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  padding: 4px 2px;
+  margin-top: 8px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.ws-plan-more:hover { color: var(--ink); }
+.ws-plan-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The hidden-block count reads as a small mono cue, like .ws-task-count. */
+.ws-plan-more-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-left: 8px;
+  white-space: nowrap;
+}
