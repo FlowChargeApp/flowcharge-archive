@@ -38,6 +38,10 @@
   --sev-medium: #A8791C;
   --sev-low: #5B6472;
 
+  /* dependency chain outline and its wider halo */
+  --chain: #6B3FA0;
+  --chain-soft: #BFA3E6;
+
   --font-display: "Fraunces", ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
   --font-body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
@@ -79,6 +83,10 @@
     --sev-medium: #E0B24F;
     --sev-low: #9AA3AC;
 
+    /* dependency chain outline and its wider halo */
+    --chain: #AF8AF0;
+    --chain-soft: #4A3670;
+
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   }
 }
@@ -92,6 +100,7 @@
   --st-backlog-bg: #1B1F25; --st-ready-bg: #17222D; --st-in-progress-bg: #241D12;
   --st-blocked-bg: #2A1518; --st-done-bg: #132218; --st-dropped-bg: #1E1922;
   --sev-critical: #E2536B; --sev-high: #E8825E; --sev-medium: #E0B24F; --sev-low: #9AA3AC;
+  --chain: #AF8AF0; --chain-soft: #4A3670;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 :root[data-theme="light"] {
@@ -104,6 +113,7 @@
   --st-backlog-bg: #ECEDEF; --st-ready-bg: #E6EEF7; --st-in-progress-bg: #F6ECDA;
   --st-blocked-bg: #F6E4E6; --st-done-bg: #E4F1E9; --st-dropped-bg: #ECE8EF;
   --sev-critical: #8E1B31; --sev-high: #B14226; --sev-medium: #A8791C; --sev-low: #5B6472;
+  --chain: #6B3FA0; --chain-soft: #BFA3E6;
   --shadow: 0 1px 2px rgba(22, 27, 34, 0.06), 0 1px 1px rgba(22, 27, 34, 0.04);
 }
 
@@ -363,6 +373,14 @@ button { font-family: inherit; }
 .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 4px; border-top: 1px dashed var(--line); }
 .card-foot .updated { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
 .card-foot .deps { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
+/* box-shadow, not outline or border: .card:focus-visible owns outline and a
+   border-width change would move the card's content. */
+.card.is-flash { box-shadow: 0 0 0 2px var(--chain); }
+/* The root card carries both classes, so the root rule comes second and wins. */
+.card.is-chain { box-shadow: 0 0 0 2px var(--chain); }
+.card.is-chain-root { box-shadow: 0 0 0 2px var(--chain), 0 0 0 5px var(--chain-soft); }
+.card-foot .deps .dep-link { color: var(--accent); cursor: pointer; }
+.card-foot .deps .dep-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ---------- Lower panels ---------- */
 .lower {
@@ -452,7 +470,7 @@ footer.note code {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .card { transition: border-color 120ms ease; }
+  .card { transition: border-color 120ms ease, box-shadow 300ms ease; }
 }
 
 /* ---------- Home page ---------- */

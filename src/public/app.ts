@@ -21,6 +21,12 @@
   var polling = false;                  // a request is in flight
   type SevMix = { critical: number; high: number; medium: number; low: number };
   var sevMix: Record<string, SevMix> | null = null;
+  var flashId: string | null = null;    // card currently flashing after a dependency jump
+  var flashTimer: number | null = null; // its pending clear timer
+  var dependsOn: Record<string, string[]> = {};   // workstream ID → the IDs it declares
+  var dependedBy: Record<string, string[]> = {};  // workstream ID → the IDs that declare it
+  var chainRoot: string | null = null;            // clicked card, null when nothing is highlighted
+  var chainSet: Record<string, true> | null = null; // its whole chain, null when nothing is highlighted
 
   function el(tag: string, cls?: string | null, text?: string | null): HTMLElement {
     var e = document.createElement(tag);
@@ -72,8 +78,102 @@
     return ({ plan: 'PLN', issuelist: 'IL', tasklist: 'TL', workstream: 'WS' } as Record<string, string>)[t] || t;
   }
 
+  // Scrolls the board to the card named by a dependency ID and flashes it.
+  // A dangling ID — no card on the board — is a silent no-op by design.
+  function jumpToDep(id: string): void {
+    var target = document.querySelector('#board .card[data-ws="' + id + '"]') as HTMLElement | null;
+    if (!target) return;
+    // Clear any flash still running, so two rapid clicks leave one outline.
+    if (flashTimer !== null) { clearTimeout(flashTimer); flashTimer = null; }
+    if (flashId) {
+      var prev = document.querySelector('#board .card[data-ws="' + flashId + '"]') as HTMLElement | null;
+      if (prev) prev.classList.remove('is-flash');
+      flashId = null;
+    }
+    target.classList.add('is-flash');
+    flashId = id;
+    flashTimer = setTimeout(function () {
+      var still = document.querySelector('#board .card[data-ws="' + id + '"]') as HTMLElement | null;
+      if (still) still.classList.remove('is-flash');
+      flashId = null;
+      flashTimer = null;
+    }, 900);
+    // One call covers both scrollers: the horizontal .board and the vertical .column-body.
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var behavior: ScrollBehavior = reduce ? 'auto' : 'smooth';
+    target.scrollIntoView({ behavior: behavior, block: 'nearest', inline: 'nearest' });
+  }
+
+  // Rebuilds both edge maps from `workstreams` in one pass. An edge is recorded
+  // only when both ends name a workstream that exists, so a dangling depends_on
+  // entry never enters the graph. It touches no DOM.
+  function buildDepIndex(): void {
+    dependsOn = {};
+    dependedBy = {};
+    var known: Record<string, true> = {};
+    workstreams.forEach(function (w) { known[w.id] = true; });
+    workstreams.forEach(function (w) {
+      if (!w.depends_on || !w.depends_on.length) return;
+      w.depends_on.forEach(function (d) {
+        if (!known[d]) return;
+        if (!dependsOn[w.id]) dependsOn[w.id] = [];
+        dependsOn[w.id].push(d);
+        if (!dependedBy[d]) dependedBy[d] = [];
+        dependedBy[d].push(w.id);
+      });
+    });
+  }
+
+  // Every ID reachable from `id` along dependsOn and dependedBy edges, in both
+  // directions, `id` itself included. The visited map is consulted before every
+  // push, so a cycle or a self-reference terminates. An ID with no edge — which
+  // includes an ID that names no workstream — gives an empty but non-null map.
+  // It touches no DOM and knows nothing about the highlight.
+  function chainOf(id: string): Record<string, true> {
+    var seen: Record<string, true> = {};
+    if (!id || (!dependsOn[id] && !dependedBy[id])) return seen;
+    seen[id] = true;
+    var queue = [id];
+    while (queue.length) {
+      var cur = queue.shift()!;
+      var next = (dependsOn[cur] || []).concat(dependedBy[cur] || []);
+      next.forEach(function (n) {
+        if (seen[n]) return;
+        seen[n] = true;
+        queue.push(n);
+      });
+    }
+    return seen;
+  }
+
+  // The only writer of chainRoot and chainSet. It repaints the classes and never
+  // calls renderBoard, which would rebuild the board under the click that ran it.
+  function setChain(id: string | null): void {
+    chainRoot = id;
+    chainSet = id ? chainOf(id) : null;
+    paintChain();
+  }
+
+  // Class-only pass over the cards currently on the board. It never re-renders,
+  // never walks the graph and never opens the modal.
+  function paintChain(): void {
+    var cards = document.querySelectorAll('#board .card');
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i] as HTMLElement;
+      var id = card.dataset.ws || '';
+      card.classList.toggle('is-chain', !!(id && chainSet && chainSet[id]));
+      card.classList.toggle('is-chain-root', !!id && id === chainRoot);
+    }
+  }
+
   function buildCard(w: PraxisWorkstream) {
-    var card = el('div', 'card' + (w.status === 'dropped' ? ' is-dropped' : ''));
+    // The highlight classes are seeded here, so a sort, search or data-change
+    // re-render restores them with no post-render fix-up. buildCard only reads
+    // this state; setChain is its only writer.
+    var cls = 'card' + (w.status === 'dropped' ? ' is-dropped' : '');
+    if (chainSet && chainSet[w.id]) cls += ' is-chain';
+    if (w.id === chainRoot) cls += ' is-chain-root';
+    var card = el('div', cls);
     card.tabIndex = 0;
     card.dataset.ws = w.id;
     card.setAttribute('role', 'button');
@@ -138,7 +238,19 @@
     var foot = el('div', 'card-foot');
     foot.appendChild(el('span', 'updated', 'created ' + fmtDate(w.created) + ' · updated ' + fmtDate(w.updated)));
     if (w.depends_on && w.depends_on.length) {
-      foot.appendChild(el('span', 'deps', '⤷ ' + w.depends_on.join(', ')));
+      // One clickable link per ID. The glyph and the separators are text nodes
+      // inside the container, so only the IDs themselves are clickable.
+      var deps = el('span', 'deps');
+      deps.appendChild(document.createTextNode('⤷ '));
+      w.depends_on.forEach(function (d, i) {
+        if (i > 0) deps.appendChild(document.createTextNode(', '));
+        var link = el('span', 'dep-link', d);
+        link.dataset.dep = d;
+        link.setAttribute('role', 'link');
+        link.tabIndex = 0;
+        deps.appendChild(link);
+      });
+      foot.appendChild(deps);
     }
     card.appendChild(foot);
 
@@ -736,8 +848,15 @@
   // board.innerHTML on every sort, direction and search change, so per-card
   // listeners would be re-created continuously and leak.
   byId('board').addEventListener('click', function (e) {
+    // A dependency link jumps to its target. The early return is the whole
+    // mechanism that keeps the modal closed — propagation is left alone.
+    var dep = (e.target as HTMLElement).closest('.dep-link') as HTMLElement | null;
+    if (dep && dep.dataset.dep) { jumpToDep(dep.dataset.dep); return; }
     var card = (e.target as HTMLElement).closest('.card') as HTMLElement | null;
-    if (!card || !card.dataset.ws) return;
+    // A miss means the click landed on column or board background, which clears
+    // the chain highlight. A hit highlights the chain and then opens the modal.
+    if (!card || !card.dataset.ws) { setChain(null); return; }
+    setChain(card.dataset.ws);
     // A click on the PLN row deep-links to the Plan tab. Anywhere else on the
     // card keeps the Issues default. The row itself has no listener.
     var row = (e.target as HTMLElement).closest('.artefact-row') as HTMLElement | null;
@@ -745,12 +864,15 @@
   });
   byId('board').addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    var depK = (e.target as HTMLElement).closest('.dep-link') as HTMLElement | null;
+    if (depK && depK.dataset.dep) { e.preventDefault(); jumpToDep(depK.dataset.dep); return; }
     var card = (e.target as HTMLElement).closest('.card') as HTMLElement | null;
     if (!card || !card.dataset.ws) return;
     e.preventDefault();   // Space on a focused card would otherwise scroll the page.
     // The card is the focus target and the row is not, so there is no row
     // context to read here. A keyboard reader reaches the plan with one Tab
     // and one ArrowLeft inside the modal.
+    setChain(card.dataset.ws);
     openModal(card.dataset.ws, 'issues');
   });
 
@@ -863,6 +985,20 @@
   function applyData(raw: BoardPayload) {
     workstreams = raw.workstreams || [];
     issues = raw.issues || [];
+    // The graph is rebuilt exactly where the data changes, not in renderBoard,
+    // which runs on every keystroke in the search box.
+    buildDepIndex();
+
+    // A poll can drop the highlighted workstream out of the data. Clear a root
+    // that no longer names a workstream, and otherwise recompute the chain from
+    // the new graph. This runs before the renderBoard() call below, so buildCard
+    // seeds the right classes. A root hidden by the search filter is still in
+    // the data and keeps its highlight.
+    if (chainRoot) {
+      var root = chainRoot;
+      var rootLives = workstreams.some(function (w) { return w.id === root; });
+      setChain(rootLives ? root : null);
+    }
 
     byId('gen-date').textContent = raw.generated || '—';
     byId('tagline').textContent = raw.source
