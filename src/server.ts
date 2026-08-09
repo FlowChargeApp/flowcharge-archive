@@ -19,6 +19,7 @@ const MIME: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
 };
 
 // The POST body's only content is a filesystem path, so 8KB is roughly 10,000x
