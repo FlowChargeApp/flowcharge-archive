@@ -2,7 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { extractPraxisData, hasPrxwork } from './lib/extract.js';
+import { extractPraxisData, hasPrxwork, ID_SUFFIX } from './lib/extract.js';
 import { readProjects, findProject, addProject, removeProject, renameProject } from './lib/projects.js';
 import { readBranch } from './lib/git.js';
 import { extractWorkstreamDetail } from './lib/detail.js';
@@ -28,6 +28,12 @@ const MAX_BODY_BYTES = 8192;
 
 // The one place the display-name cap lives, so it can be widened in one edit.
 const MAX_NAME_LENGTH = 100;
+
+// Shape of a workstream id in a detail request, composed from ID_SUFFIX so this
+// server and the extractor cannot disagree about what an id looks like. Hoisted
+// here so it compiles once, not once per request. Both anchors are load-bearing:
+// they are what make this a shape guard rather than a substring test.
+const WORKSTREAM_ID = new RegExp(String.raw`^WS-\d+${ID_SUFFIX}$`);
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 
@@ -259,7 +265,7 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
     // Shape check before any filesystem work: reqPath is already
     // decodeURIComponent'd, so a decoded single segment such as `../etc` reaches
     // here and is rejected on shape rather than on where it would have pointed.
-    if (!/^WS-\d+$/.test(wsId)) {
+    if (!WORKSTREAM_ID.test(wsId)) {
       sendJson(res, 400, { error: `Malformed workstream id ${wsId}` });
       return;
     }

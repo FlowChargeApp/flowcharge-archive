@@ -10,6 +10,14 @@
   // cue never reads '1 more blocks' and needs no singular form.
   var PLAN_BLOCK_LIMIT = 12;
   var PLAN_TRUNCATE_THRESHOLD = 16;
+  // Workstream id tail: a hyphen, the SEQUENCE NUMBER, then an OPTIONAL
+  // six-character base-36 suffix, anchored at end of string. The suffix group
+  // must stay OPTIONAL, because this dashboard's own prxwork/ tree holds both
+  // the bare WS-N and the suffixed WS-N-SUFFIX shape at once. The suffix is
+  // non-capturing, so the digits stay at capture position 1. This mirrors
+  // artefactIdNumber in src/lib/extract.ts; the shared fragment cannot be
+  // imported here, because this file compiles as a classic script.
+  var WS_ID_TAIL = /-(\d+)(?:-[0-9a-z]{6})?$/;
 
   // module (IIFE) scope — survives every re-render
   var sortKey: string | undefined = 'id';
@@ -57,7 +65,11 @@
   }
 
   /* ---------------- Board ---------------- */
-  function wsIdNum(id: string) { return parseInt(String(id).replace(/\D+/g, ''), 10) || 0; }
+  function wsIdNum(id: string) {
+    var m = String(id).match(WS_ID_TAIL);
+    var n = m ? Number(m[1]) : NaN;
+    return Number.isFinite(n) ? n : 0;
+  }
 
   function severityCmp(x: SevMix, y: SevMix) {
     return (x.critical - y.critical) || (x.high - y.high) || (x.medium - y.medium) || (x.low - y.low);

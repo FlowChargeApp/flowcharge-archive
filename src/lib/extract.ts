@@ -46,11 +46,20 @@ export function stripFrontmatter(text: string): string {
 // keys hold scalars; a fallback here would change what lands in the payload.
 function fmStr(v: string | string[] | undefined): string { return v as string; }
 
-// Character-identical in shape to the pattern the issues[] block below already
-// matches, so the modal and the board's shallow issues[] array cannot disagree
-// about what counts as an issue.
+// The optional final segment of a Praxis artefact id: `TYPE-N` became
+// `TYPE-N-SUFFIX`, where SUFFIX is exactly six lowercase base-36 characters,
+// `[0-9a-z]{6}`. A source fragment rather than a RegExp, because most consumers
+// embed it inside a larger pattern. The group MUST stay OPTIONAL: both id shapes
+// are live at the same time — this project's own prxwork/ tree holds bare and
+// suffixed ids together — so one pattern has to match both. It is also NON-capturing,
+// so an id capture that embeds it keeps its own group index.
+export const ID_SUFFIX = '(?:-[0-9a-z]{6})?';
+
+// Composed from ID_SUFFIX, exactly as the two issues[] block patterns below are,
+// so all three stay identical in shape and the modal and the board's shallow
+// issues[] array cannot disagree about what counts as an issue.
 // The checkbox mark is capture group 1.
-export const ISSUE_ITEM = /^-\s*\[([ xX])\]\s*(ISS-\d+)\.\s*(.*)$/;
+export const ISSUE_ITEM = new RegExp(String.raw`^-\s*\[([ xX])\]\s*(ISS-\d+${ID_SUFFIX})\.\s*(.*)$`);
 
 // The trailing period is OPTIONAL because both forms are in use: parents are
 // written `- [x] 1. Phase 1 — …` and children `- [x] 1.1 Capture the …`.
@@ -59,16 +68,25 @@ export const ISSUE_ITEM = /^-\s*\[([ xX])\]\s*(ISS-\d+)\.\s*(.*)$/;
 // The checkbox mark is capture group 2, NOT group 1.
 export const TASK_ITEM = /^(\s*)-\s*\[([ xX])\]\s*(\d+(?:\.\d+)*)\.?\s+(.*)$/;
 
-// Sort key for an artefact id such as 'IL-84' or 'TL-175': the number after the
-// final hyphen. Exported for detail.ts, so one rule serves both surfaces. The
-// number alone orders a set of ids that ALREADY share a prefix; on the board
-// side, grouping by artefact type is what supplies that precondition, because a
-// workstream's artefacts array mixes PLN, IL and TL ids. String order would put
-// IL-9 after IL-85, which is the defect this exists to avoid. An id that carries
-// no parsable number falls back to 0, never NaN, because a NaN sort key makes
-// sort order implementation-defined.
+// Composed from ID_SUFFIX and hoisted here so it compiles once, not once per
+// call. Anchored at end-of-string, which is what makes the match deterministic —
+// without the `$` the pattern can settle on the wrong hyphen. It carries NO `g`
+// flag, for the same reason recorded at lines 8-14.
+const ID_TAIL = new RegExp(String.raw`-(\d+)${ID_SUFFIX}$`);
+
+// Sort key for an artefact id such as 'IL-84', 'TL-175' or 'TL-175-ab12cd': the
+// SEQUENCE NUMBER. The optional six-character suffix is skipped, never read — it
+// is random, so reading it would order artefacts arbitrarily. Exported for
+// detail.ts, so one rule serves both surfaces. The number alone orders a set of
+// ids that ALREADY share a prefix; on the board side, grouping by artefact type
+// is what supplies that precondition, because a workstream's artefacts array
+// mixes PLN, IL and TL ids. String order would put IL-9 after IL-85, which is
+// the defect this exists to avoid. An id that carries no parsable number falls
+// back to 0, never NaN, because a NaN sort key makes sort order
+// implementation-defined.
 export function artefactIdNumber(id: string): number {
-  const n = Number(id.slice(id.lastIndexOf('-') + 1));
+  const m = id.match(ID_TAIL);
+  const n = m ? Number(m[1]) : NaN;
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -127,9 +145,9 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
       artefacts.push(entry);
 
       if (fm.type === 'issuelist') {
-        const blocks = text.split(/\n(?=-\s*\[[ xX]\]\s*ISS-\d+\.)/);
+        const blocks = text.split(new RegExp(String.raw`\n(?=-\s*\[[ xX]\]\s*ISS-\d+${ID_SUFFIX}\.)`));
         for (const b of blocks) {
-          const idm = b.match(/-\s*\[([ xX])\]\s*(ISS-\d+)\.\s*(.*)/);
+          const idm = b.match(new RegExp(String.raw`-\s*\[([ xX])\]\s*(ISS-\d+${ID_SUFFIX})\.\s*(.*)`));
           if (!idm) continue;
           const sevm = b.match(/^\s*severity:\s*([a-zA-Z]+)/m);
           const statm = b.match(/^\s*status:\s*([a-zA-Z-]+)/m);
