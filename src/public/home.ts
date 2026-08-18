@@ -247,5 +247,37 @@
     submitPath();
   });
 
+  // Runs once, at script-load/init time — never per-submit, never per-click.
+  // pickProjectFolder is optional on PraxisAPI (ipc-adapter.ts Decision 3); a typeof
+  // check is the correct feature-detect for an optional method, and is NOT the same as
+  // `if (window.praxisAPI)`, which WS-45's browser-ipc-shim.ts makes true unconditionally
+  // in a plain browser tab.
+  function initAddProjectControl() {
+    if (typeof window.praxisAPI.pickProjectFolder === 'function') {
+      byId('add-form').hidden = true;
+      byId('choose-folder-button').hidden = false;
+    } else {
+      byId('choose-folder-button').hidden = true;
+      byId('add-form').hidden = false;
+    }
+  }
+
+  byId('choose-folder-button').addEventListener('click', function () {
+    setError('');
+    // Non-null assertion is safe here: this listener only ever fires while the button is
+    // visible, which initAddProjectControl() only allows when the method is present.
+    window.praxisAPI.pickProjectFolder!()
+      .then(function (path) {
+        if (path == null) return; // cancelled — silent no-op, per acceptance criterion 3
+        return window.praxisAPI.addProject(path).then(unwrapIpc).then(function () {
+          return loadProjects();
+        });
+      })
+      .catch(function (err) {
+        setError(err.message);
+      });
+  });
+
+  initAddProjectControl();
   loadProjects();
 })();

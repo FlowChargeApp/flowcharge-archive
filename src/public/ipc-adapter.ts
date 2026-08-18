@@ -32,6 +32,7 @@ interface PraxisAPI {
   removeProject(id: string): Promise<PraxisIpcResult<{ deleted: ProjectEntry }>>;
   getProjectData(id: string): Promise<PraxisIpcResult<BoardPayload>>;
   getWorkstreamDetail(id: string, wsId: string): Promise<PraxisIpcResult<PraxisWorkstreamDetail>>;
+  pickProjectFolder?(): Promise<string | null>;
 }
 
 interface Window {

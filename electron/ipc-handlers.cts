@@ -5,7 +5,7 @@
 // running exactly where it runs today, inside server.ts, exercised as an
 // ordinary HTTP request from server.ts's point of view.
 
-import { ipcMain } from 'electron';
+import { ipcMain, dialog } from 'electron';
 import http from 'node:http';
 import { SERVER_URL } from './main.cjs';
 
@@ -101,4 +101,9 @@ export function registerIpcHandlers(): void {
       `/api/projects/${encodeURIComponent(id)}/workstreams/${encodeURIComponent(wsId)}/detail`
     )
   );
+
+  ipcMain.handle('pickProjectFolder', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    return result.canceled || !result.filePaths.length ? null : result.filePaths[0];
+  });
 }

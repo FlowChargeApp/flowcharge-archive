@@ -15,4 +15,5 @@ contextBridge.exposeInMainWorld('praxisAPI', {
   getProjectData: (id: string) => ipcRenderer.invoke('getProjectData', id),
   getWorkstreamDetail: (id: string, wsId: string) =>
     ipcRenderer.invoke('getWorkstreamDetail', id, wsId),
+  pickProjectFolder: (): Promise<string | null> => ipcRenderer.invoke('pickProjectFolder'),
 });
