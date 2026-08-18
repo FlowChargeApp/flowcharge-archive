@@ -4,18 +4,21 @@
   "description": "Local Kanban dashboard for Praxis (prx) project-management workstreams — a bird's-eye view of any project's prxwork/ state.",
   "type": "module",
   "private": true,
+  "main": "dist/electron/main.cjs",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && node tools/copy-assets.mjs",
+    "build": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && tsc -p electron/tsconfig.json && node tools/copy-assets.mjs",
     "prestart": "npm run build",
     "start": "node dist/server.js",
     "prerefresh": "npm run build",
-    "refresh": "node dist/scripts/extract-praxis-data.js"
+    "refresh": "node dist/scripts/extract-praxis-data.js",
+    "electron:dev": "npm run build && electron ."
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
+    "electron": "^43",
     "typescript": "^5.9.3"
   }
 }
