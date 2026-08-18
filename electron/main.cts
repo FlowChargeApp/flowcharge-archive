@@ -8,9 +8,10 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import http from 'node:http';
 import path from 'node:path';
+import { registerIpcHandlers } from './ipc-handlers.cjs';
 
 // Matches src/server.ts:12-13's own hardcoded host/port defaults exactly.
-const SERVER_URL = 'http://127.0.0.1:4173';
+export const SERVER_URL = 'http://127.0.0.1:4173';
 const POLL_INTERVAL_MS = 100;
 const POLL_TIMEOUT_MS = 10_000;
 
@@ -77,6 +78,7 @@ app.whenReady().then(async () => {
     return;
   }
 
+  registerIpcHandlers();
   createWindow();
 });
 

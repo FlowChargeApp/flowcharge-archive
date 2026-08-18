@@ -12,5 +12,5 @@
     "noEmitOnError": true,
     "skipLibCheck": true
   },
-  "include": ["main.cts", "preload.cts"]
+  "include": ["main.cts", "preload.cts", "ipc-handlers.cts"]
 }

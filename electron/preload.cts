@@ -1,7 +1,18 @@
 // This file is the preload script, wired via webPreferences.preload by
-// main.cts. It exists so that path points at a real compiled file, proving
-// the source-to-dist/electron/*.cjs build pipeline end-to-end. It stays a
-// near-empty structural stub with no renderer-exposed API surface, since
-// there is nothing to expose yet; building the IPC bridge is WS-37's job.
+// main.cts. It exposes a narrow, typed window.praxisAPI surface to the
+// renderer via contextBridge, forwarding each call straight to the matching
+// ipcMain.handle channel registered by electron/ipc-handlers.cts. No
+// adapter or error-translation logic lives here — each wrapper only
+// forwards the raw PraxisIpcResult promise.
 
-export {};
+import { contextBridge, ipcRenderer } from 'electron';
+
+contextBridge.exposeInMainWorld('praxisAPI', {
+  listProjects: () => ipcRenderer.invoke('listProjects'),
+  addProject: (path: string) => ipcRenderer.invoke('addProject', path),
+  renameProject: (id: string, name: string) => ipcRenderer.invoke('renameProject', id, name),
+  removeProject: (id: string) => ipcRenderer.invoke('removeProject', id),
+  getProjectData: (id: string) => ipcRenderer.invoke('getProjectData', id),
+  getWorkstreamDetail: (id: string, wsId: string) =>
+    ipcRenderer.invoke('getWorkstreamDetail', id, wsId),
+});
