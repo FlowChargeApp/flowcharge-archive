@@ -17,3 +17,15 @@ contextBridge.exposeInMainWorld('praxisAPI', {
     ipcRenderer.invoke('getWorkstreamDetail', id, wsId),
   pickProjectFolder: (): Promise<string | null> => ipcRenderer.invoke('pickProjectFolder'),
 });
+
+// A second, distinct global from praxisAPI above — kept decoupled rather
+// than folded into praxisAPI's object literal, per PLN-32-m51bp8's own
+// Alternatives considered, so the two concerns' preload wiring stays fully
+// separate. Forwards each call straight to the matching ipcMain.handle
+// channel registered by electron/agentic-tools-ipc-handlers.cts.
+contextBridge.exposeInMainWorld('praxisSkillInstallAPI', {
+  installSelected: (targets: unknown) => ipcRenderer.invoke('installSelected', targets),
+  getInstallStatus: () => ipcRenderer.invoke('getInstallStatus'),
+  removeInstallation: (toolId: string, scope: unknown) =>
+    ipcRenderer.invoke('removeInstallation', toolId, scope),
+});
