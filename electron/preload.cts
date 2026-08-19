@@ -29,4 +29,5 @@ contextBridge.exposeInMainWorld('praxisSkillInstallAPI', {
   removeInstallation: (toolId: string, scope: unknown) =>
     ipcRenderer.invoke('removeInstallation', toolId, scope),
   detectTools: () => ipcRenderer.invoke('detectTools'),
+  checkInstalledSkills: (target: unknown) => ipcRenderer.invoke('checkInstalledSkills', target),
 });

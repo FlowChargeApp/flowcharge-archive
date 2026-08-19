@@ -43,6 +43,18 @@ interface InstallRecord {
   contentHash: string;
 }
 
+// Mirrors agentic-tools-skill-presence.ts's SkillPresenceResult union — kept in
+// sync by hand, same mirror-not-import pattern as every other shape here.
+type SkillPresenceResult =
+  | {
+      checkKind: 'per-skill';
+      status: 'fully-installed' | 'missing-incomplete' | 'not-installed';
+      presentSkillIds: string[];
+      missingSkillIds: string[];
+    }
+  | { checkKind: 'shared-file'; exists: boolean }
+  | { checkKind: 'no-format' };
+
 interface Window {
   praxisSkillInstallAPI: {
     detectTools(): Promise<PraxisIpcResult<ToolDetectionRow[]>>;
@@ -51,6 +63,9 @@ interface Window {
     ): Promise<PraxisIpcResult<InstallResult[]>>;
     getInstallStatus(): Promise<PraxisIpcResult<InstallRecord[]>>;
     removeInstallation(toolId: string, scope: InstallScope): Promise<PraxisIpcResult<void>>;
+    checkInstalledSkills(
+      target: { toolId: string; basePath: string; scope: InstallScope }
+    ): Promise<PraxisIpcResult<SkillPresenceResult>>;
   };
 }
 
@@ -444,12 +459,27 @@ interface Window {
     'skipped-no-format': 'No format for this tool'
   };
 
+  // Label for a real filesystem presence check (checkInstalledSkills) finding every
+  // canonical skill already present on disk — never a live InstallResult, so never
+  // drawn from INSTALL_STATUS_LABEL's map (see gotcha in TL-45-s0t4ii task 1). No
+  // longer describes a persisted-ledger match (ISS-11's original fix); task 3
+  // (ISS-12) replaced that ledger join with this strictly-more-accurate fs check.
+  var ALREADY_INSTALLED_LABEL = 'Already installed';
+
+  // Label for a checkInstalledSkills 'per-skill'/'missing-incomplete' result — some
+  // but not all canonical skills are present on disk for this tool.
+  var INCOMPLETE_INSTALL_LABEL = 'Missing skills';
+
   type IntegrationsRowEntry = {
     row: ToolDetectionRow;
     rowEl: HTMLElement;
     checkbox: HTMLInputElement;
     notes: HTMLElement;
     installChip: HTMLElement;
+    // True once a live installSelected() result (this dialog session) has written a
+    // real InstallResult onto installChip — guards applyIntegrationsRowEligibility's
+    // persisted-registry join from clobbering that fresh chip on a later scope toggle.
+    hasLiveResult: boolean;
   };
 
   // One entry per rendered row, built fresh on every detectTools() call
@@ -458,6 +488,15 @@ interface Window {
   // applyIntegrationsRowEligibility, so a checkbox already ticked survives a scope
   // toggle for as long as that row stays eligible.
   var integrationsRowEntries: IntegrationsRowEntry[] = [];
+
+  // Real filesystem presence results (checkInstalledSkills), keyed by toolId, fetched
+  // once at dialog open at Global scope only (loadIntegrationsDetection, below) —
+  // fetched-once / cleared-on-close, same lifecycle as integrationsRowEntries above.
+  // A scope toggle re-derives chip visibility from this map client-side; it never
+  // triggers a new checkInstalledSkills() call. Only ever populated at Global scope —
+  // see applyIntegrationsRowEligibility's currentIntegrationsScope.kind === 'global'
+  // gate, and task list Divergence 2.
+  var integrationsSkillPresence: Record<string, SkillPresenceResult> = {};
 
   function buildIntegrationsRow(row: ToolDetectionRow): IntegrationsRowEntry {
     var rowEl = el('div', 'integrations-row');
@@ -480,7 +519,14 @@ interface Window {
     var notes = el('div', 'integrations-row-notes');
     rowEl.appendChild(notes);
 
-    return { row: row, rowEl: rowEl, checkbox: checkbox, notes: notes, installChip: installChip };
+    return {
+      row: row,
+      rowEl: rowEl,
+      checkbox: checkbox,
+      notes: notes,
+      installChip: installChip,
+      hasLiveResult: false
+    };
   }
 
   // Visible text only, never a hover-only title — both the ineligibility label and
@@ -495,6 +541,33 @@ interface Window {
     }
     if (entry.row.detection.needsManualVerification) {
       entry.notes.appendChild(el('span', 'integrations-row-note', 'Path unverified for your OS'));
+    }
+    // A live installSelected() result already reflects real, current install state —
+    // never overwrite it with the fs-presence check below, which is fetched once at
+    // dialog open and cannot see a live install that happened afterward.
+    if (!entry.hasLiveResult) {
+      // checkInstalledSkills is only ever fetched at Global scope (loadIntegrationsDetection,
+      // below) — showing its result under Project scope would be a stale, wrong-scope
+      // result mislabelled as current. Hide the chip outright at Project scope instead
+      // (a deliberate, bounded scope limit — see task list Divergence 2 — not a bug).
+      var presence = currentIntegrationsScope.kind === 'global'
+        ? integrationsSkillPresence[entry.row.toolId]
+        : undefined;
+      var fullyPresent = presence !== undefined && (
+        (presence.checkKind === 'per-skill' && presence.status === 'fully-installed') ||
+        (presence.checkKind === 'shared-file' && presence.exists)
+      );
+      var incompletePresent = presence !== undefined
+        && presence.checkKind === 'per-skill' && presence.status === 'missing-incomplete';
+      if (fullyPresent) {
+        entry.installChip.textContent = ALREADY_INSTALLED_LABEL;
+        entry.installChip.hidden = false;
+      } else if (incompletePresent) {
+        entry.installChip.textContent = INCOMPLETE_INSTALL_LABEL;
+        entry.installChip.hidden = false;
+      } else {
+        entry.installChip.hidden = true;
+      }
     }
   }
 
@@ -538,16 +611,33 @@ interface Window {
   }
 
   // Called on dialog open and on #integrations-rescan click — the only two places
-  // that call window.praxisSkillInstallAPI.detectTools(). A scope toggle re-derives
-  // eligibility from the last-fetched rows instead (refreshIntegrationsEligibility).
+  // that call window.praxisSkillInstallAPI.detectTools(). Also fetches a real
+  // filesystem presence check (checkInstalledSkills) per eligible-at-Global-scope row,
+  // so an already-installed target shows its status immediately without requiring
+  // installSelected() to run first (ISS-11-sbxv53), and independent of this app's own
+  // install-tracking ledger (ISS-12-yngl4x). Rows render as soon as detectTools()
+  // resolves; the presence checks fill in their chips once all resolve. A scope toggle
+  // re-derives eligibility and chip visibility from the last-fetched rows/presence map
+  // instead (refreshIntegrationsEligibility) — never a new IPC call.
   function loadIntegrationsDetection() {
-    return window.praxisSkillInstallAPI.detectTools()
-      .then(unwrapIpc)
-      .then(function (rows) {
-        renderIntegrationsRows(rows);
-      })
+    return window.praxisSkillInstallAPI.detectTools().then(unwrapIpc).then(function (rows) {
+      renderIntegrationsRows(rows);
+      var checks = rows.map(function (row) {
+        var basePath = resolveBasePathForScope({ kind: 'global' }, row.detection);
+        if (basePath === null) return null;
+        return window.praxisSkillInstallAPI.checkInstalledSkills(
+          { toolId: row.toolId, basePath: basePath, scope: { kind: 'global' } }
+        )
+          .then(unwrapIpc)
+          .then(function (result) {
+            integrationsSkillPresence[row.toolId] = result;
+          });
+      });
+      return Promise.all(checks).then(refreshIntegrationsEligibility);
+    })
       .catch(function (err) {
         integrationsRowEntries = [];
+        integrationsSkillPresence = {};
         var panelCli = byId('integrations-panel-cli');
         var panelGuiApp = byId('integrations-panel-gui-app');
         panelCli.innerHTML = '';
@@ -592,6 +682,7 @@ interface Window {
           if (!entry) return;
           entry.installChip.textContent = INSTALL_STATUS_LABEL[result.status];
           entry.installChip.hidden = false;
+          entry.hasLiveResult = true;
         });
       })
       .catch(function (err) {
@@ -611,6 +702,7 @@ interface Window {
     selectIntegrationsTab('cli', false);
     setIntegrationsScope('global');
     integrationsRowEntries = [];
+    integrationsSkillPresence = {};
     byId('integrations-panel-cli').innerHTML = '';
     byId('integrations-panel-gui-app').innerHTML = '';
     integrationsInstallSelectedButton.disabled = true;

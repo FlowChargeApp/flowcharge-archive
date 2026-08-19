@@ -114,6 +114,14 @@ test('selectPrimaryFormat resolves the real Windsurf catalogue entry to its rule
   assert.notEqual(resolved?.kind, 'mcp-json');
 });
 
+test('selectPrimaryFormat resolves the real OpenCode catalogue entry to its skill-directory format, never structured-config-file', () => {
+  const opencode = catalogueTool('opencode');
+  const resolved = selectPrimaryFormat(opencode);
+  assert.notEqual(resolved, null);
+  assert.equal(resolved?.kind, 'skill-directory');
+  assert.notEqual(resolved?.kind, 'structured-config-file');
+});
+
 test('formatForTarget throws when called directly with Cursor\'s real mcp-json entry', () => {
   const cursor = catalogueTool('cursor');
   assert.throws(() => formatForTarget(mcpJsonEntry(cursor), twoSkillContent));

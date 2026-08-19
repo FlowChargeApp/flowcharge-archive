@@ -12,10 +12,20 @@ export interface FileWrite {
   content: string;
 }
 
-// Returns the first integrationFormats entry whose kind is not 'mcp-json', or
-// null if the tool has no non-mcp-json format at all.
+// Kinds formatForTarget does not implement (it throws for both — 'mcp-json'
+// explicitly, 'structured-config-file' via its generic fallback). This set
+// duplicates that knowledge on purpose: there is no compiler check tying the
+// two together, so a future kind added to IntegrationFormat['kind'], or a
+// future kind implemented in formatForTarget, must update this set too, or
+// selectPrimaryFormat will silently start returning either a now-implemented
+// kind it still filters out, or a still-unimplemented kind it forgot to filter.
+const UNIMPLEMENTED_KINDS = new Set<IntegrationFormat['kind']>(['mcp-json', 'structured-config-file']);
+
+// Returns the first integrationFormats entry whose kind formatForTarget
+// actually implements (i.e. skips every kind in UNIMPLEMENTED_KINDS), or
+// null if the tool has no such format at all.
 export function selectPrimaryFormat(tool: ToolDefinition): IntegrationFormat | null {
-  return tool.integrationFormats.find((f) => f.kind !== 'mcp-json') ?? null;
+  return tool.integrationFormats.find((f) => !UNIMPLEMENTED_KINDS.has(f.kind)) ?? null;
 }
 
 function skillDirectoryWrites(format: IntegrationFormat, content: InstallContent): FileWrite[] {

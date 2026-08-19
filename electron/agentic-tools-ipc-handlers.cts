@@ -155,6 +155,18 @@ export interface InstallContent {
   }[];
 }
 
+// Mirrors agentic-tools-skill-presence.ts's SkillPresenceResult union — kept
+// in sync by hand, same caveat as every other locally-mirrored type here.
+type SkillPresenceResult =
+  | {
+      checkKind: 'per-skill';
+      status: 'fully-installed' | 'missing-incomplete' | 'not-installed';
+      presentSkillIds: string[];
+      missingSkillIds: string[];
+    }
+  | { checkKind: 'shared-file'; exists: boolean }
+  | { checkKind: 'no-format' };
+
 type InstallToTargetFn = (
   target: InstallTarget,
   content: InstallContent,
@@ -173,6 +185,12 @@ type ParseInstallRegistryFn = (raw: string) => InstallRecord[];
 type CreateNodeFsWriteAccessFn = () => FsWriteAccess;
 type CreateNodeFsAccessFn = () => FsAccess;
 type DetectAllToolsFn = (fsAccess: FsAccess, os: LocalOS) => Promise<DetectionResult[]>;
+type CheckSkillPresenceFn = (
+  tool: LocalToolDefinition,
+  basePath: string,
+  skillIds: string[],
+  fsAccess: FsAccess
+) => Promise<SkillPresenceResult>;
 
 // Mirrors electron/ipc-handlers.cts's own PraxisIpcResult<T> shape exactly —
 // a third mirror of an already-twice-mirrored shape, matching this
@@ -221,6 +239,8 @@ let TOOL_CATALOGUE!: LocalToolDefinition[];
 let fsWrite!: FsWriteAccess;
 let detectAllTools!: DetectAllToolsFn;
 let createNodeFsAccess!: CreateNodeFsAccessFn;
+let checkSkillPresence!: CheckSkillPresenceFn;
+let CANONICAL_PRAXIS_SKILL_IDS!: string[];
 
 export async function registerAgenticToolsIpcHandlers(): Promise<void> {
   // Specifiers below are relative to this file's *compiled* location
@@ -245,6 +265,12 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
   const detectModule = (await dynamicImport('../lib/agentic-tools-detect.js')) as {
     detectAllTools: DetectAllToolsFn;
   };
+  const skillPresenceModule = (await dynamicImport('../lib/agentic-tools-skill-presence.js')) as {
+    checkSkillPresence: CheckSkillPresenceFn;
+  };
+  const canonicalSkillsModule = (await dynamicImport('../lib/agentic-tools-canonical-skills.js')) as {
+    CANONICAL_PRAXIS_SKILL_IDS: string[];
+  };
 
   installToTarget = installModule.installToTarget;
   removeInstallation = installModule.removeInstallation;
@@ -253,6 +279,8 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
   fsWrite = fsAdapterModule.createNodeFsWriteAccess();
   createNodeFsAccess = fsAdapterModule.createNodeFsAccess;
   detectAllTools = detectModule.detectAllTools;
+  checkSkillPresence = skillPresenceModule.checkSkillPresence;
+  CANONICAL_PRAXIS_SKILL_IDS = canonicalSkillsModule.CANONICAL_PRAXIS_SKILL_IDS;
 
   ipcMain.handle(
     'installSelected',
@@ -322,4 +350,20 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
       return { ok: false, status: 500, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(
+    'checkInstalledSkills',
+    async (_event, request: InstallTargetRequest): Promise<PraxisIpcResult<SkillPresenceResult>> => {
+      try {
+        const tool = TOOL_CATALOGUE.find((t) => t.id === request.toolId);
+        if (tool === undefined) {
+          return { ok: false, status: 404, error: `Unknown toolId: ${request.toolId}` };
+        }
+        const result = await checkSkillPresence(tool, request.basePath, CANONICAL_PRAXIS_SKILL_IDS, createNodeFsAccess());
+        return { ok: true, status: 200, data: result };
+      } catch (err) {
+        return { ok: false, status: 500, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
 }

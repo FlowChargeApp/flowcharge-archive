@@ -264,16 +264,12 @@ test('installAllGlobal runs across the real four-tool TOOL_CATALOGUE with no wri
   assert.equal(results.length, 4);
   assert.deepEqual(results.map((r) => r.toolId), TOOL_CATALOGUE.map((t) => t.id));
 
-  // OpenCode's real catalogue entry resolves to a structured-config-file
-  // format (not yet implemented by formatForTarget) — this per-tool failure
-  // must not abort the batch for the remaining tools.
-  const opencodeResult = results.find((r) => r.toolId === 'opencode');
-  assert.ok(opencodeResult);
-  assert.equal(opencodeResult!.status, 'skipped-no-format');
-
-  // Claude Code, Cursor, and Windsurf all resolve to a real, implemented
-  // format and install successfully.
-  for (const toolId of ['claude-code', 'cursor', 'windsurf']) {
+  // Claude Code, Cursor, Windsurf, and OpenCode all resolve to a real,
+  // implemented format and install successfully. (installAllGlobal's
+  // try/catch around each per-tool install remains defensive for any future
+  // catalogue entry that resolves to an unimplemented format — it just isn't
+  // exercised by any of these four tools today.)
+  for (const toolId of ['claude-code', 'cursor', 'windsurf', 'opencode']) {
     const result = results.find((r) => r.toolId === toolId);
     assert.ok(result, `missing InstallResult for ${toolId}`);
     assert.equal(result!.status, 'installed', `expected ${toolId} to install`);

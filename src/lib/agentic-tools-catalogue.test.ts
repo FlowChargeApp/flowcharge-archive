@@ -72,27 +72,3 @@ test('every gui-app-category entry has at least one install-path signal source',
     assert.ok(hasInstallPath, `${entry.id} has at least one installPaths candidate`);
   }
 });
-
-// Confirms Data & compatibility's claim (prxplan.md lines 349-352) that no
-// consumer imports these modules yet — WS-42/WS-43 are the first consumers.
-// This is a checklist item proven here rather than left as an unverified
-// assertion in the plan. Reads the candidate source files directly rather
-// than shelling out to grep, so the test has no external-process dependency.
-test('no consumer imports agentic-tools modules yet', async () => {
-  const fs = await import('node:fs');
-  const path = await import('node:path');
-  const { fileURLToPath } = await import('node:url');
-
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const repoRoot = path.resolve(here, '..', '..');
-  const candidates = [path.join(repoRoot, 'src', 'server.ts')];
-  const publicDir = path.join(repoRoot, 'src', 'public');
-  for (const name of fs.readdirSync(publicDir)) {
-    if (name.endsWith('.ts')) candidates.push(path.join(publicDir, name));
-  }
-
-  for (const file of candidates) {
-    const contents = fs.readFileSync(file, 'utf8');
-    assert.ok(!contents.includes('agentic-tools'), `expected no "agentic-tools" reference in ${file}`);
-  }
-});
