@@ -1,6 +1,8 @@
-// Project registry library: owns .praxis-projects.json at the repo root and the
-// six operations over it. Knows the registry and its shape; knows nothing about
-// the transport layer, prxwork parsing, or the board payload.
+// Project registry library: owns .praxis-projects.json and the six operations
+// over it. Its directory defaults to the repo root but can be overridden via
+// PRAXIS_DATA_DIR (set by electron/main.cts when packaged, since app.asar is
+// read-only). Knows the registry and its shape; knows nothing about the
+// transport layer, prxwork parsing, or the board payload.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,7 +14,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // The registry lives there, and the repo root is also the self-entry's path — one
 // constant for both, so the two can never drift apart.
 const repoRoot = path.join(__dirname, '..', '..');
-const registryPath = path.join(repoRoot, '.praxis-projects.json');
+// electron/main.cts sets PRAXIS_DATA_DIR only when app.isPackaged, so its mere
+// presence doubles as the "are we running from a packaged app.asar" signal
+// without this file importing 'electron' or knowing anything about packaging
+// beyond one env var. Unset in dev, a plain browser tab, and `npm run
+// electron:dev`, so dataDir falls back to repoRoot exactly as before.
+const dataDir = process.env.PRAXIS_DATA_DIR || repoRoot;
+const registryPath = path.join(dataDir, '.praxis-projects.json');
+const isPackaged = Boolean(process.env.PRAXIS_DATA_DIR);
 
 export function projectId(absPath: string): string {
   return crypto.createHash('sha1').update(absPath).digest('hex').slice(0, 8);
@@ -56,7 +65,8 @@ export function readProjects(): ProjectEntry[] {
   try {
     raw = fs.readFileSync(registryPath, 'utf8');
   } catch (err) {
-    return (err as NodeJS.ErrnoException).code === 'ENOENT' ? [selfEntry()] : [];
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') return [];
+    return isPackaged ? [] : [selfEntry()];
   }
   try {
     const parsed = JSON.parse(raw) as ProjectList;

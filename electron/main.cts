@@ -62,6 +62,14 @@ app.whenReady().then(async () => {
   // tsc's downlevel transform, so this stays a genuine native dynamic
   // import at runtime, which Node's CommonJS main process can use to load
   // an ESM module.
+  // Mirrors src/lib/projects.ts's own PRAXIS_DATA_DIR read: only this
+  // packaged-vs-not check belongs here, because only Electron's main process
+  // knows app.isPackaged. Unset in `npm run electron:dev` (app.isPackaged is
+  // false there), so dev Electron behaves exactly as it does today.
+  if (app.isPackaged) {
+    process.env.PRAXIS_DATA_DIR = app.getPath('userData');
+  }
+
   const dynamicImport = new Function('specifier', 'return import(specifier)') as (
     specifier: string
   ) => Promise<unknown>;
