@@ -634,7 +634,7 @@ footer.note code {
   font-family: var(--font-mono);
   font-size: 12.5px;
 }
-.add-form button, #choose-folder-button {
+.add-form button, #choose-folder-button, #manage-integrations-button {
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: var(--accent);
@@ -643,8 +643,8 @@ footer.note code {
   font-size: 12.5px;
   cursor: pointer;
 }
-.add-form button:hover, #choose-folder-button:hover { background: var(--accent-ink); }
-.add-form button:focus-visible, #choose-folder-button:focus-visible {
+.add-form button:hover, #choose-folder-button:hover, #manage-integrations-button:hover { background: var(--accent-ink); }
+.add-form button:focus-visible, #choose-folder-button:focus-visible, #manage-integrations-button:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
 
@@ -774,6 +774,51 @@ footer.note code {
   text-align: center;
   color: var(--ink-faint);
   font-size: 12.5px;
+}
+
+/* ---------- Manage integrations dialog ---------- */
+/* Reuses #ws-modal, .ws-modal-* , .seg and .chip entirely for chrome, toggle, and
+   status pills (see plan's CSS reuse section) — the only new rules are this
+   dialog's own per-row layout inside each tabpanel. */
+#integrations-modal {
+  padding: 0;
+  width: min(880px, calc(100vw - 48px));
+  max-width: min(880px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+#integrations-modal::backdrop { background: color-mix(in srgb, var(--ink) 46%, transparent); }
+#integrations-project-select {
+  margin-top: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-size: 12.5px;
+}
+.integrations-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.integrations-row:last-child { border-bottom: none; }
+.integrations-row-name { flex: 1; min-width: 0; font-size: 12.5px; color: var(--ink); }
+.integrations-row-note { font-size: 11px; color: var(--ink-faint); }
+.integrations-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 14px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
 }
 
 /* Per-file sections: N artefact files become N sections within ONE tab. */

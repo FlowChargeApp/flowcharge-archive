@@ -1,3 +1,74 @@
+// Structural mirrors of electron/agentic-tools-ipc-handlers.cts's shapes, matching
+// this codebase's established mirror-not-import pattern (see that file's own header
+// comment). Declared here at file scope — NOT inside the IIFE below — so this
+// actually augments the ambient global Window interface exactly like ipc-adapter.ts's
+// own `interface Window { praxisAPI: ... }` does; an interface declared inside a
+// function body would only shadow Window locally, never merge with the global one
+// lib.dom.d.ts declares. InstallScope itself is not redeclared here: Task 3.2's
+// agentic-tools-scope.ts already declares it globally (module: "none" makes every
+// top-level declaration in every included classic script part of one shared global
+// scope), and that script tag loads before this one — a second `type InstallScope =
+// ...` here would be a duplicate identifier.
+
+type DetectionConfidence = 'confirmed' | 'likely' | 'weak' | 'not-detected';
+
+interface DetectionResult {
+  toolId: string;
+  confidence: DetectionConfidence;
+  resolvedConfigDir: string | null;
+  matchedSignals: string[];
+  needsManualVerification: boolean;
+}
+
+interface ToolDetectionRow {
+  toolId: string;
+  displayName: string;
+  category: 'cli' | 'gui-app';
+  detection: DetectionResult;
+}
+
+interface InstallResult {
+  toolId: string;
+  status: 'installed' | 'updated' | 'up-to-date' | 'skipped-no-format';
+  resolvedPath: string | null;
+}
+
+interface InstallRecord {
+  toolId: string;
+  resolvedPath: string;
+  format: string;
+  scope: InstallScope;
+  installedAt: string;
+  updatedAt: string;
+  contentHash: string;
+}
+
+// Mirrors agentic-tools-skill-presence.ts's SkillPresenceResult union — kept in
+// sync by hand, same mirror-not-import pattern as every other shape here.
+type SkillPresenceResult =
+  | {
+      checkKind: 'per-skill';
+      status: 'fully-installed' | 'missing-incomplete' | 'not-installed';
+      presentSkillIds: string[];
+      missingSkillIds: string[];
+    }
+  | { checkKind: 'shared-file'; exists: boolean }
+  | { checkKind: 'no-format' };
+
+interface Window {
+  praxisSkillInstallAPI: {
+    detectTools(): Promise<PraxisIpcResult<ToolDetectionRow[]>>;
+    installSelected(
+      targets: { toolId: string; basePath: string; scope: InstallScope }[]
+    ): Promise<PraxisIpcResult<InstallResult[]>>;
+    getInstallStatus(): Promise<PraxisIpcResult<InstallRecord[]>>;
+    removeInstallation(toolId: string, scope: InstallScope): Promise<PraxisIpcResult<void>>;
+    checkInstalledSkills(
+      target: { toolId: string; basePath: string; scope: InstallScope }
+    ): Promise<PraxisIpcResult<SkillPresenceResult>>;
+  };
+}
+
 (function () {
   var ABSOLUTE_PATH_MESSAGE = 'Path must be absolute — enter a full path starting with /';
   var TILDE_MESSAGE = '~ is not expanded — enter the full absolute path instead';
@@ -51,6 +122,11 @@
   function setError(message: string) {
     byId('add-error').textContent = message;
   }
+
+  // The most recently loaded project list. renderTiles() consumes it for the home
+  // tiles; the integrations dialog's project <select> (below) reuses the same list
+  // rather than issuing its own listProjects() call.
+  var lastKnownProjects: ProjectEntry[] = [];
 
   // Clears its container before appending: this runs again after every successful add.
   function renderTiles(projects: ProjectEntry[]) {
@@ -198,7 +274,8 @@
     return window.praxisAPI.listProjects()
       .then(unwrapIpc)
       .then(function (list: ProjectList) {
-        renderTiles(list.projects || []);
+        lastKnownProjects = list.projects || [];
+        renderTiles(lastKnownProjects);
       })
       .catch(function (err) {
         var host = byId('project-tiles');
@@ -276,6 +353,420 @@
       .catch(function (err) {
         setError(err.message);
       });
+  });
+
+  // ---------- Manage integrations dialog ----------
+  // Open/close, tab-switch, scope-toggle, project-picker population, and (from Task
+  // 4.1 on) real detectTools() row rendering. No installSelected() call lives here
+  // yet — that starts at Task 5.1.
+
+  // byId returns HTMLElement; showModal()/close() need the dialog type — same cast
+  // pattern app.ts:353 uses for #ws-modal.
+  var integrationsModal = byId('integrations-modal') as HTMLDialogElement;
+  var integrationsTabsEl = byId('integrations-tabs');
+  var integrationsScopeSeg = byId('integrations-scope-seg');
+  var integrationsProjectSelect = byId('integrations-project-select') as HTMLSelectElement;
+
+  // Declared once, in tablist order — selectIntegrationsTab and the tablist keydown
+  // handler both drive off this list, matching app.ts:358-362's own TABS pattern,
+  // adapted from three tabs down to these two.
+  var INTEGRATIONS_TABS = [
+    { name: 'cli', btn: integrationsTabsEl.querySelector('[data-tab="cli"]') as HTMLButtonElement,
+      panel: byId('integrations-panel-cli') },
+    { name: 'gui-app', btn: integrationsTabsEl.querySelector('[data-tab="gui-app"]') as HTMLButtonElement,
+      panel: byId('integrations-panel-gui-app') }
+  ];
+  var currentIntegrationsTab = 'cli';
+
+  // aria-selected, the roving tabindex and the panel's hidden attribute always move
+  // together, exactly like app.ts:378-394's own selectTab.
+  function selectIntegrationsTab(name: string, focusTab: boolean) {
+    var idx = 0;
+    for (var i = 0; i < INTEGRATIONS_TABS.length; i++) {
+      if (INTEGRATIONS_TABS[i].name === name) { idx = i; break; }
+    }
+    for (var j = 0; j < INTEGRATIONS_TABS.length; j++) {
+      var on = j === idx;
+      INTEGRATIONS_TABS[j].btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      INTEGRATIONS_TABS[j].btn.tabIndex = on ? 0 : -1;
+      INTEGRATIONS_TABS[j].panel.hidden = !on;
+    }
+    currentIntegrationsTab = INTEGRATIONS_TABS[idx].name;
+    if (focusTab) INTEGRATIONS_TABS[idx].btn.focus();
+  }
+
+  // Structurally identical to agentic-tools-scope.ts's InstallScope (Task 3.2) — not
+  // imported, since this is a classic script with no module graph between the two.
+  var currentIntegrationsScope: { kind: 'global' } | { kind: 'project'; projectPath: string } =
+    { kind: 'global' };
+
+  // Populates the project <select> from the same list renderTiles() already consumes
+  // (lastKnownProjects, above) — no separate listProjects() call. With zero projects
+  // registered, the Project scope button stays disabled with a pointer at "Add a
+  // project", per acceptance criterion 8.
+  function populateIntegrationsProjectSelect() {
+    var projectBtn = integrationsScopeSeg.querySelector('[data-scope="project"]') as HTMLButtonElement;
+    integrationsProjectSelect.innerHTML = '';
+    if (!lastKnownProjects.length) {
+      projectBtn.disabled = true;
+      projectBtn.title = 'Add a project first, using the form on this page';
+      return;
+    }
+    projectBtn.disabled = false;
+    projectBtn.removeAttribute('title');
+    lastKnownProjects.forEach(function (p) {
+      var opt = document.createElement('option');
+      opt.value = p.path;
+      opt.textContent = p.name;
+      integrationsProjectSelect.appendChild(opt);
+    });
+  }
+
+  function setIntegrationsScope(kind: 'global' | 'project') {
+    var segButtons = integrationsScopeSeg.querySelectorAll('button');
+    segButtons.forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.scope === kind);
+    });
+    if (kind === 'project') {
+      integrationsProjectSelect.hidden = false;
+      currentIntegrationsScope = {
+        kind: 'project',
+        projectPath: integrationsProjectSelect.value || (lastKnownProjects[0] ? lastKnownProjects[0].path : '')
+      };
+    } else {
+      integrationsProjectSelect.hidden = true;
+      currentIntegrationsScope = { kind: 'global' };
+    }
+    // Re-derives eligibility/labels for whatever rows are already rendered — no new
+    // detectTools() call, since a scope change never changes what's actually detected,
+    // only which of those results are usable at the newly-selected scope.
+    refreshIntegrationsEligibility();
+  }
+
+  var DETECTION_CONFIDENCE_LABEL: Record<DetectionConfidence, string> = {
+    confirmed: 'Confirmed',
+    likely: 'Likely',
+    weak: 'Weak signal',
+    'not-detected': 'Not detected'
+  };
+
+  // Read the real InstallResult.status value returned per target — never a placeholder
+  // message — and shown only as a friendly label for that same value.
+  var INSTALL_STATUS_LABEL: Record<InstallResult['status'], string> = {
+    installed: 'Installed',
+    updated: 'Updated',
+    'up-to-date': 'Up to date',
+    'skipped-no-format': 'No format for this tool'
+  };
+
+  // Label for a real filesystem presence check (checkInstalledSkills) finding every
+  // canonical skill already present on disk — never a live InstallResult, so never
+  // drawn from INSTALL_STATUS_LABEL's map (see gotcha in TL-45-s0t4ii task 1). No
+  // longer describes a persisted-ledger match (ISS-11's original fix); task 3
+  // (ISS-12) replaced that ledger join with this strictly-more-accurate fs check.
+  var ALREADY_INSTALLED_LABEL = 'Already installed';
+
+  // Label for a checkInstalledSkills 'per-skill'/'missing-incomplete' result — some
+  // but not all canonical skills are present on disk for this tool.
+  var INCOMPLETE_INSTALL_LABEL = 'Missing skills';
+
+  type IntegrationsRowEntry = {
+    row: ToolDetectionRow;
+    rowEl: HTMLElement;
+    checkbox: HTMLInputElement;
+    notes: HTMLElement;
+    installChip: HTMLElement;
+    // True once a live installSelected() result (this dialog session) has written a
+    // real InstallResult onto installChip — guards applyIntegrationsRowEligibility's
+    // persisted-registry join from clobbering that fresh chip on a later scope toggle.
+    hasLiveResult: boolean;
+  };
+
+  // One entry per rendered row, built fresh on every detectTools() call
+  // (loadIntegrationsDetection, below) and left alone by a scope toggle — only each
+  // entry's disabled state and note text are re-derived then, via
+  // applyIntegrationsRowEligibility, so a checkbox already ticked survives a scope
+  // toggle for as long as that row stays eligible.
+  var integrationsRowEntries: IntegrationsRowEntry[] = [];
+
+  // Real filesystem presence results (checkInstalledSkills), keyed by toolId, fetched
+  // once at dialog open at Global scope only (loadIntegrationsDetection, below) —
+  // fetched-once / cleared-on-close, same lifecycle as integrationsRowEntries above.
+  // A scope toggle re-derives chip visibility from this map client-side; it never
+  // triggers a new checkInstalledSkills() call. Only ever populated at Global scope —
+  // see applyIntegrationsRowEligibility's currentIntegrationsScope.kind === 'global'
+  // gate, and task list Divergence 2.
+  var integrationsSkillPresence: Record<string, SkillPresenceResult> = {};
+
+  function buildIntegrationsRow(row: ToolDetectionRow): IntegrationsRowEntry {
+    var rowEl = el('div', 'integrations-row');
+
+    var checkbox = el('input') as HTMLInputElement;
+    checkbox.type = 'checkbox';
+    checkbox.setAttribute('aria-label', 'Select ' + row.displayName);
+    checkbox.addEventListener('change', updateInstallSelectedButtonState);
+    rowEl.appendChild(checkbox);
+
+    rowEl.appendChild(el('span', 'integrations-row-name', row.displayName));
+    rowEl.appendChild(el('span', 'chip', DETECTION_CONFIDENCE_LABEL[row.detection.confidence]));
+
+    // Install-status chip: hidden until a real InstallResult for this row's toolId
+    // comes back from installSelected() (installIntegrationsSelected, below).
+    var installChip = el('span', 'chip');
+    installChip.hidden = true;
+    rowEl.appendChild(installChip);
+
+    var notes = el('div', 'integrations-row-notes');
+    rowEl.appendChild(notes);
+
+    return {
+      row: row,
+      rowEl: rowEl,
+      checkbox: checkbox,
+      notes: notes,
+      installChip: installChip,
+      hasLiveResult: false
+    };
+  }
+
+  // Visible text only, never a hover-only title — both the ineligibility label and
+  // the unverified-path note must be readable without hovering.
+  function applyIntegrationsRowEligibility(entry: IntegrationsRowEntry) {
+    var eligible = isEligibleAtScope(currentIntegrationsScope, entry.row.detection);
+    entry.checkbox.disabled = !eligible;
+    entry.notes.innerHTML = '';
+    if (!eligible) {
+      var scopeLabel = currentIntegrationsScope.kind === 'project' ? 'project scope' : 'global scope';
+      entry.notes.appendChild(el('span', 'integrations-row-note', 'Not supported at ' + scopeLabel));
+    }
+    if (entry.row.detection.needsManualVerification) {
+      entry.notes.appendChild(el('span', 'integrations-row-note', 'Path unverified for your OS'));
+    }
+    // A live installSelected() result already reflects real, current install state —
+    // never overwrite it with the fs-presence check below, which is fetched once at
+    // dialog open and cannot see a live install that happened afterward.
+    if (!entry.hasLiveResult) {
+      // checkInstalledSkills is only ever fetched at Global scope (loadIntegrationsDetection,
+      // below) — showing its result under Project scope would be a stale, wrong-scope
+      // result mislabelled as current. Hide the chip outright at Project scope instead
+      // (a deliberate, bounded scope limit — see task list Divergence 2 — not a bug).
+      var presence = currentIntegrationsScope.kind === 'global'
+        ? integrationsSkillPresence[entry.row.toolId]
+        : undefined;
+      var fullyPresent = presence !== undefined && (
+        (presence.checkKind === 'per-skill' && presence.status === 'fully-installed') ||
+        (presence.checkKind === 'shared-file' && presence.exists)
+      );
+      var incompletePresent = presence !== undefined
+        && presence.checkKind === 'per-skill' && presence.status === 'missing-incomplete';
+      if (fullyPresent) {
+        entry.installChip.textContent = ALREADY_INSTALLED_LABEL;
+        entry.installChip.hidden = false;
+      } else if (incompletePresent) {
+        entry.installChip.textContent = INCOMPLETE_INSTALL_LABEL;
+        entry.installChip.hidden = false;
+      } else {
+        entry.installChip.hidden = true;
+      }
+    }
+  }
+
+  function refreshIntegrationsEligibility() {
+    integrationsRowEntries.forEach(applyIntegrationsRowEligibility);
+    // A row that just became ineligible no longer counts toward "at least one eligible
+    // row checked", even if its checkbox is still (harmlessly) checked underneath.
+    updateInstallSelectedButtonState();
+  }
+
+  var integrationsInstallSelectedButton = byId('integrations-install-selected') as HTMLButtonElement;
+
+  // Disabled whenever zero eligible (checked AND enabled) rows are selected — recomputed
+  // on every checkbox change and every scope toggle, never left stale.
+  function updateInstallSelectedButtonState() {
+    var hasEligibleChecked = integrationsRowEntries.some(function (entry) {
+      return entry.checkbox.checked && !entry.checkbox.disabled;
+    });
+    integrationsInstallSelectedButton.disabled = !hasEligibleChecked;
+  }
+
+  // Rebuilds both tabpanels from a fresh detectTools() payload — one row per
+  // TOOL_CATALOGUE entry, placed into its own category's panel, matching the four
+  // rows the handler always returns (electron/agentic-tools-ipc-handlers.cts maps
+  // every catalogue entry, not just the ones a DetectionResult was found for).
+  function renderIntegrationsRows(rows: ToolDetectionRow[]) {
+    var panelCli = byId('integrations-panel-cli');
+    var panelGuiApp = byId('integrations-panel-gui-app');
+    panelCli.innerHTML = '';
+    panelGuiApp.innerHTML = '';
+
+    integrationsRowEntries = rows.map(buildIntegrationsRow);
+    integrationsRowEntries.forEach(function (entry) {
+      var panel = entry.row.category === 'gui-app' ? panelGuiApp : panelCli;
+      panel.appendChild(entry.rowEl);
+      applyIntegrationsRowEligibility(entry);
+    });
+    // Every freshly-built row starts unchecked, but a stale disabled state from a
+    // previous render must not linger on the button either way.
+    updateInstallSelectedButtonState();
+  }
+
+  // Called on dialog open and on #integrations-rescan click — the only two places
+  // that call window.praxisSkillInstallAPI.detectTools(). Also fetches a real
+  // filesystem presence check (checkInstalledSkills) per eligible-at-Global-scope row,
+  // so an already-installed target shows its status immediately without requiring
+  // installSelected() to run first (ISS-11-sbxv53), and independent of this app's own
+  // install-tracking ledger (ISS-12-yngl4x). Rows render as soon as detectTools()
+  // resolves; the presence checks fill in their chips once all resolve. A scope toggle
+  // re-derives eligibility and chip visibility from the last-fetched rows/presence map
+  // instead (refreshIntegrationsEligibility) — never a new IPC call.
+  function loadIntegrationsDetection() {
+    return window.praxisSkillInstallAPI.detectTools().then(unwrapIpc).then(function (rows) {
+      renderIntegrationsRows(rows);
+      var checks = rows.map(function (row) {
+        var basePath = resolveBasePathForScope({ kind: 'global' }, row.detection);
+        if (basePath === null) return null;
+        return window.praxisSkillInstallAPI.checkInstalledSkills(
+          { toolId: row.toolId, basePath: basePath, scope: { kind: 'global' } }
+        )
+          .then(unwrapIpc)
+          .then(function (result) {
+            integrationsSkillPresence[row.toolId] = result;
+          });
+      });
+      return Promise.all(checks).then(refreshIntegrationsEligibility);
+    })
+      .catch(function (err) {
+        integrationsRowEntries = [];
+        integrationsSkillPresence = {};
+        var panelCli = byId('integrations-panel-cli');
+        var panelGuiApp = byId('integrations-panel-gui-app');
+        panelCli.innerHTML = '';
+        panelGuiApp.innerHTML = '';
+        var box = el('div', 'tiles-empty');
+        box.appendChild(el('h3', null, "Couldn't detect installed tools"));
+        box.appendChild(el('p', null, 'Detail: ' + err.message));
+        panelCli.appendChild(box);
+        updateInstallSelectedButtonState();
+      });
+  }
+
+  // Collects every checked, eligible row and calls installSelected() with them, then
+  // renders each returned InstallResult.status onto that row's own install-status chip.
+  //
+  // GOTCHA (carried forward from this task's spec, not softened): once WS-42's engine is
+  // real, clicking this performs REAL FILE WRITES on whatever machine runs the app — into
+  // the real config directory a detected tool's catalogue entry resolves to (e.g.
+  // ~/.cursor/, ~/.codeium/windsurf/, ~/.claude/, or opencode's real config dir), with
+  // WS-42's placeholder/fixture getInstallContent, since real skill content is WS-44's job.
+  // This is a genuine, user-visible filesystem side effect, not a simulated one — verify
+  // only against a disposable/throwaway target, never a real, important tool config.
+  function installIntegrationsSelected() {
+    var eligibleEntries = integrationsRowEntries.filter(function (entry) {
+      return entry.checkbox.checked && !entry.checkbox.disabled;
+    });
+    if (!eligibleEntries.length) return;
+
+    var targets = eligibleEntries.map(function (entry) {
+      // Non-null: every entry here passed isEligibleAtScope (checkbox not disabled),
+      // which is defined as resolveBasePathForScope(...) !== null.
+      var basePath = resolveBasePathForScope(currentIntegrationsScope, entry.row.detection)!;
+      return { toolId: entry.row.toolId, basePath: basePath, scope: currentIntegrationsScope };
+    });
+
+    integrationsInstallSelectedButton.disabled = true;
+    window.praxisSkillInstallAPI.installSelected(targets)
+      .then(unwrapIpc)
+      .then(function (results) {
+        results.forEach(function (result) {
+          var entry = eligibleEntries.filter(function (e) { return e.row.toolId === result.toolId; })[0];
+          if (!entry) return;
+          entry.installChip.textContent = INSTALL_STATUS_LABEL[result.status];
+          entry.installChip.hidden = false;
+          entry.hasLiveResult = true;
+        });
+      })
+      .catch(function (err) {
+        window.alert("Couldn't install the selected tools. Detail: " + err.message);
+      })
+      .then(function () {
+        updateInstallSelectedButtonState();
+      });
+  }
+
+  // Resets every piece of state this task owns, so nothing persists across a
+  // close+reopen cycle (acceptance criterion 6). Task 5.1 extends this same
+  // function for its own state: install-status chips and the checked selection are
+  // torn down along with each row (integrationsRowEntries/panel innerHTML, below), and
+  // the install-selected button is put back into its default disabled state.
+  function resetIntegrationsModalState() {
+    selectIntegrationsTab('cli', false);
+    setIntegrationsScope('global');
+    integrationsRowEntries = [];
+    integrationsSkillPresence = {};
+    byId('integrations-panel-cli').innerHTML = '';
+    byId('integrations-panel-gui-app').innerHTML = '';
+    integrationsInstallSelectedButton.disabled = true;
+  }
+
+  byId('manage-integrations-button').addEventListener('click', function () {
+    populateIntegrationsProjectSelect();
+    integrationsModal.showModal();
+    loadIntegrationsDetection();
+  });
+
+  integrationsTabsEl.addEventListener('click', function (e) {
+    var btn = (e.target as HTMLElement).closest('button');
+    if (!btn || !btn.dataset.tab) return;
+    selectIntegrationsTab(btn.dataset.tab, true);
+  });
+  integrationsTabsEl.addEventListener('keydown', function (e) {
+    var idx = 0;
+    for (var i = 0; i < INTEGRATIONS_TABS.length; i++) {
+      if (INTEGRATIONS_TABS[i].name === currentIntegrationsTab) { idx = i; break; }
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      // + (INTEGRATIONS_TABS.length - 1) is a left step that stays non-negative, so
+      // one modulo wraps in both directions — same arithmetic as app.ts:895-900.
+      var step = e.key === 'ArrowRight' ? 1 : INTEGRATIONS_TABS.length - 1;
+      selectIntegrationsTab(INTEGRATIONS_TABS[(idx + step) % INTEGRATIONS_TABS.length].name, true);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      selectIntegrationsTab(INTEGRATIONS_TABS[0].name, true);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      selectIntegrationsTab(INTEGRATIONS_TABS[INTEGRATIONS_TABS.length - 1].name, true);
+    }
+  });
+
+  byId('integrations-modal-close').addEventListener('click', function () { integrationsModal.close(); });
+  // Backdrop dismissal: a backdrop click targets the dialog element itself — same
+  // e.target === modal check as app.ts:913's #ws-modal.
+  integrationsModal.addEventListener('click', function (e) {
+    if (e.target === integrationsModal) integrationsModal.close();
+  });
+
+  byId('integrations-rescan').addEventListener('click', function () {
+    loadIntegrationsDetection();
+  });
+
+  integrationsInstallSelectedButton.addEventListener('click', function () {
+    installIntegrationsSelected();
+  });
+
+  integrationsScopeSeg.addEventListener('click', function (e) {
+    var btn = (e.target as HTMLElement).closest('button');
+    if (!btn || !btn.dataset.scope) return;
+    setIntegrationsScope(btn.dataset.scope as 'global' | 'project');
+  });
+  integrationsProjectSelect.addEventListener('change', function () {
+    if (currentIntegrationsScope.kind === 'project') setIntegrationsScope('project');
+  });
+
+  // The dialog's native 'close' event fires uniformly for the close button, Escape,
+  // and modal.close() from the backdrop handler above — one hook resets every path.
+  integrationsModal.addEventListener('close', function () {
+    resetIntegrationsModalState();
   });
 
   initAddProjectControl();

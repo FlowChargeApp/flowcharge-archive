@@ -9,6 +9,7 @@ import { app, BrowserWindow, dialog } from 'electron';
 import http from 'node:http';
 import path from 'node:path';
 import { registerIpcHandlers } from './ipc-handlers.cjs';
+import { registerAgenticToolsIpcHandlers } from './agentic-tools-ipc-handlers.cjs';
 
 // Matches src/server.ts:12-13's own hardcoded host/port defaults exactly.
 export const SERVER_URL = 'http://127.0.0.1:4173';
@@ -87,6 +88,7 @@ app.whenReady().then(async () => {
   }
 
   registerIpcHandlers();
+  await registerAgenticToolsIpcHandlers();
   createWindow();
 });
 
