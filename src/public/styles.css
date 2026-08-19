@@ -634,7 +634,7 @@ footer.note code {
   font-family: var(--font-mono);
   font-size: 12.5px;
 }
-.add-form button {
+.add-form button, #choose-folder-button {
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: var(--accent);
@@ -643,8 +643,10 @@ footer.note code {
   font-size: 12.5px;
   cursor: pointer;
 }
-.add-form button:hover { background: var(--accent-ink); }
-.add-form button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.add-form button:hover, #choose-folder-button:hover { background: var(--accent-ink); }
+.add-form button:focus-visible, #choose-folder-button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
 
 #add-error {
   margin-top: 8px;

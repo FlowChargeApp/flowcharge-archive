@@ -52,15 +52,6 @@
     byId('add-error').textContent = message;
   }
 
-  // Carries the HTTP status alongside the message, so a caller can tell one failure
-  // status from another. A rejected fetch chain otherwise arrives as a bare Error and
-  // the status is lost by the time the .catch runs.
-  function httpError(status: number, message: string): Error & { status: number } {
-    var err = new Error(message) as Error & { status: number };
-    err.status = status;
-    return err;
-  }
-
   // Clears its container before appending: this runs again after every successful add.
   function renderTiles(projects: ProjectEntry[]) {
     var host = byId('project-tiles');
@@ -145,19 +136,8 @@
 
         function save() {
           setTileError('');
-          fetch('/api/projects/' + encodeURIComponent(p.id), {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: nameInput.value })
-          })
-            .then(function (r) {
-              return r.json().then(function (body: any) {
-                if (!r.ok) throw new Error(body && body.error ? body.error : 'HTTP ' + r.status);
-                return body;
-              }, function () {
-                throw new Error('HTTP ' + r.status);
-              });
-            })
+          window.praxisAPI.renameProject(p.id, nameInput.value)
+            .then(unwrapIpc)
             .then(function () {
               return loadProjects();
             })
@@ -195,15 +175,8 @@
           'This removes the project from the list only. The project\'s own files on disk are not touched.');
         if (!confirmed) return;
 
-        fetch('/api/projects/' + encodeURIComponent(p.id), { method: 'DELETE' })
-          .then(function (r) {
-            return r.json().then(function (body: any) {
-              if (!r.ok) throw httpError(r.status, body && body.error ? body.error : 'HTTP ' + r.status);
-              return body;
-            }, function () {
-              throw httpError(r.status, 'HTTP ' + r.status);
-            });
-          })
+        window.praxisAPI.removeProject(p.id)
+          .then(unwrapIpc)
           .then(function () {
             return loadProjects();
           })
@@ -222,11 +195,8 @@
   }
 
   function loadProjects() {
-    return fetch('/api/projects', { cache: 'no-store' })
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
+    return window.praxisAPI.listProjects()
+      .then(unwrapIpc)
       .then(function (list: ProjectList) {
         renderTiles(list.projects || []);
       })
@@ -260,19 +230,8 @@
       return;
     }
 
-    fetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: value })
-    })
-      .then(function (r) {
-        return r.json().then(function (body: any) {
-          if (!r.ok) throw new Error(body && body.error ? body.error : 'HTTP ' + r.status);
-          return body;
-        }, function () {
-          throw new Error('HTTP ' + r.status);
-        });
-      })
+    window.praxisAPI.addProject(value)
+      .then(unwrapIpc)
       .then(function () {
         input.value = '';
         return loadProjects();
@@ -288,5 +247,37 @@
     submitPath();
   });
 
+  // Runs once, at script-load/init time — never per-submit, never per-click.
+  // pickProjectFolder is optional on PraxisAPI (ipc-adapter.ts Decision 3); a typeof
+  // check is the correct feature-detect for an optional method, and is NOT the same as
+  // `if (window.praxisAPI)`, which WS-45's browser-ipc-shim.ts makes true unconditionally
+  // in a plain browser tab.
+  function initAddProjectControl() {
+    if (typeof window.praxisAPI.pickProjectFolder === 'function') {
+      byId('add-form').hidden = true;
+      byId('choose-folder-button').hidden = false;
+    } else {
+      byId('choose-folder-button').hidden = true;
+      byId('add-form').hidden = false;
+    }
+  }
+
+  byId('choose-folder-button').addEventListener('click', function () {
+    setError('');
+    // Non-null assertion is safe here: this listener only ever fires while the button is
+    // visible, which initAddProjectControl() only allows when the method is present.
+    window.praxisAPI.pickProjectFolder!()
+      .then(function (path) {
+        if (path == null) return; // cancelled — silent no-op, per acceptance criterion 3
+        return window.praxisAPI.addProject(path).then(unwrapIpc).then(function () {
+          return loadProjects();
+        });
+      })
+      .catch(function (err) {
+        setError(err.message);
+      });
+  });
+
+  initAddProjectControl();
   loadProjects();
 })();

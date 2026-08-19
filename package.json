@@ -4,18 +4,54 @@
   "description": "Local Kanban dashboard for Praxis (prx) project-management workstreams — a bird's-eye view of any project's prxwork/ state.",
   "type": "module",
   "private": true,
+  "main": "dist/electron/main.cjs",
+  "author": "Anthony Koukoullis <akoukoullis@gmail.com>",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && node tools/copy-assets.mjs",
+    "build": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && tsc -p electron/tsconfig.json && node tools/copy-assets.mjs",
     "prestart": "npm run build",
     "start": "node dist/server.js",
     "prerefresh": "npm run build",
-    "refresh": "node dist/scripts/extract-praxis-data.js"
+    "refresh": "node dist/scripts/extract-praxis-data.js",
+    "electron:dev": "npm run build && electron .",
+    "package:mac": "npm run build && electron-builder --mac --x64 --arm64",
+    "package:linux": "npm run build && electron-builder --linux deb AppImage",
+    "package:win": "npm run build && electron-builder --win --arm64"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
+    "electron": "^43",
+    "electron-builder": "^26",
     "typescript": "^5.9.3"
+  },
+  "build": {
+    "appId": "com.praxisboard.app",
+    "productName": "Praxis Board",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
+      ]
+    },
+    "linux": {
+      "target": [
+        { "target": "deb", "arch": ["x64"] },
+        { "target": "AppImage", "arch": ["x64"] }
+      ]
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["arm64"] }
+      ]
+    }
   }
 }

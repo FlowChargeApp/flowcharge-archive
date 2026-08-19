@@ -839,14 +839,8 @@
 
     // Refetched on every open; no client-side caching (assumption A6).
     // projectParam is what scopes the modal to the board's own project.
-    fetch('/api/projects/' + encodeURIComponent(projectParam!) + '/workstreams/' + encodeURIComponent(wsId) + '/detail', { cache: 'no-store' })
-      .then(function (r) {
-        if (r.ok) return r.json();
-        return r.json().then(
-          function (body) { throw new Error((body && body.error) || 'HTTP ' + r.status); },
-          function () { throw new Error('HTTP ' + r.status); }
-        );
-      })
+    window.praxisAPI.getWorkstreamDetail(projectParam!, wsId)
+      .then(unwrapIpc)
       .then(renderDetail)
       .catch(function (err) {
         byId('ws-modal-title').textContent = "Couldn't load this workstream";
@@ -936,20 +930,18 @@
   function pollOnce() {
     if (polling) return;
     polling = true;
-    fetch(dataUrl, { cache: 'no-store' })
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.text();
-      })
-      .then(function (text) {
-        if (text === lastBody) {
+    window.praxisAPI.getProjectData(projectParam!)
+      .then(unwrapIpc)
+      .then(function (data) {
+        var stringified = JSON.stringify(data);
+        if (stringified === lastBody) {
           setLiveStatus(true);
           return;
         }
-        lastBody = text;
+        lastBody = stringified;
         var board = byId('board');
         var scrollLeft = board.scrollLeft;
-        applyData(JSON.parse(text));
+        applyData(data);
         board.scrollLeft = scrollLeft;
         setLiveStatus(true);
       })
@@ -969,20 +961,11 @@
   if (!projectParam) {
     showLoadState('No project selected', 'This board renders one project at a time. Pick one from the project list to open its board.');
   } else {
-    var dataUrl = '/api/projects/' + encodeURIComponent(projectParam) + '/data';
-    fetch(dataUrl, { cache: 'no-store' })
-      .then(function (r) {
-        if (r.ok) return r.text();
-        // Every API failure answers with a JSON { error } string; surface that verbatim,
-        // falling back to the status code if the body itself cannot be parsed.
-        return r.json().then(
-          function (body) { throw new Error((body && body.error) || 'HTTP ' + r.status); },
-          function () { throw new Error('HTTP ' + r.status); }
-        );
-      })
-      .then(function (text) {
-        lastBody = text;
-        applyData(JSON.parse(text));
+    window.praxisAPI.getProjectData(projectParam)
+      .then(unwrapIpc)
+      .then(function (data) {
+        lastBody = JSON.stringify(data);
+        applyData(data);
         setLiveStatus(true);
         setInterval(pollOnce, POLL_MS);
       })
