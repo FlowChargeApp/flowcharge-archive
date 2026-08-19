@@ -1,5 +1,8 @@
 # Praxis Board
 
+**Private repository.** This is closed-source software for internal use. It is not
+published, licensed for reuse, or intended for external redistribution.
+
 A local, bird's-eye Kanban dashboard for [Praxis](https://github.com) (`prx`) project-management
 workstreams — the `prxwork/` markdown convention used by the `prx-orchestrate` Claude Code skill.
 
@@ -8,7 +11,8 @@ six-column board (Backlog · Ready · In Progress · Blocked · Done · Dropped)
 artefact ID or name, with panels for open issues by severity and artefacts that have gone
 quiet. It's read-only and non-interactive by design — no drag-and-drop, no writes back to
 the source project. All board movement still happens through the `prx-*` skills; this is
-just a way to see the result at a glance.
+just a way to see the result at a glance, kept here for this project's own ongoing use of
+the board.
 
 ## Quick start
 
@@ -17,16 +21,17 @@ npm install     # TypeScript toolchain (devDependencies only)
 npm start       # build, then serve at http://localhost:4173
 ```
 
-Then open the home page and add a project: paste the absolute path of any directory containing a
-`prxwork/` folder into the form, and it appears as a tile. Click the tile to open its board.
+Then open the home page and add a project you're working on: paste the absolute path of any
+directory containing a `prxwork/` folder into the form, and it appears as a tile. Click the tile to
+open its board.
 
-`npm install` is a genuine prerequisite: both `npm start` and `npm run refresh` compile first, and
-without `node_modules` they fail on a missing `tsc`.
+`npm install` is required before running this locally: both `npm start` and `npm run refresh`
+compile first, and without `node_modules` they fail on a missing `tsc`.
 
 The board works out of the box with nothing added. Until a registry file exists, the home page
 shows a single pre-registered tile for this repository itself, and its board renders live from the
-dashboard's own `prxwork/`. As soon as you add your first project the registry file is written and
-the list becomes exactly what it contains.
+dashboard's own `prxwork/`. As soon as a project is added the registry file is written and the
+list becomes exactly what it contains.
 
 ## How it fits together
 
@@ -95,6 +100,5 @@ write somewhere other than its `dist/public/data.json` default.
 - "Needs attention" (artefacts `in-progress` for 14+ days) is computed in the browser
   against the *viewer's* clock from each artefact's own `updated` date, so it stays
   accurate no matter how long ago the data was last refreshed.
-- Works with any project that follows the Praxis `prxwork/` convention, not just LAD — add
-  whichever projects you want to inspect on the home page, and switch between their boards
-  from there.
+- Works with any project that follows the Praxis `prxwork/` convention, not just LAD — the
+  extractor has no LAD-specific logic.
