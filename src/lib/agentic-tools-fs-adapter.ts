@@ -6,7 +6,74 @@
 
 import fs from 'node:fs/promises';
 import os from 'node:os';
+import path from 'node:path';
 import type { FsWriteAccess } from './agentic-tools-install.js';
+import type { FsAccess } from './agentic-tools-signals.js';
+
+// Expands a leading '~' against os.homedir() and '%VAR%' tokens against
+// process.env — the single shared implementation used by both
+// createNodeFsAccess() (read side) and createNodeFsWriteAccess() (write
+// side), per PLN-33-271zlx's Design section. Unset %VAR% tokens are left
+// untouched rather than replaced with an empty string, so a typo'd token
+// stays visible instead of silently collapsing the path.
+function expandTokensImpl(input: string): string {
+  const homeExpanded = input.startsWith('~') ? path.join(os.homedir(), input.slice(1)) : input;
+  return homeExpanded.replace(/%([^%]+)%/g, (match, name: string) => process.env[name] ?? match);
+}
+
+// Concrete, real-filesystem FsAccess adapter — the read-side counterpart to
+// createNodeFsWriteAccess() below. Implements WS-41's FsAccess port exactly
+// (pathExists, isDirectory, resolveBinaryOnPath, expandTokens) against real
+// node:fs/promises, node:os, and process.env/process.platform — no per-tool
+// catalogue knowledge belongs in this file.
+export function createNodeFsAccess(): FsAccess {
+  return {
+    async pathExists(targetPath: string): Promise<boolean> {
+      try {
+        await fs.access(targetPath);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+
+    async isDirectory(targetPath: string): Promise<boolean> {
+      try {
+        const stat = await fs.stat(targetPath);
+        return stat.isDirectory();
+      } catch {
+        return false;
+      }
+    },
+
+    // Walks process.env.PATH, appending PATHEXT extensions only on win32,
+    // and returns the first candidate that exists and is executable.
+    async resolveBinaryOnPath(name: string): Promise<string | null> {
+      const dirs = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+      const extensions =
+        process.platform === 'win32'
+          ? (process.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM').split(';').filter(Boolean)
+          : [''];
+
+      for (const dir of dirs) {
+        for (const ext of extensions) {
+          const candidate = path.join(dir, name + ext);
+          try {
+            await fs.access(candidate, fs.constants.X_OK);
+            return candidate;
+          } catch {
+            // Not a hit — try the next candidate.
+          }
+        }
+      }
+      return null;
+    },
+
+    async expandTokens(input: string): Promise<string> {
+      return expandTokensImpl(input);
+    },
+  };
+}
 
 export function createNodeFsWriteAccess(): FsWriteAccess {
   return {
@@ -39,20 +106,8 @@ export function createNodeFsWriteAccess(): FsWriteAccess {
       await fs.rm(path, { recursive: true, force: true });
     },
 
-    // Resolves a leading '~' against os.homedir() and '%VAR%' tokens against
-    // process.env. Unset %VAR% tokens are left untouched rather than replaced
-    // with an empty string, so a typo'd token stays visible instead of
-    // silently collapsing the path.
-    async expandTokens(path: string): Promise<string> {
-      let expanded = path;
-      if (expanded === '~' || expanded.startsWith('~/')) {
-        expanded = os.homedir() + expanded.slice(1);
-      }
-      expanded = expanded.replace(/%([^%]+)%/g, (match, name: string) => {
-        const value = process.env[name];
-        return value !== undefined ? value : match;
-      });
-      return expanded;
+    async expandTokens(input: string): Promise<string> {
+      return expandTokensImpl(input);
     },
   };
 }

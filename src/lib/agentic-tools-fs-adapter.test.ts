@@ -13,7 +13,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { createNodeFsWriteAccess } from './agentic-tools-fs-adapter.js';
+import { createNodeFsAccess, createNodeFsWriteAccess } from './agentic-tools-fs-adapter.js';
 
 let tmpDir: string;
 
@@ -89,6 +89,67 @@ test('expandTokens resolves a %VAR% token against process.env', async () => {
   try {
     const expanded = await fsWrite.expandTokens('%AGENTIC_TOOLS_FS_ADAPTER_TEST_VAR%/rest');
     assert.equal(expanded, 'test-value/rest');
+  } finally {
+    delete process.env.AGENTIC_TOOLS_FS_ADAPTER_TEST_VAR;
+  }
+});
+
+test('createNodeFsAccess: pathExists returns true for a real file and false for a missing path', async () => {
+  const fsAccess = createNodeFsAccess();
+  const target = path.join(tmpDir, 'read-pathexists.txt');
+  await fs.writeFile(target, 'hi', 'utf8');
+
+  assert.equal(await fsAccess.pathExists(target), true);
+  assert.equal(await fsAccess.pathExists(path.join(tmpDir, 'does-not-exist-either.txt')), false);
+});
+
+test('createNodeFsAccess: isDirectory returns true for a real directory and false for a file or missing path', async () => {
+  const fsAccess = createNodeFsAccess();
+  const dir = path.join(tmpDir, 'read-isdirectory-dir');
+  await fs.mkdir(dir);
+  const file = path.join(tmpDir, 'read-isdirectory-file.txt');
+  await fs.writeFile(file, 'hi', 'utf8');
+
+  assert.equal(await fsAccess.isDirectory(dir), true);
+  assert.equal(await fsAccess.isDirectory(file), false);
+  assert.equal(await fsAccess.isDirectory(path.join(tmpDir, 'does-not-exist-dir')), false);
+});
+
+test('createNodeFsAccess: resolveBinaryOnPath finds an executable fixture on PATH and rejects a non-executable one', async () => {
+  const fsAccess = createNodeFsAccess();
+  const binDir = path.join(tmpDir, 'fixture-bin');
+  await fs.mkdir(binDir);
+
+  const executableName = 'agentic-tools-fixture-exe';
+  const executablePath = path.join(binDir, executableName);
+  await fs.writeFile(executablePath, '#!/bin/sh\necho hi\n', { mode: 0o755 });
+
+  const nonExecutableName = 'agentic-tools-fixture-not-exe';
+  const nonExecutablePath = path.join(binDir, nonExecutableName);
+  await fs.writeFile(nonExecutablePath, 'not a script\n', { mode: 0o644 });
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = binDir + path.delimiter + (originalPath ?? '');
+  try {
+    const resolved = await fsAccess.resolveBinaryOnPath(executableName);
+    assert.equal(resolved, executablePath);
+
+    const resolvedMissing = await fsAccess.resolveBinaryOnPath(nonExecutableName);
+    assert.equal(resolvedMissing, null);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
+test('createNodeFsAccess: expandTokens resolves ~ against os.homedir() and %VAR% against process.env', async () => {
+  const fsAccess = createNodeFsAccess();
+  const expandedHome = await fsAccess.expandTokens('~/some/sub/path');
+  assert.equal(expandedHome, path.join(os.homedir(), 'some/sub/path'));
+
+  process.env.AGENTIC_TOOLS_FS_ADAPTER_TEST_VAR = 'test-value';
+  try {
+    const expandedVar = await fsAccess.expandTokens('%AGENTIC_TOOLS_FS_ADAPTER_TEST_VAR%/rest');
+    assert.equal(expandedVar, 'test-value/rest');
   } finally {
     delete process.env.AGENTIC_TOOLS_FS_ADAPTER_TEST_VAR;
   }

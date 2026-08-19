@@ -54,13 +54,60 @@
 
 import { ipcMain } from 'electron';
 import path from 'node:path';
+import os from 'node:os';
 
 // --- Locally-mirrored types (see file-header comment for why these can't be
 // `import type`-ed from src/lib/agentic-tools-*.ts instead). ---
 
+type LocalOS = 'macos' | 'linux' | 'windows';
+type LocalToolCategory = 'cli' | 'gui-app';
+
 interface LocalToolDefinition {
   id: string;
+  displayName: string;
+  category: LocalToolCategory;
   [key: string]: unknown;
+}
+
+type DetectionConfidence = 'confirmed' | 'likely' | 'weak' | 'not-detected';
+
+interface DetectionResult {
+  toolId: string;
+  confidence: DetectionConfidence;
+  resolvedConfigDir: string | null;
+  matchedSignals: string[];
+  needsManualVerification: boolean;
+}
+
+export interface ToolDetectionRow {
+  toolId: string;
+  displayName: string;
+  category: LocalToolCategory;
+  detection: DetectionResult;
+}
+
+interface FsAccess {
+  pathExists(path: string): Promise<boolean>;
+  isDirectory(path: string): Promise<boolean>;
+  resolveBinaryOnPath(name: string): Promise<string | null>;
+  expandTokens(path: string): Promise<string>;
+}
+
+// Maps Node's os.platform() to WS-41's OS union. An unmapped platform (e.g.
+// 'aix', 'freebsd') returns null rather than guessing a bucket — the
+// detectTools handler turns that into a failed PraxisIpcResult instead of
+// calling detectAllTools with a fabricated OS.
+function mapNodePlatformToOs(platform: NodeJS.Platform): LocalOS | null {
+  switch (platform) {
+    case 'darwin':
+      return 'macos';
+    case 'linux':
+      return 'linux';
+    case 'win32':
+      return 'windows';
+    default:
+      return null;
+  }
 }
 
 export type InstallScope = { kind: 'global' } | { kind: 'project'; projectPath: string };
@@ -124,6 +171,8 @@ type RemoveInstallationFn = (
 
 type ParseInstallRegistryFn = (raw: string) => InstallRecord[];
 type CreateNodeFsWriteAccessFn = () => FsWriteAccess;
+type CreateNodeFsAccessFn = () => FsAccess;
+type DetectAllToolsFn = (fsAccess: FsAccess, os: LocalOS) => Promise<DetectionResult[]>;
 
 // Mirrors electron/ipc-handlers.cts's own PraxisIpcResult<T> shape exactly —
 // a third mirror of an already-twice-mirrored shape, matching this
@@ -170,6 +219,8 @@ let removeInstallation!: RemoveInstallationFn;
 let parseInstallRegistry!: ParseInstallRegistryFn;
 let TOOL_CATALOGUE!: LocalToolDefinition[];
 let fsWrite!: FsWriteAccess;
+let detectAllTools!: DetectAllToolsFn;
+let createNodeFsAccess!: CreateNodeFsAccessFn;
 
 export async function registerAgenticToolsIpcHandlers(): Promise<void> {
   // Specifiers below are relative to this file's *compiled* location
@@ -186,9 +237,13 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
   };
   const fsAdapterModule = (await dynamicImport('../lib/agentic-tools-fs-adapter.js')) as {
     createNodeFsWriteAccess: CreateNodeFsWriteAccessFn;
+    createNodeFsAccess: CreateNodeFsAccessFn;
   };
   const catalogueModule = (await dynamicImport('../lib/agentic-tools-catalogue.js')) as {
     TOOL_CATALOGUE: LocalToolDefinition[];
+  };
+  const detectModule = (await dynamicImport('../lib/agentic-tools-detect.js')) as {
+    detectAllTools: DetectAllToolsFn;
   };
 
   installToTarget = installModule.installToTarget;
@@ -196,6 +251,8 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
   parseInstallRegistry = trackingModule.parseInstallRegistry;
   TOOL_CATALOGUE = catalogueModule.TOOL_CATALOGUE;
   fsWrite = fsAdapterModule.createNodeFsWriteAccess();
+  createNodeFsAccess = fsAdapterModule.createNodeFsAccess;
+  detectAllTools = detectModule.detectAllTools;
 
   ipcMain.handle(
     'installSelected',
@@ -245,4 +302,24 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
       }
     }
   );
+
+  ipcMain.handle('detectTools', async (): Promise<PraxisIpcResult<ToolDetectionRow[]>> => {
+    try {
+      const platform = os.platform();
+      const mappedOs = mapNodePlatformToOs(platform);
+      if (mappedOs === null) {
+        return { ok: false, status: 500, error: `Unsupported OS: ${platform}` };
+      }
+      const results = await detectAllTools(createNodeFsAccess(), mappedOs);
+      const rows: ToolDetectionRow[] = TOOL_CATALOGUE.map((tool, index) => ({
+        toolId: tool.id,
+        displayName: tool.displayName,
+        category: tool.category,
+        detection: results[index],
+      }));
+      return { ok: true, status: 200, data: rows };
+    } catch (err) {
+      return { ok: false, status: 500, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
