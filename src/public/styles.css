@@ -622,6 +622,7 @@ footer.note code {
 .tiles-empty p { margin: 0; font-size: 12.5px; }
 
 .add-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.add-form[hidden] { display: none; }
 .add-form input {
   flex: 1;
   min-width: 240px;
