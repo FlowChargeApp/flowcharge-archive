@@ -181,6 +181,7 @@ type RemoveInstallationFn = (
   deps: { fsWrite: FsWriteAccess }
 ) => Promise<void>;
 
+type GetInstallContentFn = (toolId: string) => Promise<InstallContent>;
 type ParseInstallRegistryFn = (raw: string) => InstallRecord[];
 type CreateNodeFsWriteAccessFn = () => FsWriteAccess;
 type CreateNodeFsAccessFn = () => FsAccess;
@@ -215,13 +216,6 @@ export interface InstallTargetRequest {
 const repoRoot = path.join(__dirname, '..', '..');
 const registryPath = path.join(repoRoot, '.praxis-installs.json');
 
-// The still-placeholder Gap 1 port (plan Assumption 9): real skill content
-// stays out of scope for this workstream, including here in the real IPC
-// wiring. Returns an empty skill set for every toolId.
-async function getInstallContent(_toolId: string): Promise<InstallContent> {
-  return { version: 'placeholder', skills: [] };
-}
-
 const dynamicImport = new Function('specifier', 'return import(specifier)') as (
   specifier: string
 ) => Promise<unknown>;
@@ -232,6 +226,7 @@ const dynamicImport = new Function('specifier', 'return import(specifier)') as (
 // callback below only runs after registerAgenticToolsIpcHandlers's `await`
 // has resolved and assigned these, since ipcMain.handle registration itself
 // happens after that await.
+let getInstallContent!: GetInstallContentFn;
 let installToTarget!: InstallToTargetFn;
 let removeInstallation!: RemoveInstallationFn;
 let parseInstallRegistry!: ParseInstallRegistryFn;
@@ -271,7 +266,11 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
   const canonicalSkillsModule = (await dynamicImport('../lib/agentic-tools-canonical-skills.js')) as {
     CANONICAL_PRAXIS_SKILL_IDS: string[];
   };
+  const skillContentModule = (await dynamicImport('../lib/skill-content-fetch.js')) as {
+    getInstallContent: GetInstallContentFn;
+  };
 
+  getInstallContent = skillContentModule.getInstallContent;
   installToTarget = installModule.installToTarget;
   removeInstallation = installModule.removeInstallation;
   parseInstallRegistry = trackingModule.parseInstallRegistry;
