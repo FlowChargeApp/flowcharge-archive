@@ -13,6 +13,7 @@
     "build": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && tsc -p electron/tsconfig.json && node tools/copy-assets.mjs",
     "prestart": "npm run build",
     "start": "node dist/server.js",
+    "start:lan": "HOST=0.0.0.0 npm start",
     "prerefresh": "npm run build",
     "refresh": "node dist/scripts/extract-praxis-data.js",
     "electron:dev": "npm run build && electron .",
