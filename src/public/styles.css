@@ -742,6 +742,12 @@ footer.note code {
 }
 .ws-modal-meta .card-tags { margin-bottom: 0; }
 .ws-modal-dates { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
+.ws-modal-description {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
 
 /* Underlined labels, not .seg's joined pills — .seg is a behavioural precedent
    for the delegated tab handler, not a visual one. */

@@ -787,11 +787,14 @@
     var sevDot = byId('ws-modal-sev-dot');
     var tagsEl = byId('ws-modal-tags');
     var datesEl = byId('ws-modal-dates');
+    var descEl = byId('ws-modal-description');
     tagsEl.innerHTML = '';
     if (!w) {
       sevDot.hidden = true;
       sevDot.removeAttribute('title');
       tagsEl.hidden = true;
+      descEl.textContent = '';
+      descEl.hidden = true;
       datesEl.textContent = '';
       return;
     }
@@ -809,6 +812,14 @@
       tagsEl.hidden = false;
     } else {
       tagsEl.hidden = true;
+    }
+    var desc = w.description ? w.description.trim() : '';
+    if (desc) {
+      descEl.textContent = desc;
+      descEl.hidden = false;
+    } else {
+      descEl.textContent = '';
+      descEl.hidden = true;
     }
     datesEl.textContent = 'created ' + fmtDate(w.created) + ' · updated ' + fmtDate(w.updated);
   }
