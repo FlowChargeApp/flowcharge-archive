@@ -1003,9 +1003,9 @@
       workstreams.length + ' workstreams · ' + issues.length + ' issues';
     if (raw.branch) {
       byId('branch-name').textContent = raw.branch;
-      byId('branch-line').style.display = '';
+      byId('branch-line').hidden = false;
     }
-    byId('lower').style.display = '';
+    byId('lower').hidden = false;
 
     function collectStale() {
       var out: any[] = [];

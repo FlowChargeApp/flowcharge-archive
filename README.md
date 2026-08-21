@@ -97,8 +97,44 @@ write somewhere other than its `dist/public/data.json` default.
   can add, rename, or remove registry entries — and registered project paths still resolve on
   this machine's filesystem regardless of which machine's browser makes the request. The server
   logs a startup warning whenever it is bound to a non-loopback host.
+- `ALLOWED_HOSTS` is a comma-separated list of extra hostnames the server will answer to. It
+  does not open the server to the network — only `HOST` does that — it just widens the `Host`
+  header the server accepts. IP literals and `localhost` are always accepted, so the default
+  empty value needs no configuration. Set it when you reach a `npm run start:lan` server by a
+  hostname rather than by its IP address (for example `ALLOWED_HOSTS=board.local npm run
+  start:lan`); without the name listed, every request to that hostname is answered `403`.
 - "Needs attention" (artefacts `in-progress` for 14+ days) is computed in the browser
   against the *viewer's* clock from each artefact's own `updated` date, so it stays
   accurate no matter how long ago the data was last refreshed.
 - Works with any project that follows the Praxis `prxwork/` convention, not just LAD — the
   extractor has no LAD-specific logic.
+
+## Packaged builds
+
+The desktop builds produced by `npm run package:mac`, `npm run package:linux` and
+`npm run package:win` are unsigned and unnotarized. They are intended for the author's own
+machine only, in keeping with the private, closed-source status stated at the top of this file.
+
+- A build made and run on the same machine carries no `com.apple.quarantine` attribute, because
+  quarantine is applied by the browser, mail client or AirDrop that downloads a file, not by
+  `electron-builder`. Gatekeeper therefore never prompts, and the unsigned status costs nothing
+  in that use.
+- Copy a macOS build to another machine and that copy does get quarantined, so Gatekeeper blocks
+  it. Clear the attribute on the copied bundle before the first launch:
+
+  ```bash
+  xattr -dr com.apple.quarantine "Praxis Board.app"
+  ```
+
+- Linux `deb` and `AppImage` have no signature gate, so a copied Linux build needs nothing.
+
+Distribution to other people is a different matter. These are prerequisites of the first such
+distribution, not later improvements — none of them is in place today:
+
+- An Apple Developer Program membership and a Developer ID Application certificate.
+- The `hardenedRuntime`, `entitlements` and `notarize` keys added to the `mac` block of the
+  `build` section in `package.json`.
+- A Windows OV code-signing certificate, or Azure Trusted Signing, wired through
+  `win.signtoolOptions`.
+- All of those credentials moved into CI secrets, which also needs a macOS runner this repo
+  does not have today.
