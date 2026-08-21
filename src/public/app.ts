@@ -18,11 +18,24 @@
   // artefactIdNumber in src/lib/extract.ts; the shared fragment cannot be
   // imported here, because this file compiles as a classic script.
   var WS_ID_TAIL = /-(\d+)(?:-[0-9a-z]{6})?$/;
+  // Filter chip thresholds. A tag earns a chip only when at least TAG_MIN_COUNT
+  // workstreams carry it AND it stays below TAG_MAX_SHARE of the board, so a
+  // near-universal tag — which filters almost nothing out — never takes a slot.
+  // At most TAG_MAX_CHIPS ranked chips show; an active tag is pinned on top of
+  // that cap by the pin step in refreshFilterTags.
+  var TAG_MIN_COUNT = 2;
+  var TAG_MAX_SHARE = 0.30;
+  var TAG_MAX_CHIPS = 10;
 
   // module (IIFE) scope — survives every re-render
   var sortKey: string | undefined = 'id';
   var sortDir: string | undefined = 'asc';
   var query = '';
+  // Filter state, in memory only — no URL parameter and no storage, exactly
+  // like query. A presence map, not an array, so a card costs one property
+  // read per render; this mirrors chainSet below.
+  var activeTags: Record<string, true> = {};
+  var blockedOnly = false;
   var workstreams: PraxisWorkstream[] = [];
   var issues: PraxisIssue[] = [];
   var lastBody: string | null = null;   // raw response text of the last applied payload
@@ -35,6 +48,8 @@
   var dependedBy: Record<string, string[]> = {};  // workstream ID → the IDs that declare it
   var chainRoot: string | null = null;            // clicked card, null when nothing is highlighted
   var chainSet: Record<string, true> | null = null; // its whole chain, null when nothing is highlighted
+  var filterTags: { key: string; label: string; count: number }[] = []; // the chips now displayed
+  var filterTagSig: string | null = null;         // their signature, null before the first build
 
   function el(tag: string, cls?: string | null, text?: string | null): HTMLElement {
     var e = document.createElement(tag);
@@ -88,6 +103,20 @@
 
   function isBlocked(w: PraxisWorkstream): boolean {
     return !!(w.blocked || '').trim();
+  }
+
+  // Tags reach the browser exactly as they were written in the frontmatter, so
+  // the browser owns normalisation. Trim and lowercase only: no stemming, no
+  // singular/plural folding, and no punctuation stripping.
+  function tagKey(tag: string): string {
+    return String(tag).trim().toLowerCase();
+  }
+
+  // The OR inside the tag axis. No active tag matches every workstream;
+  // otherwise a workstream needs at least one of its own tags in the set.
+  function tagMatch(w: PraxisWorkstream): boolean {
+    if (!Object.keys(activeTags).length) return true;
+    return (w.tags || []).some(function (t) { return activeTags[tagKey(t)] === true; });
   }
 
   function artefactTypeLabel(t: string) {
@@ -281,10 +310,80 @@
     return card;
   }
 
+  // Repaints the active class over the buttons already in the row. Active state
+  // is always a class refresh, never a rebuild, so a chip rebuilt for a tag that
+  // is still active comes back active.
+  function syncFilterActive(): void {
+    byId('filter-chips').querySelectorAll('button').forEach(function (b) {
+      if (b.id === 'filter-blocked') b.classList.toggle('active', blockedOnly);
+      else if (b.id === 'filter-clear') b.classList.remove('active');
+      else b.classList.toggle('active', activeTags[b.dataset.tag || ''] === true);
+    });
+  }
+
+  // Derives the chip row from the workstream data and nothing else. It is called
+  // from applyData only — never from renderBoard, which runs on every keystroke
+  // in the search box and on every sort click.
+  function refreshFilterTags(): void {
+    var counts: Record<string, number> = {};
+    var labels: Record<string, string> = {};
+    workstreams.forEach(function (w) {
+      var seen: Record<string, true> = {};
+      (w.tags || []).forEach(function (raw) {
+        var key = tagKey(raw);
+        if (!key || seen[key]) return;   // a repeated tag counts once per workstream
+        seen[key] = true;
+        counts[key] = (counts[key] || 0) + 1;
+        if (labels[key] === undefined) labels[key] = String(raw);  // first raw form wins
+      });
+    });
+
+    // PRUNE. A poll can drop a tag out of the data altogether. An active key with
+    // no workstream behind it would filter the board to nothing, so clear it —
+    // the same safety applyData already applies to chainRoot.
+    Object.keys(activeTags).forEach(function (k) {
+      if (counts[k] === undefined) delete activeTags[k];
+    });
+
+    var shown = Object.keys(counts).filter(function (k) {
+      return counts[k] >= TAG_MIN_COUNT && counts[k] / workstreams.length < TAG_MAX_SHARE;
+    });
+    shown.sort(function (a, b) { return (counts[b] - counts[a]) || (a < b ? -1 : a > b ? 1 : 0); });
+    shown = shown.slice(0, TAG_MAX_CHIPS);
+
+    // PIN. A surviving active key keeps its chip even when it ranks below the cap
+    // or under the count floor, so an applied filter is never left unclearable.
+    // It is appended after the ranked set, which leaves that ranking undisturbed.
+    Object.keys(activeTags).forEach(function (k) {
+      if (shown.indexOf(k) === -1) shown.push(k);
+    });
+
+    filterTags = shown.map(function (k) { return { key: k, label: labels[k], count: counts[k] }; });
+
+    // GUARD. Rebuild only when the displayed set itself changed. A poll that
+    // changes something unrelated — an updated date — must leave this DOM alone,
+    // so a chip under the pointer keeps its hover and its focus.
+    var sig = shown.join('\n');
+    if (sig !== filterTagSig) {
+      filterTagSig = sig;
+      var host = byId('filter-tags');
+      host.textContent = '';
+      filterTags.forEach(function (t) {
+        var b = el('button', null, t.label) as HTMLButtonElement;
+        b.type = 'button';
+        b.dataset.tag = t.key;
+        host.appendChild(b);
+      });
+    }
+    syncFilterActive();
+  }
+
   function renderBoard() {
     var board = byId('board');
     board.innerHTML = '';
     var q = query.trim().toLowerCase();
+    // True when ANY axis is filtering, which is what an emptied column reports on.
+    var filtering = !!q || blockedOnly || Object.keys(activeTags).length > 0;
     var visibleTotal = 0;
 
     var byStatus: Record<string, PraxisWorkstream[]> = {};
@@ -300,7 +399,10 @@
     });
 
     STATUS_ORDER.forEach(function (status) {
-      var items = byStatus[status].filter(function (w) { return matches(w, q); });
+      // The three axes combine with AND; the OR lives inside tagMatch.
+      var items = byStatus[status].filter(function (w) {
+        return matches(w, q) && tagMatch(w) && (!blockedOnly || isBlocked(w));
+      });
       visibleTotal += items.length;
 
       items.sort(function (a, b) {
@@ -323,7 +425,7 @@
 
       var body = el('div', 'column-body');
       if (!items.length) {
-        body.appendChild(el('div', 'column-empty', q ? 'No matches' : 'Empty'));
+        body.appendChild(el('div', 'column-empty', filtering ? 'No matches' : 'Empty'));
       } else {
         items.forEach(function (w) { body.appendChild(buildCard(w)); });
       }
@@ -352,6 +454,32 @@
     query = (e.target as HTMLInputElement).value;
     renderBoard();
   });
+  // One delegated listener for the whole row, bound once. The chips are rebuilt
+  // whenever the data changes, so a per-chip listener would have to be rebound
+  // every time and would leak a handler on every rebuild.
+  byId('filter-chips').addEventListener('click', function (e) {
+    var btn = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null;
+    if (!btn) return;
+    if (btn.id === 'filter-clear') {
+      // Both chip axes only. The search box keeps its text and the sort controls
+      // keep their state; clearing with nothing active is a harmless re-render.
+      activeTags = {};
+      blockedOnly = false;
+    } else if (btn.id === 'filter-blocked') {
+      blockedOnly = !blockedOnly;
+    } else if (btn.dataset.tag) {
+      var key = btn.dataset.tag;
+      if (activeTags[key]) delete activeTags[key];
+      else activeTags[key] = true;
+    } else {
+      return;
+    }
+    syncFilterActive();
+    renderBoard();
+  });
+  // The row ships hidden in board.html so it can land before it is wired. It is
+  // wired now, so it becomes visible here.
+  byId('filter-chips').hidden = false;
 
   // A backgrounded tab is throttled by the browser (assumption 8, accepted):
   // this is the whole answer to it — one immediate poll on return, no worker,
@@ -1028,6 +1156,11 @@
       var rootLives = workstreams.some(function (w) { return w.id === root; });
       setChain(rootLives ? root : null);
     }
+
+    // The chip row is derived where the data changes, for the same reason the
+    // graph above is. It prunes a vanished active tag, pins a surviving one, and
+    // rebuilds the chips only when the displayed set changed.
+    refreshFilterTags();
 
     byId('gen-date').textContent = raw.generated || '—';
     byId('tagline').textContent = raw.source
