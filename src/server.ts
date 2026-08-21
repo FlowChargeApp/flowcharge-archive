@@ -300,8 +300,11 @@ const server = http.createServer((req, res) => {
   const reqPath = decodeURIComponent(req.url!.split('?')[0]);
   let filePath = path.join(root, reqPath === '/' ? '/index.html' : reqPath);
 
-  // Prevent path traversal outside public/
-  if (!filePath.startsWith(root)) {
+  // Prevent path traversal outside public/. path.join has already collapsed any
+  // '..', so the only remaining gap is a bare prefix match: a sibling of root
+  // whose name merely begins with root's name. Compare against root plus
+  // path.sep so the boundary is a real directory separator on every platform.
+  if (!filePath.startsWith(root + path.sep)) {
     res.writeHead(403);
     res.end('Forbidden');
     return;
@@ -329,16 +332,43 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(port, host, () => {
-  console.log(`Praxis Dashboard running at http://${host}:${port}`);
-  if (!isLoopbackHost(host)) {
-    console.warn(
-      `WARNING: bound to ${host}, which is not loopback-only — this dashboard is now ` +
-      `reachable from other devices on the network. There is no authentication: any ` +
-      `device that can reach ${host}:${port} can read every registered project's ` +
-      `prxwork/ content and can add, rename, or remove project registry entries. ` +
-      `Registered project paths are resolved on THIS machine's filesystem regardless ` +
-      `of which machine's browser makes the request.`
-    );
-  }
+// Readiness and the bound port are one fact, so one export carries both: it
+// resolves with the port the socket actually bound and rejects with whatever
+// the 'error' listener receives. The listen call still runs as this module's
+// startup side effect — the executor below runs synchronously on module
+// evaluation — so `npm start` behaves exactly as it did without this export.
+export const serverReady: Promise<number> = new Promise<number>((resolve, reject) => {
+  // Without this listener an EADDRINUSE (or an EACCES on a privileged port, or
+  // any other bind failure) becomes an uncaught exception in whichever process
+  // imported this module. Not narrowed to one code, because any of them means
+  // the same thing here: this server never started.
+  server.on('error', (err) => {
+    console.error(`Praxis Dashboard could not bind ${host}:${port}:`, err);
+    reject(err);
+  });
+
+  server.listen(port, host, () => {
+    // Read back rather than reported from `port`: when PORT is 0 the OS picks
+    // an ephemeral port, and address() is null until the socket is listening,
+    // which is why this can only be read from inside this callback.
+    const address = server.address();
+    resolve(typeof address === 'object' && address !== null ? address.port : port);
+
+    console.log(`Praxis Dashboard running at http://${host}:${port}`);
+    if (!isLoopbackHost(host)) {
+      console.warn(
+        `WARNING: bound to ${host}, which is not loopback-only — this dashboard is now ` +
+        `reachable from other devices on the network. There is no authentication: any ` +
+        `device that can reach ${host}:${port} can read every registered project's ` +
+        `prxwork/ content and can add, rename, or remove project registry entries. ` +
+        `Registered project paths are resolved on THIS machine's filesystem regardless ` +
+        `of which machine's browser makes the request.`
+      );
+    }
+  });
 });
+
+// `npm start` imports nothing and awaits nothing, so a bind failure would raise
+// an unhandled rejection on top of the error listener's own report. The failure
+// is already surfaced there; this only marks the rejection as observed.
+serverReady.catch(() => {});

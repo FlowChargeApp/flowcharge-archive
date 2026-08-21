@@ -38,14 +38,28 @@ export interface InstallContent {
 export const PRAXIS_REPO_BASE_URL = 'http://100.87.185.97:8110/akoukoullis/Praxis';
 export const PRAXIS_REPO_REF = 'master';
 
+// Hard ceilings on the archive download and its decompression. The real
+// archive is a git-archive tarball of a skills directory — a few megabytes at
+// most, orders of magnitude below either limit. These are generous headroom
+// against a hostile or broken response, not tuning values, and they sit well
+// below Node's own maximum buffer length so an over-limit response fails with
+// the explicit message below rather than an allocation error.
+const MAX_ARCHIVE_BYTES = 64 * 1024 * 1024; // compressed bytes, as received
+const MAX_DECOMPRESSED_BYTES = 256 * 1024 * 1024; // gunzip output ceiling
+
 export function buildArchiveUrl(baseUrl: string, ref: string): string {
   return `${baseUrl}/archive/${ref}.tar.gz`;
 }
 
 // Same three exclusion rules applied while vendoring, re-applied here as a
 // defensive second pass rather than trusted to have already been fully
-// enforced upstream.
+// enforced upstream. The segment-shape rules exist for a second reason: these
+// segments reach a write sink that joins them onto a base path, so a segment
+// that carries its own separators, a drive-relative colon, or an upward
+// traversal must never pass, whatever character it happens to start with.
 function isExcluded(name: string): boolean {
+  if (name.includes('\\') || name.includes('/') || name.includes(':')) return true;
+  if (name === '..') return true;
   return name.startsWith('.') || name.startsWith('.git') || name.endsWith('.zip');
 }
 
@@ -159,6 +173,49 @@ export function parseTar(buf: Buffer): TarEntry[] {
   return entries;
 }
 
+// Buffers a response body under a running byte cap. res.arrayBuffer() takes
+// whatever the server sends with no limit at all, so the cap has to be
+// applied while reading rather than after. Content-Length is consulted first
+// for a fast refusal, but it is only a hint — a chunked response carries no
+// such header — so the running total over the stream is what actually
+// enforces the limit. The reader is cancelled on the over-limit path so the
+// connection does not stay open behind the abandoned read.
+async function readCappedBody(res: Response, maxBytes: number): Promise<Buffer> {
+  const declaredHeader = res.headers.get('content-length');
+  if (declaredHeader !== null) {
+    const declared = Number(declaredHeader);
+    if (Number.isFinite(declared) && declared > maxBytes) {
+      throw new Error(`Praxis skill archive exceeds ${maxBytes} bytes (Content-Length ${declared})`);
+    }
+  }
+
+  const body = res.body;
+  if (!body) {
+    throw new Error('Failed to fetch Praxis skill archive: response carried no body');
+  }
+
+  const reader = body.getReader();
+  const chunks: Buffer[] = [];
+  let total = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error(`Praxis skill archive exceeds ${maxBytes} bytes`);
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return Buffer.concat(chunks, total);
+}
+
 // Ignores toolId — every tool gets the same InstallContent. Fetches the
 // archive fresh on every call: no in-memory cache, matching this repo's
 // existing "extracted live on request" philosophy, extended here to a live
@@ -169,8 +226,8 @@ export async function getInstallContent(_toolId: string): Promise<InstallContent
     throw new Error(`Failed to fetch Praxis skill archive: ${res.status} ${res.statusText}`);
   }
 
-  const gz = Buffer.from(await res.arrayBuffer());
-  const tarBuf = gunzipSync(gz);
+  const gz = await readCappedBody(res, MAX_ARCHIVE_BYTES);
+  const tarBuf = gunzipSync(gz, { maxOutputLength: MAX_DECOMPRESSED_BYTES });
   const entries = parseTar(tarBuf);
 
   const skillsById = new Map<string, { skillMdContent?: string; files: { relativePath: string; content: string }[] }>();
