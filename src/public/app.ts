@@ -797,11 +797,15 @@
     var tagsEl = byId('ws-modal-tags');
     var datesEl = byId('ws-modal-dates');
     var descEl = byId('ws-modal-description');
+    var blockedEl = byId('ws-modal-blocked');
+    var blockedReasonEl = byId('ws-modal-blocked-reason');
     tagsEl.innerHTML = '';
     if (!w) {
       sevDot.hidden = true;
       sevDot.removeAttribute('title');
       tagsEl.hidden = true;
+      blockedReasonEl.textContent = '';
+      blockedEl.hidden = true;
       descEl.textContent = '';
       descEl.hidden = true;
       datesEl.textContent = '';
@@ -821,6 +825,14 @@
       tagsEl.hidden = false;
     } else {
       tagsEl.hidden = true;
+    }
+    var blockedReason = (w.blocked || '').trim();
+    if (blockedReason) {
+      blockedReasonEl.textContent = blockedReason;
+      blockedEl.hidden = false;
+    } else {
+      blockedReasonEl.textContent = '';
+      blockedEl.hidden = true;
     }
     var desc = w.description ? w.description.trim() : '';
     if (desc) {
