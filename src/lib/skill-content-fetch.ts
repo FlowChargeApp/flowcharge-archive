@@ -53,8 +53,13 @@ export function buildArchiveUrl(baseUrl: string, ref: string): string {
 
 // Same three exclusion rules applied while vendoring, re-applied here as a
 // defensive second pass rather than trusted to have already been fully
-// enforced upstream.
+// enforced upstream. The segment-shape rules exist for a second reason: these
+// segments reach a write sink that joins them onto a base path, so a segment
+// that carries its own separators, a drive-relative colon, or an upward
+// traversal must never pass, whatever character it happens to start with.
 function isExcluded(name: string): boolean {
+  if (name.includes('\\') || name.includes('/') || name.includes(':')) return true;
+  if (name === '..') return true;
   return name.startsWith('.') || name.startsWith('.git') || name.endsWith('.zip');
 }
 

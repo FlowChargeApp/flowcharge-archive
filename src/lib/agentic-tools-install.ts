@@ -6,6 +6,11 @@
 // reads the registry to detect up-to-date/updated content, and
 // removeInstallation reverses an install.
 
+// node:path is pure path algebra and touches no filesystem, so it does not
+// breach the "no direct filesystem access" rule above — every actual write
+// still goes through the injected FsWriteAccess port.
+import path from 'node:path';
+
 import type { ToolDefinition } from './agentic-tools-catalogue.js';
 import type { InstallContent, GetInstallContent } from './agentic-tools-content.js';
 import { hashInstallContent } from './agentic-tools-content.js';
@@ -89,6 +94,14 @@ export async function installToTarget(
   let resolvedPath: string | null = null;
   for (const write of writes) {
     const fullPath = `${target.basePath}/${write.relativePath}`;
+    // Containment gate in front of the write: resolve both sides with the
+    // host's own rules and compare on a separator boundary, so a sibling
+    // directory whose name merely begins with the base's name is refused.
+    const resolvedBase = path.resolve(target.basePath);
+    const resolvedFull = path.resolve(fullPath);
+    if (!resolvedFull.startsWith(resolvedBase + path.sep)) {
+      throw new Error(`Refusing to write outside the install target: ${write.relativePath}`);
+    }
     const dir = fullPath.replace(/\/[^/]+$/, '');
     await deps.fsWrite.mkdir(dir);
     await deps.fsWrite.writeTextFileAtomic(fullPath, write.content);
