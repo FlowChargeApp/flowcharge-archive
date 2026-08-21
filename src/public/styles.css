@@ -129,6 +129,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 ::selection { background: var(--accent); color: #fff; }
+/* [hidden] carries the specificity of a single class, so a later class rule such
+   as .lower (display: grid) or .card-tags (display: flex) would win on source
+   order and re-reveal an element the markup marked hidden. !important is what
+   makes the attribute authoritative regardless of where a rule sits. */
+[hidden] { display: none !important; }
 a { color: var(--accent); }
 .tab { font-variant-numeric: tabular-nums; }
 button { font-family: inherit; }
@@ -951,9 +956,9 @@ footer.note code {
 /* ---------- Plan body ---------- */
 /* The rendered plan body. Everything here targets a container INSIDE the tab
    panel, never the panel div itself: the panels rely entirely on the `hidden`
-   attribute and the user-agent `display: none` that comes with it, and this
-   file carries no [hidden] rule, so any display rule reaching a panel would
-   make a hidden panel visible. No scroll container either — .ws-modal-body
+   attribute and the global [hidden] rule in the base element section, which
+   enforces `display: none` with !important, so any display rule reaching a
+   panel would still be wrong. No scroll container either — .ws-modal-body
    already sets overflow: auto and .ws-modal-inner already caps the height. */
 .ws-plan {
   color: var(--ink);

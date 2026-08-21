@@ -23,6 +23,14 @@ const MIME: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
+// The policy every static response carries. Every asset this server sends is
+// same-origin: separate script files, one stylesheet, one local woff2, and
+// fetch calls that only ever reach /api/* on this same origin.
+const CSP =
+  "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; " +
+  "connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; " +
+  "frame-ancestors 'none'; object-src 'none'";
+
 // The POST body's only content is a filesystem path, so 8KB is roughly 10,000x
 // the expected size — and it is the one unbounded input this server accepts.
 const MAX_BODY_BYTES = 8192;
@@ -398,7 +406,10 @@ const server = http.createServer((req, res) => {
       return;
     }
     const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    res.writeHead(200, {
+      'Content-Type': MIME[ext] || 'application/octet-stream',
+      'Content-Security-Policy': CSP,
+    });
     res.end(data);
   });
 });
