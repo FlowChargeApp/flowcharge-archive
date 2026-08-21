@@ -193,6 +193,7 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
       body: body.split('\n').filter(Boolean).slice(0, 3).join(' '),
       archived,
       artefacts,
+      description: typeof wsFm.description === 'string' ? wsFm.description : undefined,
     });
   }
   return out;
