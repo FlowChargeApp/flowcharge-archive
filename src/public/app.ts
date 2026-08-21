@@ -1,6 +1,6 @@
 (function () {
-  var STATUS_ORDER = ['backlog', 'ready', 'in-progress', 'blocked', 'done', 'dropped'];
-  var STATUS_LABEL: Record<string, string> = { backlog: 'Backlog', ready: 'Ready', 'in-progress': 'In Progress', blocked: 'Blocked', done: 'Done', dropped: 'Dropped' };
+  var STATUS_ORDER = ['backlog', 'ready', 'in-progress', 'done', 'dropped'];
+  var STATUS_LABEL: Record<string, string> = { backlog: 'Backlog', ready: 'Ready', 'in-progress': 'In Progress', done: 'Done', dropped: 'Dropped' };
   var SEV_ORDER = ['critical', 'high', 'medium', 'low'];
   var SEV_LABEL: Record<string, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
   var POLL_MS = 5000;

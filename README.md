@@ -7,7 +7,7 @@ A local, bird's-eye Kanban dashboard for [Praxis](https://github.com) (`prx`) pr
 workstreams — the `prxwork/` markdown convention used by the `prx-orchestrate` Claude Code skill.
 
 Reads a project's `prxwork/` frontmatter and renders every workstream as a card in a
-six-column board (Backlog · Ready · In Progress · Blocked · Done · Dropped), sortable by
+five-column board (Backlog · Ready · In Progress · Done · Dropped), sortable by
 artefact ID or name, with panels for open issues by severity and artefacts that have gone
 quiet. It's read-only and non-interactive by design — no drag-and-drop, no writes back to
 the source project. All board movement still happens through the `prx-*` skills; this is
