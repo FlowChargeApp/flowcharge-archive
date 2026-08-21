@@ -97,6 +97,12 @@ write somewhere other than its `dist/public/data.json` default.
   can add, rename, or remove registry entries — and registered project paths still resolve on
   this machine's filesystem regardless of which machine's browser makes the request. The server
   logs a startup warning whenever it is bound to a non-loopback host.
+- `ALLOWED_HOSTS` is a comma-separated list of extra hostnames the server will answer to. It
+  does not open the server to the network — only `HOST` does that — it just widens the `Host`
+  header the server accepts. IP literals and `localhost` are always accepted, so the default
+  empty value needs no configuration. Set it when you reach a `npm run start:lan` server by a
+  hostname rather than by its IP address (for example `ALLOWED_HOSTS=board.local npm run
+  start:lan`); without the name listed, every request to that hostname is answered `403`.
 - "Needs attention" (artefacts `in-progress` for 14+ days) is computed in the browser
   against the *viewer's* clock from each artefact's own `updated` date, so it stays
   accurate no matter how long ago the data was last refreshed.

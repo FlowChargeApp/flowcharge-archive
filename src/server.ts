@@ -1,5 +1,6 @@
 import http from 'node:http';
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractPraxisData, hasPrxwork, ID_SUFFIX } from './lib/extract.js';
@@ -39,6 +40,63 @@ const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 
 function isLoopbackHost(candidate: string): boolean {
   return LOOPBACK_HOSTS.has(candidate);
+}
+
+// The extra hostnames this server answers to, beyond IP literals and `localhost`.
+// Read once at module scope, exactly as `port` and `host` are above: a
+// comma-separated list, trimmed and lowercased, with empty entries dropped.
+const ALLOWED_HOSTS: ReadonlySet<string> = new Set(
+  (process.env.ALLOWED_HOSTS ?? '')
+    .split(',')
+    .map((name) => name.trim().toLowerCase())
+    .filter((name) => name !== ''),
+);
+
+// The bare hostname from a Host header value, or null when the header is absent
+// or unparseable. A WHATWG URL keeps the brackets on an IPv6 literal, so they
+// are stripped here — otherwise `[::1]:4173` would never match net.isIP.
+function hostnameOf(hostHeader: string | undefined): string | null {
+  if (hostHeader === undefined) return null;
+  try {
+    const hostname = new URL('http://' + hostHeader).hostname;
+    return hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
+  } catch {
+    return null;
+  }
+}
+
+// Header-only request-origin validation: it knows nothing about routes, project
+// ids, the registry, or the extractor. Returns true when the request may
+// proceed; otherwise it writes its own 403 through sendJson and returns false.
+// No Access-Control-Allow-* header is ever sent — sending none is the posture.
+function passesOriginCheck(req: http.IncomingMessage, res: http.ServerResponse): boolean {
+  // Check one: the Host header. An absent or unparseable Host fails.
+  const hostname = hostnameOf(req.headers.host);
+  if (hostname === null || !(net.isIP(hostname) !== 0 || hostname === 'localhost' || ALLOWED_HOSTS.has(hostname))) {
+    sendJson(res, 403, { error: 'Host header not allowed' });
+    return false;
+  }
+
+  // Check two: the Origin header, when present. Compared against the RAW Host
+  // header value so the port is part of the comparison. An absent Origin passes
+  // — Electron's loopbackRequest sends none. `Origin: null` fails, because it
+  // never equals `http://` plus a host.
+  const origin = req.headers.origin;
+  if (origin !== undefined && origin.toLowerCase() !== ('http://' + req.headers.host).toLowerCase()) {
+    sendJson(res, 403, { error: 'Origin not allowed' });
+    return false;
+  }
+
+  return true;
+}
+
+// True only when the header's media type is exactly application/json. Real
+// requests attach parameters, so `application/json; charset=utf-8` must pass:
+// the parameters are split off at the first semicolon before the comparison.
+// An absent header returns false.
+function isJsonContentType(header: string | undefined): boolean {
+  if (header === undefined) return false;
+  return header.split(';')[0].trim().toLowerCase() === 'application/json';
 }
 
 function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
@@ -179,6 +237,15 @@ function handleRenameProject(req: http.IncomingMessage, res: http.ServerResponse
 function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath: string): void {
   const method = req.method ?? 'GET';
 
+  // Above every route match, so no route added below can miss it, and before any
+  // body is read, so readRequestBody never runs for a rejected request. 403, not
+  // 415: one uniform rejection shape across every check at this boundary. GET
+  // and DELETE carry no body and are left alone.
+  if ((method === 'POST' || method === 'PATCH') && !isJsonContentType(req.headers['content-type'])) {
+    sendJson(res, 403, { error: 'Content-Type must be application/json' });
+    return;
+  }
+
   if (reqPath === '/api/projects') {
     if (method === 'GET') {
       try {
@@ -298,6 +365,10 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
 const server = http.createServer((req, res) => {
   // req.url is string | undefined under @types/node but always set here; assert, don't fall back.
   const reqPath = decodeURIComponent(req.url!.split('?')[0]);
+
+  // Before the traversal check, so every route is covered — static files included.
+  if (!passesOriginCheck(req, res)) return;
+
   let filePath = path.join(root, reqPath === '/' ? '/index.html' : reqPath);
 
   // Prevent path traversal outside public/. path.join has already collapsed any
