@@ -26,6 +26,9 @@
   var TAG_MIN_COUNT = 2;
   var TAG_MAX_SHARE = 0.30;
   var TAG_MAX_CHIPS = 10;
+  // WS-57: the filter row is built and wired but stays hidden until WS-56's
+  // fixes land. Set to true to reveal it again — this is the only switch.
+  var FILTER_ROW_ENABLED = false;
 
   // module (IIFE) scope — survives every re-render
   var sortKey: string | undefined = 'id';
@@ -478,8 +481,10 @@
     renderBoard();
   });
   // The row ships hidden in board.html so it can land before it is wired. It is
-  // wired now, so it becomes visible here.
-  byId('filter-chips').hidden = false;
+  // wired now, so it becomes visible here — but only when the switch declared
+  // at the top of this file is on. WS-57 holds the reveal back until WS-56's
+  // fixes land, so the row stays hidden for the whole session while it is off.
+  if (FILTER_ROW_ENABLED) byId('filter-chips').hidden = false;
 
   // A backgrounded tab is throttled by the browser (assumption 8, accepted):
   // this is the whole answer to it — one immediate poll on return, no worker,
