@@ -1088,6 +1088,16 @@
         c.style.color = 'var(--st-' + s + ')';
         chips1.appendChild(c);
       });
+      // Blocked overlaps the status counts above rather than adding to them, so the
+      // chip is appended last and carries a tooltip that says so. It is inert by design.
+      var blockedCount = workstreams.filter(isBlocked).length;
+      if (blockedCount > 0) {
+        var bc = el('span', 'chip', 'Blocked ' + blockedCount);
+        bc.style.background = 'color-mix(in srgb, var(--sev-critical) 16%, var(--paper-raised))';
+        bc.style.color = 'var(--sev-critical)';
+        bc.title = 'Blocked workstreams overlap the status counts above rather than adding to them — a blocked workstream also sits at one of the five statuses.';
+        chips1.appendChild(bc);
+      }
       k1.appendChild(chips1);
       strip.appendChild(k1);
 
