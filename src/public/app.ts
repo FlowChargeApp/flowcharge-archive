@@ -86,6 +86,10 @@
     return hay.indexOf(q) !== -1;
   }
 
+  function isBlocked(w: PraxisWorkstream): boolean {
+    return !!(w.blocked || '').trim();
+  }
+
   function artefactTypeLabel(t: string) {
     return ({ plan: 'PLN', issuelist: 'IL', tasklist: 'TL', workstream: 'WS' } as Record<string, string>)[t] || t;
   }
@@ -211,11 +215,10 @@
     top.appendChild(upd);
     card.appendChild(top);
 
-    var blockedReason = (w.blocked || '').trim();
-    if (blockedReason) {
+    if (isBlocked(w)) {
       var blockedRow = el('div', 'card-blocked');
       var blockedPill = el('span', 'blocked-pill', 'Blocked');
-      blockedPill.title = blockedReason;
+      blockedPill.title = String(w.blocked).trim();
       blockedRow.appendChild(blockedPill);
       card.appendChild(blockedRow);
     }
@@ -826,9 +829,8 @@
     } else {
       tagsEl.hidden = true;
     }
-    var blockedReason = (w.blocked || '').trim();
-    if (blockedReason) {
-      blockedReasonEl.textContent = blockedReason;
+    if (isBlocked(w)) {
+      blockedReasonEl.textContent = String(w.blocked).trim();
       blockedEl.hidden = false;
     } else {
       blockedReasonEl.textContent = '';
