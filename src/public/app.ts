@@ -211,6 +211,15 @@
     top.appendChild(upd);
     card.appendChild(top);
 
+    var blockedReason = (w.blocked || '').trim();
+    if (blockedReason) {
+      var blockedRow = el('div', 'card-blocked');
+      var blockedPill = el('span', 'blocked-pill', 'Blocked');
+      blockedPill.title = blockedReason;
+      blockedRow.appendChild(blockedPill);
+      card.appendChild(blockedRow);
+    }
+
     card.appendChild(el('div', 'card-title', w.title));
 
     if (w.tags && w.tags.length) {
