@@ -300,8 +300,11 @@ const server = http.createServer((req, res) => {
   const reqPath = decodeURIComponent(req.url!.split('?')[0]);
   let filePath = path.join(root, reqPath === '/' ? '/index.html' : reqPath);
 
-  // Prevent path traversal outside public/
-  if (!filePath.startsWith(root)) {
+  // Prevent path traversal outside public/. path.join has already collapsed any
+  // '..', so the only remaining gap is a bare prefix match: a sibling of root
+  // whose name merely begins with root's name. Compare against root plus
+  // path.sep so the boundary is a real directory separator on every platform.
+  if (!filePath.startsWith(root + path.sep)) {
     res.writeHead(403);
     res.end('Forbidden');
     return;
