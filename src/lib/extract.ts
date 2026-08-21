@@ -194,6 +194,7 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
       archived,
       artefacts,
       description: typeof wsFm.description === 'string' ? wsFm.description : undefined,
+      blocked: typeof wsFm.blocked === 'string' ? wsFm.blocked : undefined,
     });
   }
   return out;

@@ -1,6 +1,6 @@
 (function () {
-  var STATUS_ORDER = ['backlog', 'ready', 'in-progress', 'blocked', 'done', 'dropped'];
-  var STATUS_LABEL: Record<string, string> = { backlog: 'Backlog', ready: 'Ready', 'in-progress': 'In Progress', blocked: 'Blocked', done: 'Done', dropped: 'Dropped' };
+  var STATUS_ORDER = ['backlog', 'ready', 'in-progress', 'done', 'dropped'];
+  var STATUS_LABEL: Record<string, string> = { backlog: 'Backlog', ready: 'Ready', 'in-progress': 'In Progress', done: 'Done', dropped: 'Dropped' };
   var SEV_ORDER = ['critical', 'high', 'medium', 'low'];
   var SEV_LABEL: Record<string, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
   var POLL_MS = 5000;
@@ -210,6 +210,15 @@
     upd.style.color = 'var(--ink-faint)';
     top.appendChild(upd);
     card.appendChild(top);
+
+    var blockedReason = (w.blocked || '').trim();
+    if (blockedReason) {
+      var blockedRow = el('div', 'card-blocked');
+      var blockedPill = el('span', 'blocked-pill', 'Blocked');
+      blockedPill.title = blockedReason;
+      blockedRow.appendChild(blockedPill);
+      card.appendChild(blockedRow);
+    }
 
     card.appendChild(el('div', 'card-title', w.title));
 
@@ -788,11 +797,15 @@
     var tagsEl = byId('ws-modal-tags');
     var datesEl = byId('ws-modal-dates');
     var descEl = byId('ws-modal-description');
+    var blockedEl = byId('ws-modal-blocked');
+    var blockedReasonEl = byId('ws-modal-blocked-reason');
     tagsEl.innerHTML = '';
     if (!w) {
       sevDot.hidden = true;
       sevDot.removeAttribute('title');
       tagsEl.hidden = true;
+      blockedReasonEl.textContent = '';
+      blockedEl.hidden = true;
       descEl.textContent = '';
       descEl.hidden = true;
       datesEl.textContent = '';
@@ -812,6 +825,14 @@
       tagsEl.hidden = false;
     } else {
       tagsEl.hidden = true;
+    }
+    var blockedReason = (w.blocked || '').trim();
+    if (blockedReason) {
+      blockedReasonEl.textContent = blockedReason;
+      blockedEl.hidden = false;
+    } else {
+      blockedReasonEl.textContent = '';
+      blockedEl.hidden = true;
     }
     var desc = w.description ? w.description.trim() : '';
     if (desc) {

@@ -25,6 +25,7 @@ interface PraxisWorkstream {
   archived: boolean;
   artefacts: PraxisArtefact[];
   description?: string;
+  blocked?: string;
 }
 
 interface PraxisIssue {
