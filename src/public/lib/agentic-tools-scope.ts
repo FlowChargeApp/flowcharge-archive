@@ -1,13 +1,13 @@
-// Classic script (module: "none" — no import/export statements permitted). Loaded via a
-// <script> tag on index.html ahead of home.js.
+// A module, imported by home.ts. It has no <script> tag of its own: it reaches index.html
+// inside the home.js bundle that esbuild builds from home.ts.
 //
 // Knows one rule: resolve or reject a base path given a scope and a (possibly absent)
 // detection result shape. Must not know about the DOM, TOOL_CATALOGUE contents by id, or
 // any specific tool.
 
-type InstallScope = { kind: 'global' } | { kind: 'project'; projectPath: string };
+export type InstallScope = { kind: 'global' } | { kind: 'project'; projectPath: string };
 
-interface DetectionResultLike {
+export interface DetectionResultLike {
   resolvedConfigDir: string | null;
 }
 
@@ -16,7 +16,7 @@ interface DetectionResultLike {
 // lookup is needed. 'global' scope defers entirely to whatever detection already resolved;
 // a tool with no global configDir for the running OS is handled automatically, because this
 // only reads what detection already worked out — no per-tool special-casing here.
-function resolveBasePathForScope(
+export function resolveBasePathForScope(
   scope: InstallScope,
   detection: DetectionResultLike | undefined
 ): string | null {
@@ -24,7 +24,7 @@ function resolveBasePathForScope(
   return detection ? detection.resolvedConfigDir : null;
 }
 
-function isEligibleAtScope(
+export function isEligibleAtScope(
   scope: InstallScope,
   detection: DetectionResultLike | undefined
 ): boolean {

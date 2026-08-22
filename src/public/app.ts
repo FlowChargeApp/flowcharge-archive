@@ -1,3 +1,13 @@
+// The entry module for board.html. esbuild bundles this file and everything it
+// imports into dist/public/app.js, the page's only script. './browser-ipc-shim'
+// comes first, so its fallback installs window.praxisAPI before any other module
+// body runs; './app-version' and './update-banner' follow as side-effect imports
+// with no binding, reproducing the order their script tags used to give them.
+import './browser-ipc-shim';
+import './app-version';
+import './update-banner';
+import { unwrapIpc } from './ipc-adapter';
+
 (function () {
   var STATUS_ORDER = ['backlog', 'ready', 'in-progress', 'done', 'dropped'];
   var STATUS_LABEL: Record<string, string> = { backlog: 'Backlog', ready: 'Ready', 'in-progress': 'In Progress', done: 'Done', dropped: 'Dropped' };
@@ -15,8 +25,9 @@
   // must stay OPTIONAL, because this dashboard's own prxwork/ tree holds both
   // the bare WS-N and the suffixed WS-N-SUFFIX shape at once. The suffix is
   // non-capturing, so the digits stay at capture position 1. This mirrors
-  // artefactIdNumber in src/lib/extract.ts; the shared fragment cannot be
-  // imported here, because this file compiles as a classic script.
+  // artefactIdNumber in src/lib/extract.ts; the shared fragment is not imported
+  // here, because src/lib/ is Node-side server code and the browser bundle must
+  // stay free of it.
   var WS_ID_TAIL = /-(\d+)(?:-[0-9a-z]{6})?$/;
   // Filter chip thresholds. A tag earns a chip only when at least TAG_MIN_COUNT
   // workstreams carry it AND it stays below TAG_MAX_SHARE of the board, so a

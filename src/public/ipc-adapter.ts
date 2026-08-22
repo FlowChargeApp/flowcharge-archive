@@ -1,11 +1,13 @@
 // Shared renderer-side adapter for window.praxisAPI, the six-channel IPC
-// surface electron/preload.cts exposes via contextBridge. Declared at file
-// scope with no import/export keyword, exactly like src/types/praxis-data.d.ts
-// — adding either here would turn this file into a module and these
-// declarations would stop being global, which src/public/tsconfig.json's
-// module: "none" setting is specifically configured to reject at compile time.
+// surface electron/preload.cts exposes via contextBridge. This file is an ES
+// module. Its published surface — PraxisIpcResult, unwrapIpc and PraxisAPI —
+// is consumed by home.ts, app.ts and browser-ipc-shim.ts, which reach it by
+// import rather than through a shared global scope. The Window augmentation
+// sits inside a global-augmentation block for that same reason: a bare
+// top-level `interface Window` in a module is a local interface and never
+// merges with the Window that lib.dom.d.ts declares.
 
-type PraxisIpcResult<T> =
+export type PraxisIpcResult<T> =
   | { ok: true; status: number; data: T }
   | { ok: false; status: number; error: string };
 
@@ -18,14 +20,14 @@ function httpError(status: number, message: string): Error & { status: number } 
   return err;
 }
 
-function unwrapIpc<T>(result: PraxisIpcResult<T>): T {
+export function unwrapIpc<T>(result: PraxisIpcResult<T>): T {
   if (!result.ok) {
     throw httpError(result.status, result.error);
   }
   return result.data;
 }
 
-interface PraxisAPI {
+export interface PraxisAPI {
   listProjects(): Promise<PraxisIpcResult<ProjectList>>;
   addProject(path: string): Promise<PraxisIpcResult<{ project: ProjectEntry }>>;
   renameProject(id: string, name: string): Promise<PraxisIpcResult<{ project: ProjectEntry }>>;
@@ -36,6 +38,8 @@ interface PraxisAPI {
   pickProjectFolder?(): Promise<string | null>;
 }
 
-interface Window {
-  praxisAPI: PraxisAPI;
+declare global {
+  interface Window {
+    praxisAPI: PraxisAPI;
+  }
 }

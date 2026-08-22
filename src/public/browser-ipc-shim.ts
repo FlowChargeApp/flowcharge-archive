@@ -6,10 +6,14 @@
 // only when window.praxisAPI is not already present — checked once here at
 // script-load time, never per-call. In Electron, preload.cts's
 // contextBridge.exposeInMainWorld call runs before this script, so the guard
-// below is a no-op there. No import/export keyword, exactly like
-// ipc-adapter.ts — this file relies on that file's ambient, file-scope
-// declarations (PraxisIpcResult<T>, PraxisAPI, Window.praxisAPI) being visible
-// in the same global scope, per src/public/tsconfig.json's module: "none".
+// below is a no-op there. This file is a module, and it takes only a type from
+// ipc-adapter — PraxisIpcResult<T>, imported with the `type` modifier — so it
+// carries no runtime dependency on that module. Window.praxisAPI is typed by
+// ipc-adapter's `declare global` block, which applies program-wide and needs no
+// import here. Both entry files, home.ts and app.ts, import this module first,
+// so the guard below runs before any page code touches window.praxisAPI.
+
+import type { PraxisIpcResult } from './ipc-adapter';
 
 function fetchIpc<T>(method: string, urlPath: string, body?: unknown): Promise<PraxisIpcResult<T>> {
   var init: RequestInit = body === undefined
