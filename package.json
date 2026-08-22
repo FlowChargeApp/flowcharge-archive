@@ -37,6 +37,13 @@
       "dist/**/*",
       "package.json"
     ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "grantFileProtocolExtraPrivileges": false,
+      "resetAdHocDarwinSignature": true
+    },
     "mac": {
       "target": [
         { "target": "dmg", "arch": ["x64", "arm64"] },
