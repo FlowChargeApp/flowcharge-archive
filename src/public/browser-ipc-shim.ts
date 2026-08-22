@@ -66,5 +66,12 @@ if (!window.praxisAPI) {
         '/api/projects/' + encodeURIComponent(id) + '/workstreams/' + encodeURIComponent(wsId) + '/detail'
       );
     },
+    getAppVersion: function () {
+      // No .catch: fetchIpc already resolves rather than rejects on a network
+      // failure, so the ok test alone covers every failure path.
+      return fetchIpc<{ version: string }>('GET', '/api/version').then(function (result) {
+        return result.ok ? result.data.version : null;
+      });
+    },
   };
 }

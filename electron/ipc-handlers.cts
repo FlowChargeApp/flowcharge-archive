@@ -5,7 +5,7 @@
 // running exactly where it runs today, inside server.ts, exercised as an
 // ordinary HTTP request from server.ts's point of view.
 
-import { ipcMain, dialog } from 'electron';
+import { ipcMain, dialog, app } from 'electron';
 import http from 'node:http';
 import { SERVER_URL } from './main.cjs';
 
@@ -106,4 +106,8 @@ export function registerIpcHandlers(): void {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
     return result.canceled || !result.filePaths.length ? null : result.filePaths[0];
   });
+
+  // Answered directly, not through the loopback relay: in a packaged build the
+  // Electron app's own version is authoritative, not the bundled package.json.
+  ipcMain.handle('getAppVersion', () => app.getVersion());
 }

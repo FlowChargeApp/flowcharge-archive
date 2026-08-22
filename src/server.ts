@@ -46,6 +46,22 @@ const WORKSTREAM_ID = new RegExp(String.raw`^WS-\d+${ID_SUFFIX}$`);
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 
+// The app's own version, read from package.json ONCE at module load rather than
+// per request. `__dirname` is `dist/` in the compiled output, so package.json
+// sits one level up. Any failure — unreadable file, invalid JSON, a missing or
+// non-string `version` field — logs once and leaves this null, and the route
+// below answers 500 instead of throwing.
+const APP_VERSION: string | null = (() => {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8');
+    const parsed = JSON.parse(raw) as { version?: string };
+    return typeof parsed.version === 'string' ? parsed.version : null;
+  } catch (err) {
+    console.error('Could not read package.json for the app version:', err);
+    return null;
+  }
+})();
+
 function isLoopbackHost(candidate: string): boolean {
   return LOOPBACK_HOSTS.has(candidate);
 }
@@ -364,6 +380,15 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
       console.error(`GET /api/projects/${id}/workstreams/${wsId}/detail failed:`, err);
       sendJson(res, 500, { error: 'Detail extraction failed' });
     }
+    return;
+  }
+
+  if (reqPath === '/api/version' && method === 'GET') {
+    if (APP_VERSION === null) {
+      sendJson(res, 500, { error: 'Could not read the app version' });
+      return;
+    }
+    sendJson(res, 200, { version: APP_VERSION });
     return;
   }
 

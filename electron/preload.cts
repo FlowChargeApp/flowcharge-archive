@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('praxisAPI', {
   getWorkstreamDetail: (id: string, wsId: string) =>
     ipcRenderer.invoke('getWorkstreamDetail', id, wsId),
   pickProjectFolder: (): Promise<string | null> => ipcRenderer.invoke('pickProjectFolder'),
+  getAppVersion: (): Promise<string | null> => ipcRenderer.invoke('getAppVersion'),
 });
 
 // A second, distinct global from praxisAPI above — kept decoupled rather
