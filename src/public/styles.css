@@ -775,6 +775,13 @@ footer.note code {
   border-bottom: 1px solid var(--line);
 }
 .ws-modal-meta .card-tags { margin-bottom: 0; }
+/* Board modal only: an expanded description on a short viewport scrolls here
+   instead of being clipped. Scoped by id, so the integrations modal in
+   index.html, which shares the class, keeps its plain unscrolled layout. */
+#ws-modal-meta {
+  max-height: 40vh;
+  overflow-y: auto;
+}
 .ws-modal-dates { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
 .ws-modal-blocked {
   display: flex;
