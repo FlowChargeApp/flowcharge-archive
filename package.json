@@ -12,15 +12,16 @@
   "scripts": {
     "build:base": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && tsc -p electron/tsconfig.json && node tools/copy-assets.mjs",
     "build": "npm run build:base && node tools/bundle-public.mjs",
+    "build:release": "npm run build:base && node tools/bundle-public.mjs --harden",
     "prestart": "npm run build",
     "start": "node dist/server.js",
     "start:lan": "HOST=0.0.0.0 npm start",
     "prerefresh": "npm run build",
     "refresh": "node dist/scripts/extract-praxis-data.js",
     "electron:dev": "npm run build && electron .",
-    "package:mac": "npm run build && electron-builder --mac --x64 --arm64",
-    "package:linux": "npm run build && electron-builder --linux deb AppImage",
-    "package:win": "npm run build && electron-builder --win --x64 --arm64"
+    "package:mac": "npm run build:release && electron-builder --mac --x64 --arm64",
+    "package:linux": "npm run build:release && electron-builder --linux deb AppImage",
+    "package:win": "npm run build:release && electron-builder --win --x64 --arm64"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
