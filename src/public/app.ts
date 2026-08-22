@@ -944,6 +944,7 @@ import { unwrapIpc } from './ipc-adapter';
     var tagsEl = byId('ws-modal-tags');
     var datesEl = byId('ws-modal-dates');
     var descEl = byId('ws-modal-description');
+    var descMoreEl = byId('ws-modal-description-more');
     var blockedEl = byId('ws-modal-blocked');
     var blockedReasonEl = byId('ws-modal-blocked-reason');
     tagsEl.innerHTML = '';
@@ -954,7 +955,9 @@ import { unwrapIpc } from './ipc-adapter';
       blockedReasonEl.textContent = '';
       blockedEl.hidden = true;
       descEl.textContent = '';
+      descEl.classList.add('is-clamped');
       descEl.hidden = true;
+      descMoreEl.hidden = true;
       datesEl.textContent = '';
       return;
     }
@@ -983,12 +986,31 @@ import { unwrapIpc } from './ipc-adapter';
     var desc = w.description ? w.description.trim() : '';
     if (desc) {
       descEl.textContent = desc;
+      descEl.classList.add('is-clamped');
       descEl.hidden = false;
+      descMoreEl.hidden = true;
     } else {
       descEl.textContent = '';
+      descEl.classList.add('is-clamped');
       descEl.hidden = true;
+      descMoreEl.hidden = true;
     }
     datesEl.textContent = 'created ' + fmtDate(w.created) + ' · updated ' + fmtDate(w.updated);
+  }
+
+  // Show the reveal button only when the clamped paragraph really overflows.
+  // This must run after modal.showModal(): a <dialog> without the open
+  // attribute is display: none, so both height reads return 0 before it.
+  // The +1 absorbs sub-pixel rounding between the two integer readings; one
+  // real extra line is a whole line-height, far above that tolerance.
+  function syncDescriptionOverflow(): void {
+    var descEl = byId('ws-modal-description');
+    var moreEl = byId('ws-modal-description-more');
+    if (descEl.hidden) {
+      moreEl.hidden = true;
+      return;
+    }
+    moreEl.hidden = descEl.scrollHeight <= descEl.clientHeight + 1;
   }
 
   // initialTab is the tab this open lands on. Every caller states it, so a
@@ -1014,6 +1036,7 @@ import { unwrapIpc } from './ipc-adapter';
     // showModal() supplies focus containment, an inert background,
     // Escape-to-close, ::backdrop and focus restoration — none of it hand-rolled.
     modal.showModal();
+    syncDescriptionOverflow();
 
     // Refetched on every open; no client-side caching (assumption A6).
     // projectParam is what scopes the modal to the board's own project.
@@ -1086,6 +1109,14 @@ import { unwrapIpc } from './ipc-adapter';
   });
 
   byId('ws-modal-close').addEventListener('click', function () { modal.close(); });
+  // Registered once here, never per open: the button is static markup, so a
+  // per-open registration would stack a listener on every card click.
+  // One shot only — the reveal removes the clamp class and there is no
+  // collapse path.
+  byId('ws-modal-description-more').addEventListener('click', function () {
+    byId('ws-modal-description').classList.remove('is-clamped');
+    byId('ws-modal-description-more').hidden = true;
+  });
   // Backdrop dismissal: a backdrop click targets the dialog element itself,
   // which is why #ws-modal carries no padding (styles.css).
   modal.addEventListener('click', function (e) { if (e.target === modal) modal.close(); });
