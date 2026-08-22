@@ -10,5 +10,5 @@
     "noEmitOnError": true,
     "skipLibCheck": true
   },
-  "include": ["app.ts", "home.ts", "ipc-adapter.ts", "browser-ipc-shim.ts", "../types/praxis-data.d.ts", "lib/agentic-tools-scope.ts"]
+  "include": ["app.ts", "home.ts", "ipc-adapter.ts", "browser-ipc-shim.ts", "app-version.ts", "../types/praxis-data.d.ts", "lib/agentic-tools-scope.ts"]
 }

@@ -81,6 +81,7 @@
   then every few seconds — so an open board keeps showing the project's current state without a reload, with
   nothing to regenerate first.
   “Needs attention” recomputes elapsed days from each artefact's own <code>updated</code> date against your clock.
+  <div id="app-version" hidden></div>
 </footer>
 
 <!-- Card detail modal. No `open` attribute — app.ts calls showModal(). All content
@@ -127,6 +128,7 @@
 
 <script src="ipc-adapter.js"></script>
 <script src="browser-ipc-shim.js"></script>
+<script src="app-version.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
