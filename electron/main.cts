@@ -9,6 +9,7 @@ import { app, BrowserWindow, dialog } from 'electron';
 import path from 'node:path';
 import { registerIpcHandlers } from './ipc-handlers.cjs';
 import { registerAgenticToolsIpcHandlers } from './agentic-tools-ipc-handlers.cjs';
+import { registerUpdateCheckIpcHandlers } from './update-check-ipc-handlers.cjs';
 
 // The URL of the server this process itself started, on the ephemeral port that
 // server reported binding — never a compile-time guess about who answers on a
@@ -92,6 +93,7 @@ app.whenReady().then(async () => {
 
   registerIpcHandlers();
   await registerAgenticToolsIpcHandlers();
+  await registerUpdateCheckIpcHandlers();
   createWindow(SERVER_URL);
 });
 
