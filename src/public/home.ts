@@ -1,14 +1,27 @@
-// Structural mirrors of electron/agentic-tools-ipc-handlers.cts's shapes, matching
-// this codebase's established mirror-not-import pattern (see that file's own header
-// comment). Declared here at file scope — NOT inside the IIFE below — so this
-// actually augments the ambient global Window interface exactly like ipc-adapter.ts's
-// own `interface Window { praxisAPI: ... }` does; an interface declared inside a
-// function body would only shadow Window locally, never merge with the global one
-// lib.dom.d.ts declares. InstallScope itself is not redeclared here: Task 3.2's
-// agentic-tools-scope.ts already declares it globally (module: "none" makes every
-// top-level declaration in every included classic script part of one shared global
-// scope), and that script tag loads before this one — a second `type InstallScope =
-// ...` here would be a duplicate identifier.
+// The entry module for index.html. esbuild bundles this file and everything it
+// imports into dist/public/home.js, the page's only script.
+//
+// The import order below is load-bearing. './browser-ipc-shim' comes first, so its
+// fallback installs window.praxisAPI before any other module body runs, and
+// './app-version' and './update-banner' follow as side-effect imports with no
+// binding, reproducing the order their script tags used to give them.
+//
+// The shapes declared here are structural mirrors of
+// electron/agentic-tools-ipc-handlers.cts's, matching this codebase's established
+// mirror-not-import pattern (see that file's own header comment). The Window
+// augmentation stays at file scope — NOT inside the IIFE below — and sits inside
+// a global-augmentation block, so it merges with the Window that lib.dom.d.ts
+// declares; an interface inside a function body would only shadow Window locally.
+// InstallScope is not redeclared here because it is imported from
+// './lib/agentic-tools-scope'.
+
+import './browser-ipc-shim';
+import './app-version';
+import './update-banner';
+import { unwrapIpc } from './ipc-adapter';
+import type { PraxisIpcResult } from './ipc-adapter';
+import { resolveBasePathForScope, isEligibleAtScope } from './lib/agentic-tools-scope';
+import type { InstallScope } from './lib/agentic-tools-scope';
 
 type DetectionConfidence = 'confirmed' | 'likely' | 'weak' | 'not-detected';
 
@@ -55,18 +68,20 @@ type SkillPresenceResult =
   | { checkKind: 'shared-file'; exists: boolean }
   | { checkKind: 'no-format' };
 
-interface Window {
-  praxisSkillInstallAPI: {
-    detectTools(): Promise<PraxisIpcResult<ToolDetectionRow[]>>;
-    installSelected(
-      targets: { toolId: string; basePath: string; scope: InstallScope }[]
-    ): Promise<PraxisIpcResult<InstallResult[]>>;
-    getInstallStatus(): Promise<PraxisIpcResult<InstallRecord[]>>;
-    removeInstallation(toolId: string, scope: InstallScope): Promise<PraxisIpcResult<void>>;
-    checkInstalledSkills(
-      target: { toolId: string; basePath: string; scope: InstallScope }
-    ): Promise<PraxisIpcResult<SkillPresenceResult>>;
-  };
+declare global {
+  interface Window {
+    praxisSkillInstallAPI: {
+      detectTools(): Promise<PraxisIpcResult<ToolDetectionRow[]>>;
+      installSelected(
+        targets: { toolId: string; basePath: string; scope: InstallScope }[]
+      ): Promise<PraxisIpcResult<InstallResult[]>>;
+      getInstallStatus(): Promise<PraxisIpcResult<InstallRecord[]>>;
+      removeInstallation(toolId: string, scope: InstallScope): Promise<PraxisIpcResult<void>>;
+      checkInstalledSkills(
+        target: { toolId: string; basePath: string; scope: InstallScope }
+      ): Promise<PraxisIpcResult<SkillPresenceResult>>;
+    };
+  }
 }
 
 (function () {
@@ -395,8 +410,9 @@ interface Window {
     if (focusTab) INTEGRATIONS_TABS[idx].btn.focus();
   }
 
-  // Structurally identical to agentic-tools-scope.ts's InstallScope (Task 3.2) — not
-  // imported, since this is a classic script with no module graph between the two.
+  // Structurally identical to agentic-tools-scope.ts's InstallScope (Task 3.2), and
+  // deliberately left as its own inline literal rather than switched over to the
+  // imported type — substituting it is out of scope here.
   var currentIntegrationsScope: { kind: 'global' } | { kind: 'project'; projectPath: string } =
     { kind: 'global' };
 

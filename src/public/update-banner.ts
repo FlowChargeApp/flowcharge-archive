@@ -10,25 +10,32 @@
 // window.praxisUpdateAPI is absent, so the guard below returns immediately:
 // nothing renders, nothing logs, and no external request is made.
 //
-// No import/export keyword anywhere, exactly like ipc-adapter.ts,
-// browser-ipc-shim.ts and app-version.ts — src/public/tsconfig.json sets
-// module: "none", and either keyword would turn this file into a module.
+// An ES module, exactly like app-version.ts: the empty declaration at the foot
+// of the file is what makes it one. It carries no named binding and nothing
+// imports anything from it. It reaches both pages inside the home.js and app.js
+// bundles, pulled in by a side-effect import in each entry file, so it has no
+// script tag and no output file of its own. The Window augmentation below sits
+// inside `declare global` because a bare top-level `interface Window` in a
+// module is a local interface and never merges with lib.dom.d.ts's Window.
 
-interface Window {
-  // Optional on purpose. A required property would make the browser-tab guard
-  // below unreachable to the type checker, and this is the only thing that
-  // distinguishes an Electron renderer from a plain tab.
-  praxisUpdateAPI?: {
-    getUpdateNotice(): Promise<{ version: string; hasReleaseUrl: boolean } | null>;
-    dismissUpdate(): Promise<void>;
-    disableUpdateChecks(): Promise<void>;
-    openReleasePage(): Promise<void>;
-  };
+declare global {
+  interface Window {
+    // Optional on purpose. A required property would make the browser-tab guard
+    // below unreachable to the type checker, and this is the only thing that
+    // distinguishes an Electron renderer from a plain tab.
+    praxisUpdateAPI?: {
+      getUpdateNotice(): Promise<{ version: string; hasReleaseUrl: boolean } | null>;
+      dismissUpdate(): Promise<void>;
+      disableUpdateChecks(): Promise<void>;
+      openReleasePage(): Promise<void>;
+    };
+  }
 }
 
-// Everything below lives inside an IIFE. A classic script shares one global
-// scope with app.ts, home.ts, ipc-adapter.ts and browser-ipc-shim.ts, so a
-// top-level binding here would be a redeclaration error at run time.
+// Everything below lives inside an IIFE, kept from when this file was a classic
+// script sharing one global scope with the other renderer files. The bundle
+// gives each module its own scope now, so the wrapper is no longer required,
+// but it is harmless and removing it would change code this task must not touch.
 (function () {
   // Six hours. This value cannot cause an extra request on its own: the main
   // process decides whether a check is actually due, and answers from its own
@@ -104,3 +111,5 @@ interface Window {
   ask();
   setInterval(ask, ASK_INTERVAL_MS);
 })();
+
+export {};

@@ -2,12 +2,12 @@
   "compilerOptions": {
     "target": "es2020",
     "lib": ["dom", "es2020"],
-    "module": "none",            // guarantees a classic script; an added import becomes an error
+    "module": "esnext",          // real ES modules; esbuild bundles the graph into dist/public/
+    "moduleResolution": "bundler",
+    "isolatedModules": true,     // esbuild transpiles file-by-file, so reject what it cannot see across
+    "noEmit": true,              // esbuild owns emit; tsc is the type-check gate only
     "types": [],                 // load-bearing: without it tsc auto-includes @types/node
-    "rootDir": "..",             // = src/, so output lands at dist/public/app.js
-    "outDir": "../../dist",
     "strict": true,
-    "noEmitOnError": true,
     "skipLibCheck": true
   },
   "include": ["app.ts", "home.ts", "ipc-adapter.ts", "browser-ipc-shim.ts", "app-version.ts", "update-banner.ts", "../types/praxis-data.d.ts", "lib/agentic-tools-scope.ts"]

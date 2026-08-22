@@ -10,7 +10,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && tsc -p electron/tsconfig.json && node tools/copy-assets.mjs",
+    "build:base": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && tsc -p electron/tsconfig.json && node tools/copy-assets.mjs",
+    "build": "npm run build:base && node tools/bundle-public.mjs",
     "prestart": "npm run build",
     "start": "node dist/server.js",
     "start:lan": "HOST=0.0.0.0 npm start",
