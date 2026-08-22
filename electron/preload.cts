@@ -32,3 +32,17 @@ contextBridge.exposeInMainWorld('praxisSkillInstallAPI', {
   detectTools: () => ipcRenderer.invoke('detectTools'),
   checkInstalledSkills: (target: unknown) => ipcRenderer.invoke('checkInstalledSkills', target),
 });
+
+// A third, distinct global, for a third distinct concern — following the
+// precedent the praxisSkillInstallAPI block above set rather than folding
+// these methods into praxisAPI's object literal. Forwards each call straight
+// to the matching ipcMain.handle channel registered by
+// electron/update-check-ipc-handlers.cts. Every wrapper takes no parameter and
+// forwards none: the renderer cannot steer the check, the dismissal, or the
+// URL that is opened.
+contextBridge.exposeInMainWorld('praxisUpdateAPI', {
+  getUpdateNotice: () => ipcRenderer.invoke('getUpdateNotice'),
+  dismissUpdate: () => ipcRenderer.invoke('dismissUpdate'),
+  disableUpdateChecks: () => ipcRenderer.invoke('disableUpdateChecks'),
+  openReleasePage: () => ipcRenderer.invoke('openReleasePage'),
+});

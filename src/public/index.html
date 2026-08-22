@@ -19,6 +19,16 @@
   <button type="button" id="manage-integrations-button">Manage integrations</button>
 </div>
 
+<!-- Ships hidden and sits in normal flow as a sibling of everything below it,
+     so no innerHTML rebuild on this page can reach it. update-banner.js is the
+     only script that touches it; app.ts neither queries nor binds it. -->
+<div class="update-banner" id="update-banner" hidden role="status">
+  <span id="update-banner-text"></span>
+  <button type="button" id="update-banner-view">View release</button>
+  <button type="button" id="update-banner-off">Turn off update checks</button>
+  <button type="button" id="update-banner-dismiss" aria-label="Dismiss">×</button>
+</div>
+
 <section class="home">
   <h2 class="home-heading">Your projects</h2>
   <div id="project-tiles"></div>
@@ -70,6 +80,7 @@
 
 <script src="ipc-adapter.js"></script>
 <script src="browser-ipc-shim.js"></script>
+<script src="update-banner.js"></script>
 <script src="app-version.js"></script>
 <script src="lib/agentic-tools-scope.js"></script>
 <script src="home.js"></script>
