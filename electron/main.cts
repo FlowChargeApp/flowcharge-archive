@@ -24,6 +24,7 @@ function createWindow(url: string): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      devTools: !app.isPackaged,
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
