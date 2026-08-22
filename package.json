@@ -41,6 +41,8 @@
       "runAsNode": false,
       "enableNodeOptionsEnvironmentVariable": false,
       "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
       "grantFileProtocolExtraPrivileges": false,
       "resetAdHocDarwinSignature": true
     },
@@ -48,7 +50,9 @@
       "target": [
         { "target": "dmg", "arch": ["x64", "arm64"] },
         { "target": "zip", "arch": ["x64", "arm64"] }
-      ]
+      ],
+      "hardenedRuntime": true,
+      "notarize": true
     },
     "linux": {
       "target": [
@@ -59,7 +63,10 @@
     "win": {
       "target": [
         { "target": "nsis", "arch": ["x64", "arm64"] }
-      ]
+      ],
+      "signtoolOptions": {
+        "rfc3161TimeStampServer": "http://timestamp.digicert.com"
+      }
     },
     "publish": {
       "provider": "github",
