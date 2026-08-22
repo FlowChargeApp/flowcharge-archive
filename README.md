@@ -103,6 +103,13 @@ write somewhere other than its `dist/public/data.json` default.
   empty value needs no configuration. Set it when you reach a `npm run start:lan` server by a
   hostname rather than by its IP address (for example `ALLOWED_HOSTS=board.local npm run
   start:lan`); without the name listed, every request to that hostname is answered `403`.
+- The packaged app asks GitHub's public Releases API (`api.github.com`) for the latest release —
+  once per launch, and at most once a day. The request carries no identifier beyond the IP address
+  any HTTPS request reveals, and nothing is downloaded and nothing is installed: the app only shows
+  a dismissible banner telling you a newer release exists. The banner's "Turn off update checks"
+  button writes `"enabled": false` into `.praxis-update.json` in the app's user-data directory.
+  There is no settings screen and none is planned, so that file is also where you set `enabled`
+  back to `true` by hand to turn the checks on again.
 - "Needs attention" (artefacts `in-progress` for 14+ days) is computed in the browser
   against the *viewer's* clock from each artefact's own `updated` date, so it stays
   accurate no matter how long ago the data was last refreshed.
