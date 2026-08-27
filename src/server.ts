@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { extractPraxisData, hasPrxwork, ID_SUFFIX } from './lib/extract.js';
+import { extractPraxisData, ID_SUFFIX } from './lib/extract.js';
+import { hasWorkstreamTree, resolveTreeLayout } from './lib/tree-layout.js';
 import { readProjects, findProject, addProject, removeProject, renameProject } from './lib/projects.js';
 import { readBranch } from './lib/git.js';
 import { extractWorkstreamDetail } from './lib/detail.js';
@@ -64,6 +65,21 @@ const APP_VERSION: string | null = (() => {
 
 function isLoopbackHost(candidate: string): boolean {
   return LOOPBACK_HOSTS.has(candidate);
+}
+
+// One greppable line per legacy resolution, printed at the route boundary. The
+// printing lives here and never in src/lib/, which returns facts and logs
+// nothing. There is deliberately NO seen-set and no cross-request dedupe: the
+// line exists to show whether the fallback is still load-bearing, and a
+// suppressed repeat would hide exactly that.
+function warnLegacyLayout(target: string): void {
+  const layout = resolveTreeLayout(target);
+  if (layout !== null && layout.legacy) {
+    console.warn(
+      `LEGACY LAYOUT: ${layout.dir} uses prxwork/ — rename it to flowcharge/; ` +
+      `support for the old name will be removed`
+    );
+  }
 }
 
 // The extra hostnames this server answers to, beyond IP literals and `localhost`.
@@ -194,10 +210,11 @@ function handleAddProject(req: http.IncomingMessage, res: http.ServerResponse): 
         sendJson(res, 400, { error: 'Path must be absolute — enter a full path starting with /' });
         return;
       }
-      if (!hasPrxwork(input)) {
-        sendJson(res, 400, { error: `No prxwork/ folder found under ${input} — a project is a directory containing prxwork/` });
+      if (!hasWorkstreamTree(input)) {
+        sendJson(res, 400, { error: `No flowcharge/ folder found under ${input} — a project is a directory containing flowcharge/ (a legacy prxwork/ folder is still accepted)` });
         return;
       }
+      warnLegacyLayout(input);
 
       const { entry, created } = addProject(input);
       sendJson(res, created ? 201 : 200, { project: entry });
@@ -332,10 +349,11 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;
       }
-      if (!hasPrxwork(entry.path)) {
-        sendJson(res, 410, { error: `${entry.path} no longer contains a prxwork/ folder` });
+      if (!hasWorkstreamTree(entry.path)) {
+        sendJson(res, 410, { error: `${entry.path} no longer contains a flowcharge/ or prxwork/ folder` });
         return;
       }
+      warnLegacyLayout(entry.path);
       const payload: BoardPayload = { ...extractPraxisData(entry.path), branch: readBranch(entry.path) };
       sendJson(res, 200, payload);
     } catch (err) {
@@ -366,10 +384,11 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;
       }
-      if (!hasPrxwork(entry.path)) {
-        sendJson(res, 410, { error: `${entry.path} no longer contains a prxwork/ folder` });
+      if (!hasWorkstreamTree(entry.path)) {
+        sendJson(res, 410, { error: `${entry.path} no longer contains a flowcharge/ or prxwork/ folder` });
         return;
       }
+      warnLegacyLayout(entry.path);
       const detail = extractWorkstreamDetail(entry.path, wsId);
       if (!detail) {
         sendJson(res, 404, { error: `Unknown workstream ${wsId}` });

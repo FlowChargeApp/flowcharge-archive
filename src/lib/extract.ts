@@ -9,7 +9,6 @@ import path from 'node:path';
 
 import {
   WORKSTREAM_MARKERS,
-  hasWorkstreamTree,
   isWorkstreamMarker,
   resolveTreeLayout,
 } from './tree-layout.js';
@@ -220,13 +219,6 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
     });
   }
   return out;
-}
-
-// TEMPORARY compatibility re-export, removed by task 3.2 of TL-69-qk0xhx. The
-// name is kept only so src/server.ts keeps compiling until that file is moved
-// onto hasWorkstreamTree directly; the body already holds no folder literal.
-export function hasPrxwork(root: string): boolean {
-  return hasWorkstreamTree(root);
 }
 
 export function extractPraxisData(root: string): PraxisData {

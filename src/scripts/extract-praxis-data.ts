@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Dumps a Praxis project's prxwork/ frontmatter to a JSON file on demand — a
+// Dumps a project's flowcharge/ frontmatter to a JSON file on demand — a
 // standalone snapshot of the project's state. Source of truth is always the
 // frontmatter files themselves — this script never writes back to the project
 // it reads.
@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractPraxisData } from '../lib/extract.js';
+import { resolveTreeLayout } from '../lib/tree-layout.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -45,6 +46,17 @@ function main() {
   if (args.help || !args.root) {
     usage();
     process.exit(args.help ? 0 : 1);
+  }
+
+  // The same fixed, greppable line src/server.ts prints, byte for byte, so one
+  // grep finds both entry points. It goes to console.warn rather than
+  // console.log so a caller piping stdout to a file still sees it.
+  const layout = resolveTreeLayout(args.root);
+  if (layout !== null && layout.legacy) {
+    console.warn(
+      `LEGACY LAYOUT: ${layout.dir} uses prxwork/ — rename it to flowcharge/; ` +
+      `support for the old name will be removed`
+    );
   }
 
   let payload: PraxisData;
