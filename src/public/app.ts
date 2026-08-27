@@ -807,7 +807,7 @@ import { unwrapIpc } from './ipc-adapter';
     panelPlan.innerHTML = '';
     // No plan file at all — the majority case, and not an error.
     if (!plans.length) {
-      setPanelMessage(panelPlan, 'No plan in this workstream. The modal looked for a prxplan file in its folder and found none.');
+      setPanelMessage(panelPlan, 'No plan in this workstream. The modal looked for a plan file in its folder and found none.');
       return;
     }
     plans.forEach(function (item) {
@@ -822,7 +822,7 @@ import { unwrapIpc } from './ipc-adapter';
     panelIssues.innerHTML = '';
     // (a) No issue-list file at all — the common case, and not an error.
     if (!lists.length) {
-      setPanelMessage(panelIssues, 'No issue list in this workstream. The modal looked for a prxissuelist file in its folder and found none.');
+      setPanelMessage(panelIssues, 'No issue list in this workstream. The modal looked for an issue list file in its folder and found none.');
       return;
     }
     lists.forEach(function (list) {
@@ -884,7 +884,7 @@ import { unwrapIpc } from './ipc-adapter';
     panelTasks.innerHTML = '';
     // (c) No task-list file at all — the common case, and not an error.
     if (!lists.length) {
-      setPanelMessage(panelTasks, 'No task list in this workstream. The modal looked for a prxtasklist file in its folder and found none.');
+      setPanelMessage(panelTasks, 'No task list in this workstream. The modal looked for a task list file in its folder and found none.');
       return;
     }
     lists.forEach(function (list) {
