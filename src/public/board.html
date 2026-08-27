@@ -8,14 +8,15 @@
 </head>
 <body>
 
-<div class="masthead">
+<header class="masthead">
   <div>
     <a class="back-link" href="/">← Projects</a>
     <div class="brand-row">
-      <span class="mark">P</span>
-      <h1>Praxis Board</h1>
+      <img class="wordmark" src="img/flowcharge-wordmark.png" alt="FlowCharge" width="770" height="124">
+      <span class="brand-divider" aria-hidden="true"></span>
+      <h1 id="board-title">Board</h1>
     </div>
-    <div class="tagline" id="tagline">Workstream state</div>
+    <div class="tagline">Workstream state</div>
   </div>
   <div class="meta">
     Data generated <strong id="gen-date">—</strong><br>
@@ -23,7 +24,7 @@
     <span id="branch-line" hidden><br>Branch <strong id="branch-name"></strong></span><br>
     <span id="live-status"></span>
   </div>
-</div>
+</header>
 
 <!-- Ships hidden and sits in normal flow as a sibling of everything below it,
      so no innerHTML rebuild on this page can reach it. update-banner.js is the
@@ -87,6 +88,7 @@
 </div>
 
 <footer class="note">
+  <img class="footer-lockup" src="img/flowcharge-lockup.png" alt="" aria-hidden="true" width="628" height="80">
   Reads the selected project's <code>flowcharge/</code> frontmatter live through the dashboard server, on load and
   then every few seconds — so an open board keeps showing the project's current state without a reload, with
   nothing to regenerate first.

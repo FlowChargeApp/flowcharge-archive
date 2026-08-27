@@ -1210,9 +1210,9 @@ import { unwrapIpc } from './ipc-adapter';
     refreshFilterTags();
 
     byId('gen-date').textContent = raw.generated || '—';
-    byId('tagline').textContent = raw.source
-      ? 'Workstream state · ' + raw.source.split('/').pop()
-      : 'Workstream state';
+    byId('board-title').textContent = raw.source
+      ? raw.source.split('/').pop()!
+      : 'Board';
     byId('meta-counts').textContent =
       workstreams.length + ' workstreams · ' + issues.length + ' issues';
     if (raw.branch) {

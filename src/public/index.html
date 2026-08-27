@@ -8,16 +8,15 @@
 </head>
 <body>
 
-<div class="masthead">
+<header class="masthead">
   <div>
     <div class="brand-row">
-      <span class="mark">P</span>
-      <h1>Praxis Projects</h1>
+      <img class="wordmark" src="img/flowcharge-wordmark.png" alt="FlowCharge" width="770" height="124">
     </div>
     <div class="tagline">Registered projects</div>
   </div>
   <button type="button" id="manage-integrations-button">Manage integrations</button>
-</div>
+</header>
 
 <!-- Ships hidden and sits in normal flow as a sibling of everything below it,
      so no innerHTML rebuild on this page can reach it. update-banner.js is the
@@ -30,7 +29,7 @@
 </div>
 
 <section class="home">
-  <h2 class="home-heading">Your projects</h2>
+  <h1 class="home-heading">Your projects</h1>
   <div id="project-tiles"></div>
 
   <h2 class="home-heading">Add a project</h2>
@@ -43,6 +42,7 @@
 </section>
 
 <footer class="note">
+  <img class="footer-lockup" src="img/flowcharge-lockup.png" alt="" aria-hidden="true" width="628" height="80">
   A project is any directory containing a <code>flowcharge/</code> folder. Each tile opens that project's board,
   extracted fresh from its <code>flowcharge/</code> frontmatter on every load. The list of projects is stored
   machine-locally in <code>.praxis-projects.json</code> at this repository's root — it is never committed and
