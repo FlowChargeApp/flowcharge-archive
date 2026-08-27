@@ -13,7 +13,14 @@ const distRoot = path.join(repoRoot, 'dist');
 fs.mkdirSync(distPublic, { recursive: true });
 console.log(`ensured ${distPublic}`);
 
-for (const name of ['index.html', 'board.html', 'styles.css', 'fonts/fraunces-latin.woff2']) {
+for (const name of [
+  'index.html',
+  'board.html',
+  'styles.css',
+  'fonts/fraunces-latin.woff2',
+  'img/flowcharge-wordmark.png',
+  'img/flowcharge-lockup.png',
+]) {
   const dest = path.join(distPublic, name);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(path.join(srcPublic, name), dest);
