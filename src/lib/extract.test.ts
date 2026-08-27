@@ -9,11 +9,15 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 
 import { ISSUE_ITEM, artefactIdNumber, extractPraxisData } from './extract.js';
+import { FIXTURE_GENERATIONS, withFixtureProject } from './fixture-project.js';
+
+// Re-exported so the shared builder is reachable under this module's name too.
+// The builder itself lives in fixture-project.ts, NOT here: importing one test
+// file from another registers the imported file's tests a second time, and the
+// detail.ts suite therefore imports fixture-project.js directly.
+export { FIXTURE_GENERATIONS, withFixtureProject };
 
 // A regex match is `RegExpMatchArray | null` under `strict`, so the null case is
 // discharged here, once, rather than at every index below.
@@ -61,95 +65,6 @@ test('ISSUE_ITEM captures an unchecked mark over both id shapes', () => {
 // extraction path rather than by re-declaring the literals here: a copied
 // literal would pass while the file's own pattern stayed broken, which is
 // exactly the failure these tests exist to catch.
-const WORKSTREAM_FILE = `---
-id: WS-1-aa11bb
-type: workstream
-slug: fixture
-title: "Fixture workstream"
-status: in-progress
-created: 2026-01-01
-updated: 2026-01-01
-tags: []
-depends_on: []
----
-
-# Fixture
-`;
-
-const ISSUELIST_FILE = `---
-id: IL-1-cc22dd
-type: issuelist
-workstream: WS-1-aa11bb
-slug: fixture
-title: "Fixture issues"
-status: in-progress
-created: 2026-01-01
-updated: 2026-01-01
-depends_on: []
-links: []
----
-
-# PRX Issue List
-
-- [x] ISS-2. Unsuffixed issue title
-
-  \`\`\`yaml
-  id: ISS-2
-  status: done
-  severity: medium
-  \`\`\`
-
-- [ ] ISS-18-awinon. Suffixed issue title
-
-  \`\`\`yaml
-  id: ISS-18-awinon
-  status: open
-  severity: high
-  \`\`\`
-`;
-
-// The three filesystem names a fixture tree needs, per generation. They live in
-// this table rather than inside the helper, so the helper body derives every
-// name from its argument and holds no literal of its own. Only these three
-// names changed upstream — `workstreams/` and the slug folder are the same in
-// both generations.
-export const FIXTURE_GENERATIONS = ['flowcharge', 'prxwork'] as const;
-export type FixtureGeneration = (typeof FIXTURE_GENERATIONS)[number];
-
-interface FixtureNames {
-  tree: string;
-  marker: string;
-  artefact: string;
-}
-
-const GENERATION_NAMES: Record<FixtureGeneration, FixtureNames> = {
-  flowcharge: { tree: 'flowcharge', marker: 'workstream.md', artefact: 'IL-1-cc22dd-issuelist.md' },
-  prxwork: { tree: 'prxwork', marker: 'prxworkstream.md', artefact: 'prxissuelist.md' },
-};
-
-// Builds a one-workstream fixture project and runs `run` against its root.
-// EXPORTED so the detail.ts tests consume this helper rather than copying it —
-// a copied fixture drifts, and then the two surfaces disagree about what a tree
-// looks like. `generation` picks the name set; `overrides` mixes them, which is
-// how the half-renamed-tree cases below are built.
-export function withFixtureProject(
-  run: (root: string) => void,
-  generation: FixtureGeneration = 'flowcharge',
-  overrides: Partial<FixtureNames> = {},
-): void {
-  const names = { ...GENERATION_NAMES[generation], ...overrides };
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-extract-test-'));
-  try {
-    const dir = path.join(root, names.tree, 'workstreams', 'WS-1-aa11bb-fixture');
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, names.marker), WORKSTREAM_FILE);
-    fs.writeFileSync(path.join(dir, names.artefact), ISSUELIST_FILE);
-    run(root);
-  } finally {
-    // Removed even when an assertion throws, so a failing run leaves no tree behind.
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-}
 
 // The two extraction tests below are run once per generation. Their assertions
 // are unchanged — only the fixture's name generation varies — so the id-shape
