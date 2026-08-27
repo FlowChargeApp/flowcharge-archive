@@ -488,6 +488,13 @@ footer.note code {
   padding: 1px 5px;
   border-radius: 4px;
 }
+footer.note .footer-lockup {
+  display: block;
+  height: 40px;
+  width: auto;
+  opacity: 0.75;
+  margin-bottom: 10px;
+}
 
 .load-state {
   padding: 60px clamp(16px, 4vw, 40px);
