@@ -152,7 +152,7 @@ declare global {
       var empty = el('div', 'tiles-empty');
       empty.appendChild(el('h3', null, 'No projects yet'));
       empty.appendChild(el('p', null,
-        'Add the absolute path of any directory that contains a prxwork/ folder, using the form below.'));
+        'Add the absolute path of any directory that contains a flowcharge/ folder (a legacy prxwork/ folder is still accepted), using the form below.'));
       host.appendChild(empty);
       return;
     }
@@ -308,7 +308,7 @@ declare global {
 
     setError('');
     if (!value) {
-      setError('Enter the absolute path of a directory containing a prxwork/ folder');
+      setError('Enter the absolute path of a directory containing a flowcharge/ folder (a legacy prxwork/ folder is still accepted)');
       return;
     }
     // Instant feedback only — the server remains the authority. Both messages are the

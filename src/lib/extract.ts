@@ -1,9 +1,17 @@
-// Pure extraction library: reads a Praxis project's prxwork/ frontmatter and
-// returns the PraxisData payload. Knows nothing about argv, stdout, HTTP or
-// where the payload ends up — callers decide that.
+// Pure extraction library: reads a project's workstream tree frontmatter and
+// returns the PraxisData payload. Which folder that tree lives in, and which
+// marker filename names a workstream, are both owned by ./tree-layout.js — this
+// file holds neither name as a literal. Knows nothing about argv, stdout, HTTP
+// or where the payload ends up — callers decide that.
 
 import fs from 'node:fs';
 import path from 'node:path';
+
+import {
+  WORKSTREAM_MARKERS,
+  isWorkstreamMarker,
+  resolveTreeLayout,
+} from './tree-layout.js';
 
 // One definition of "frontmatter" for both readers below. Two load-bearing
 // facts. First, the pattern carries NO `g` flag, so `match` is not stateful and
@@ -109,9 +117,10 @@ function countChecks(text: string, itemRe: RegExp, markGroup: number) {
 // list. That is the causal chain, and it is deliberately NOT alphabetical —
 // neither the labels (IL, PLN, TL) nor the frontmatter keys (issuelist, plan,
 // tasklist) sort into that order, and both would put the plan second, between
-// the issues and the tasks. 'workstream' is deliberately absent: prxworkstream.md
-// is skipped by filename inside the walk, so a workstream-typed file only reaches
-// the array under some other name, and the trailing bucket is where it belongs.
+// the issues and the tasks. 'workstream' is deliberately absent: every marker
+// filename in WORKSTREAM_MARKERS is skipped inside the walk, so a
+// workstream-typed file only reaches the array under some other name, and the
+// trailing bucket is where it belongs.
 const ARTEFACT_TYPE_RANK: Record<string, number> = { plan: 0, issuelist: 1, tasklist: 2 };
 const UNRANKED_TYPE = 3;
 
@@ -121,8 +130,16 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
   for (const slug of fs.readdirSync(base)) {
     const dir = path.join(base, slug);
     if (!fs.statSync(dir).isDirectory()) continue;
-    const wsFile = path.join(dir, 'prxworkstream.md');
-    if (!fs.existsSync(wsFile)) continue;
+    // EITHER marker names a workstream, whichever generation the tree folder
+    // itself resolved as. A half-renamed tree is a real state — a flowcharge/
+    // folder still holding prxworkstream.md — and testing one filename would
+    // `continue` past it with no error and no log, which is how such a tree
+    // loses its cards silently. The PATH of whichever marker was found is what
+    // is kept, because the next line reads that same file.
+    const wsFile = WORKSTREAM_MARKERS
+      .map((marker) => path.join(dir, marker))
+      .find((candidate) => fs.existsSync(candidate));
+    if (wsFile === undefined) continue;
     const wsText = fs.readFileSync(wsFile, 'utf8');
     const wsFm = parseFrontmatter(wsText);
     const parts = wsText.split('---');
@@ -130,7 +147,11 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
 
     const artefacts = [];
     for (const f of fs.readdirSync(dir)) {
-      if (f === 'prxworkstream.md') continue;
+      // BOTH markers are skipped, not just the one this tree resolved as. A
+      // marker let through here carries `id` and `type: workstream` in its own
+      // frontmatter, so it clears the `fm.id` test below and lands on the card
+      // as a phantom artefact row in the UNRANKED_TYPE bucket.
+      if (isWorkstreamMarker(f)) continue;
       const fp = path.join(dir, f);
       if (!fs.statSync(fp).isFile()) continue;
       const text = fs.readFileSync(fp, 'utf8');
@@ -200,21 +221,20 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
   return out;
 }
 
-export function hasPrxwork(root: string): boolean {
-  return fs.existsSync(path.join(path.resolve(root), 'prxwork'));
-}
-
 export function extractPraxisData(root: string): PraxisData {
   const resolvedRoot = path.resolve(root);
-  if (!hasPrxwork(resolvedRoot)) {
-    throw new Error(`No prxwork/ found under ${resolvedRoot}`);
+  // Resolved ONCE per call, and the resolved dir is passed down. Resolving
+  // inside walkWorkstreams would stat the root twice and could let the
+  // workstreams/ and archive/ walks disagree about which tree they are reading.
+  const layout = resolveTreeLayout(resolvedRoot);
+  if (layout === null) {
+    throw new Error(`No flowcharge/ or prxwork/ found under ${resolvedRoot}`);
   }
 
-  const prxwork = path.join(resolvedRoot, 'prxwork');
   const issues: PraxisIssue[] = [];
   const workstreams = [
-    ...walkWorkstreams(path.join(prxwork, 'workstreams'), false, issues),
-    ...walkWorkstreams(path.join(prxwork, 'archive'), true, issues),
+    ...walkWorkstreams(path.join(layout.dir, 'workstreams'), false, issues),
+    ...walkWorkstreams(path.join(layout.dir, 'archive'), true, issues),
   ];
 
   return {

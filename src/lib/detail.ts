@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ISSUE_ITEM, TASK_ITEM, artefactIdNumber, parseFrontmatter, stripFrontmatter } from './extract.js';
+import { WORKSTREAM_MARKERS, isWorkstreamMarker, resolveTreeLayout } from './tree-layout.js';
 import { parseYamlBlock } from './yaml-block.js';
 
 // A fence opener is matched loosely (trailing whitespace is common); its closer
@@ -192,8 +193,16 @@ function locateWorkstream(base: string, archived: boolean, workstreamId: string)
   for (const slug of fs.readdirSync(base).sort()) {
     const dir = path.join(base, slug);
     if (!fs.statSync(dir).isDirectory()) continue;
-    const wsFile = path.join(dir, 'prxworkstream.md');
-    if (!fs.existsSync(wsFile)) continue;
+    // EITHER marker names a workstream, whichever generation the tree folder
+    // itself resolved as — the same rule walkWorkstreams applies on the board
+    // side. Testing one filename would `continue` past a half-renamed folder
+    // with no error and no log, and the modal would 404 on a card that exists.
+    // The PATH of whichever marker was found is what is kept, because the next
+    // line reads that same file.
+    const wsFile = WORKSTREAM_MARKERS
+      .map((marker) => path.join(dir, marker))
+      .find((candidate) => fs.existsSync(candidate));
+    if (wsFile === undefined) continue;
     const fm = parseFrontmatter(fs.readFileSync(wsFile, 'utf8'));
     if (str(fm.id) !== workstreamId) continue;
     return { dir, slug, archived, fm };
@@ -203,11 +212,17 @@ function locateWorkstream(base: string, archived: boolean, workstreamId: string)
 
 export function extractWorkstreamDetail(root: string, workstreamId: string): PraxisWorkstreamDetail | null {
   const resolvedRoot = path.resolve(root);
-  const prxwork = path.join(resolvedRoot, 'prxwork');
+  // Resolved ONCE per detail request, and the resolved dir is passed down to
+  // both locate calls. A null layout returns null rather than throwing: the
+  // route at src/server.ts already turns a null detail into a 404, and a
+  // registered path that no longer holds a tree is caught by its own guard
+  // ahead of this call.
+  const layout = resolveTreeLayout(resolvedRoot);
+  if (layout === null) return null;
 
   const found =
-    locateWorkstream(path.join(prxwork, 'workstreams'), false, workstreamId) ??
-    locateWorkstream(path.join(prxwork, 'archive'), true, workstreamId);
+    locateWorkstream(path.join(layout.dir, 'workstreams'), false, workstreamId) ??
+    locateWorkstream(path.join(layout.dir, 'archive'), true, workstreamId);
   if (!found) return null;
 
   const plans: PraxisPlanDetail[] = [];
@@ -218,7 +233,11 @@ export function extractWorkstreamDetail(root: string, workstreamId: string): Pra
   // so the walk visits the files in the same order everywhere. Display order is
   // set after the walk, by artefact id.
   for (const file of fs.readdirSync(found.dir).sort()) {
-    if (file === 'prxworkstream.md') continue;
+    // BOTH markers are skipped, not just the one this tree resolved as, through
+    // the single predicate every skip site shares. The type gate below already
+    // drops a workstream-typed file, so this is belt and braces — but one
+    // predicate at all four sites is what stops the sites disagreeing.
+    if (isWorkstreamMarker(file)) continue;
     const filePath = path.join(found.dir, file);
     if (!fs.statSync(filePath).isFile()) continue;
     const text = fs.readFileSync(filePath, 'utf8');
