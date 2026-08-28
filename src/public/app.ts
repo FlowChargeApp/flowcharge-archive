@@ -303,6 +303,12 @@ import { unwrapIpc } from './ipc-adapter';
           barWrap.appendChild(seg);
           row.appendChild(barWrap);
           row.appendChild(el('span', 'a-frac tab', a.done! + '/' + a.total!));
+          // At 0 of N the bar's filled segment has zero width, so the badge and
+          // the faded fraction are the only cue a dropped list gets here.
+          if (a.status === 'dropped') {
+            row.classList.add('is-dropped');
+            row.appendChild(statusBadge('dropped'));
+          }
         } else {
           var dot = el('span', 'dot-sm');
           dot.style.background = 'var(--st-' + a.status + ')';
