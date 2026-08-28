@@ -557,26 +557,6 @@ button { font-family: inherit; }
 .sev-legend-row .label { flex: 1; }
 .sev-legend-row .val { font-family: var(--font-mono); font-weight: 600; }
 
-footer.note {
-  padding: 0 clamp(16px, 4vw, 40px) 34px;
-  color: var(--ink-faint);
-  font-size: 11.5px;
-  max-width: 760px;
-}
-footer.note code {
-  font-family: var(--font-mono);
-  background: var(--paper-sunken);
-  padding: 1px 5px;
-  border-radius: 4px;
-}
-footer.note .footer-lockup {
-  display: block;
-  height: 40px;
-  width: auto;
-  opacity: 0.75;
-  margin-bottom: 10px;
-}
-
 .load-state {
   padding: 60px clamp(16px, 4vw, 40px);
   color: var(--ink-soft);

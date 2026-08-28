@@ -18,7 +18,6 @@ for (const name of [
   'board.html',
   'styles.css',
   'img/flowcharge-wordmark.png',
-  'img/flowcharge-lockup.png',
   'img/flowcharge-mark.png',
 ]) {
   const dest = path.join(distPublic, name);
