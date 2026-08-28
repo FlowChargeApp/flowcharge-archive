@@ -639,6 +639,10 @@ import { unwrapIpc } from './ipc-adapter';
     var head = el('div', 'ws-section-head');
     head.appendChild(el('span', 'ws-section-id', artefact.id));
     head.appendChild(el('h3', 'ws-section-title', artefact.title));
+    if (artefact.status === 'dropped') {
+      sec.classList.add('is-dropped');
+      head.appendChild(statusBadge('dropped'));
+    }
     sec.appendChild(head);
     return sec;
   }

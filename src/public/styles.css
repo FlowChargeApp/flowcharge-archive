@@ -984,6 +984,7 @@ button { font-family: inherit; }
   color: var(--ink);
   overflow-wrap: anywhere;
 }
+.ws-section.is-dropped .ws-section-title { text-decoration: line-through; text-decoration-color: var(--ink-faint); }
 
 /* Collapsed rows. The default disclosure marker is kept deliberately — it is
    the platform affordance this feature reuses rather than reimplements. */
