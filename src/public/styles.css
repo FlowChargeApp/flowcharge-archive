@@ -586,7 +586,10 @@ button { font-family: inherit; }
   font-weight: 600;
   margin: 0 0 12px;
 }
-.home-heading + * { margin-bottom: 28px; }
+/* The add-project control clears the tile grid. #add-form is the heading's adjacent
+   sibling; #choose-folder-button replaces it in the native-picker build, so both are
+   named — only one is ever visible, and a hidden one renders no margin. */
+.home-heading + *, #choose-folder-button { margin-bottom: 28px; }
 
 #project-tiles {
   display: grid;
