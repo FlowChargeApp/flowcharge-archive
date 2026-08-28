@@ -46,3 +46,13 @@ contextBridge.exposeInMainWorld('praxisUpdateAPI', {
   disableUpdateChecks: () => ipcRenderer.invoke('disableUpdateChecks'),
   openReleasePage: () => ipcRenderer.invoke('openReleasePage'),
 });
+
+// A fourth, distinct global, for a fourth distinct concern — following the
+// precedent the praxisSkillInstallAPI and praxisUpdateAPI blocks above set
+// rather than folding this method into praxisAPI's object literal. Forwards
+// the call straight to the matching ipcMain.handle channel registered by
+// electron/theme-ipc-handlers.cts, with no error translation, exactly as every
+// other block in this file does.
+contextBridge.exposeInMainWorld('praxisThemeAPI', {
+  setThemeSource: (mode: string): Promise<void> => ipcRenderer.invoke('setThemeSource', mode),
+});
