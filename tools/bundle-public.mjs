@@ -56,13 +56,20 @@ function sweepJavaScript(dir) {
 const swept = sweepJavaScript(distPublic);
 console.log(`swept ${swept} stale .js file(s) from ${distPublic}`);
 
-// Exactly two entry points. app-version.ts and update-banner.ts are not entry
+// Exactly three entry points. app-version.ts and update-banner.ts are not entry
 // points: they arrive inside both bundles through the side-effect imports in
 // home.ts and app.ts, so they need no output file and no script tag.
+//
+// theme-init.ts is the third, and it is an entry point for the opposite
+// reason: it must load and run in <head>, before the page's own bundle, so
+// that data-theme is set before the first paint. That needs its own output
+// file and its own script tag in both HTML pages — being inlined into home.js
+// and app.js would run it far too late.
 const result = await esbuild.build({
   entryPoints: {
     home: path.join(repoRoot, 'src', 'public', 'home.ts'),
     app: path.join(repoRoot, 'src', 'public', 'app.ts'),
+    'theme-init': path.join(repoRoot, 'src', 'public', 'theme-init.ts'),
   },
   bundle: true,
   format: 'iife',

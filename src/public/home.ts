@@ -3,8 +3,9 @@
 //
 // The import order below is load-bearing. './browser-ipc-shim' comes first, so its
 // fallback installs window.praxisAPI before any other module body runs, and
-// './app-version' and './update-banner' follow as side-effect imports with no
-// binding, reproducing the order their script tags used to give them.
+// './app-version', './update-banner' and './theme-toggle' follow as side-effect
+// imports with no binding, reproducing the order their script tags used to give
+// them.
 //
 // The shapes declared here are structural mirrors of
 // electron/agentic-tools-ipc-handlers.cts's, matching this codebase's established
@@ -18,6 +19,7 @@
 import './browser-ipc-shim';
 import './app-version';
 import './update-banner';
+import './theme-toggle';
 import { unwrapIpc } from './ipc-adapter';
 import type { PraxisIpcResult } from './ipc-adapter';
 import { resolveBasePathForScope, isEligibleAtScope } from './lib/agentic-tools-scope';

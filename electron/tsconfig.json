@@ -12,5 +12,5 @@
     "noEmitOnError": true,
     "skipLibCheck": true
   },
-  "include": ["main.cts", "preload.cts", "ipc-handlers.cts", "agentic-tools-ipc-handlers.cts", "update-check-ipc-handlers.cts"]
+  "include": ["main.cts", "preload.cts", "ipc-handlers.cts", "agentic-tools-ipc-handlers.cts", "update-check-ipc-handlers.cts", "theme-ipc-handlers.cts"]
 }

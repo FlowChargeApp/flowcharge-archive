@@ -1,11 +1,13 @@
 // The entry module for board.html. esbuild bundles this file and everything it
 // imports into dist/public/app.js, the page's only script. './browser-ipc-shim'
 // comes first, so its fallback installs window.praxisAPI before any other module
-// body runs; './app-version' and './update-banner' follow as side-effect imports
-// with no binding, reproducing the order their script tags used to give them.
+// body runs; './app-version', './update-banner' and './theme-toggle' follow as
+// side-effect imports with no binding, reproducing the order their script tags
+// used to give them.
 import './browser-ipc-shim';
 import './app-version';
 import './update-banner';
+import './theme-toggle';
 import { unwrapIpc } from './ipc-adapter';
 
 (function () {

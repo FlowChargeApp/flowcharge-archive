@@ -6,18 +6,45 @@
   font-display: swap;
 }
 
+/* ---------------------------------------------------------------------------
+   The FlowCharge chrome palette.
+
+   Every chrome value below is derived from the five logo colours:
+
+     #434A5B  slate
+     #D5E0E9  powder blue
+     #5C7C96  steel blue
+     #A2805B  bronze
+     #D2C2AA  oak
+
+   Only two derivation operations are used, and no third one may be added:
+
+     1. A straight-line sRGB mix of a palette colour toward black or toward
+        white.
+     2. A straight-line sRGB mix of a palette colour toward that block's own
+        --paper.
+
+   See PLN-60-f7jh0n for the two tables these values come from.
+
+   The --st-*, --sev-*, --chain and --chain-soft tokens are deliberately left
+   untouched. They are semantic status and severity colours with no logo
+   equivalent, and they must stay identical in both blocks.
+   --------------------------------------------------------------------------- */
+
 :root {
-  --ink: #161B22;
-  --ink-soft: #4B5560;
-  --ink-faint: #7A8389;
-  --paper: #F3F5F4;
-  --paper-raised: #FFFFFF;
-  --paper-sunken: #E9ECEB;
-  --line: #D9DFDD;
-  --line-strong: #C3CBC8;
-  --accent: #1F6F73;
-  --accent-soft: #E1EEED;
-  --accent-ink: #0F4548;
+  --ink: #434A5B;
+  --ink-soft: #545967;
+  --ink-faint: #5C616D;
+  --paper: #E9E1D5;
+  --paper-raised: #EFEAE1;
+  --paper-sunken: #DED2C0;
+  --line: #D2C2AA;
+  --line-strong: #7D7F86;
+  --accent: #455D71;
+  --accent-soft: #DBE0E3;
+  --accent-ink: #2F3440;
+  --accent-on: #FFFFFF;
+  --rule-strong: #9A7A56;
 
   --st-backlog: #6B7280;
   --st-ready: #2E63A6;
@@ -47,74 +74,48 @@
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
 
   --radius: 7px;
-  --shadow: 0 1px 2px rgba(22, 27, 34, 0.06), 0 1px 1px rgba(22, 27, 34, 0.04);
+  --shadow: 0 1px 2px rgba(67, 74, 91, 0.10), 0 1px 1px rgba(67, 74, 91, 0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #E9EDEC;
-    --ink-soft: #AAB3B1;
-    --ink-faint: #7B8583;
-    --paper: #10141A;
-    --paper-raised: #171D24;
-    --paper-sunken: #0B0E13;
-    --line: #262E36;
-    --line-strong: #333D46;
-    --accent: #4FB8B0;
-    --accent-soft: #16292A;
-    --accent-ink: #B9EDE8;
-
-    --st-backlog: #9AA3AC;
-    --st-ready: #7FADE6;
-    --st-in-progress: #E0A83F;
-    --st-blocked: #E2707C;
-    --st-done: #6BC48C;
-    --st-dropped: #B3A6C2;
-
-    --st-backlog-bg: #1B1F25;
-    --st-ready-bg: #17222D;
-    --st-in-progress-bg: #241D12;
-    --st-blocked-bg: #2A1518;
-    --st-done-bg: #132218;
-    --st-dropped-bg: #1E1922;
-
-    --sev-critical: #E2536B;
-    --sev-high: #E8825E;
-    --sev-medium: #E0B24F;
-    --sev-low: #9AA3AC;
-
-    /* dependency chain outline and its wider halo */
-    --chain: #AF8AF0;
-    --chain-soft: #4A3670;
-
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-  }
-}
 :root[data-theme="dark"] {
-  --ink: #E9EDEC; --ink-soft: #AAB3B1; --ink-faint: #7B8583;
-  --paper: #10141A; --paper-raised: #171D24; --paper-sunken: #0B0E13;
-  --line: #262E36; --line-strong: #333D46;
-  --accent: #4FB8B0; --accent-soft: #16292A; --accent-ink: #B9EDE8;
-  --st-backlog: #9AA3AC; --st-ready: #7FADE6; --st-in-progress: #E0A83F;
-  --st-blocked: #E2707C; --st-done: #6BC48C; --st-dropped: #B3A6C2;
-  --st-backlog-bg: #1B1F25; --st-ready-bg: #17222D; --st-in-progress-bg: #241D12;
-  --st-blocked-bg: #2A1518; --st-done-bg: #132218; --st-dropped-bg: #1E1922;
-  --sev-critical: #E2536B; --sev-high: #E8825E; --sev-medium: #E0B24F; --sev-low: #9AA3AC;
-  --chain: #AF8AF0; --chain-soft: #4A3670;
+  --ink: #D5E0E9;
+  --ink-soft: #9FA8B1;
+  --ink-faint: #8D959E;
+  --paper: #22252E;
+  --paper-raised: #2A2E39;
+  --paper-sunken: #16181E;
+  --line: #3B3F46;
+  --line-strong: #6A7079;
+  --accent: #95AABB;
+  --accent-soft: #333845;
+  --accent-ink: #D5E0E9;
+  --accent-on: #22252E;
+  --rule-strong: #A2805B;
+
+  --st-backlog: #9AA3AC;
+  --st-ready: #7FADE6;
+  --st-in-progress: #E0A83F;
+  --st-blocked: #E2707C;
+  --st-done: #6BC48C;
+  --st-dropped: #B3A6C2;
+
+  --st-backlog-bg: #1B1F25;
+  --st-ready-bg: #17222D;
+  --st-in-progress-bg: #241D12;
+  --st-blocked-bg: #2A1518;
+  --st-done-bg: #132218;
+  --st-dropped-bg: #1E1922;
+
+  --sev-critical: #E2536B;
+  --sev-high: #E8825E;
+  --sev-medium: #E0B24F;
+  --sev-low: #9AA3AC;
+
+  /* dependency chain outline and its wider halo */
+  --chain: #AF8AF0;
+  --chain-soft: #4A3670;
+
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-}
-:root[data-theme="light"] {
-  --ink: #161B22; --ink-soft: #4B5560; --ink-faint: #7A8389;
-  --paper: #F3F5F4; --paper-raised: #FFFFFF; --paper-sunken: #E9ECEB;
-  --line: #D9DFDD; --line-strong: #C3CBC8;
-  --accent: #1F6F73; --accent-soft: #E1EEED; --accent-ink: #0F4548;
-  --st-backlog: #6B7280; --st-ready: #2E63A6; --st-in-progress: #A8721B;
-  --st-blocked: #AD3A48; --st-done: #2F8F58; --st-dropped: #8A7E93;
-  --st-backlog-bg: #ECEDEF; --st-ready-bg: #E6EEF7; --st-in-progress-bg: #F6ECDA;
-  --st-blocked-bg: #F6E4E6; --st-done-bg: #E4F1E9; --st-dropped-bg: #ECE8EF;
-  --sev-critical: #8E1B31; --sev-high: #B14226; --sev-medium: #A8791C; --sev-low: #5B6472;
-  --chain: #6B3FA0; --chain-soft: #BFA3E6;
-  --shadow: 0 1px 2px rgba(22, 27, 34, 0.06), 0 1px 1px rgba(22, 27, 34, 0.04);
 }
 
 * { box-sizing: border-box; }
@@ -128,7 +129,7 @@ body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
-::selection { background: var(--accent); color: #fff; }
+::selection { background: var(--accent); color: var(--accent-on); }
 /* [hidden] carries the specificity of a single class, so a later class rule such
    as .lower (display: grid) or .card-tags (display: flex) would win on source
    order and re-reveal an element the markup marked hidden. !important is what
@@ -269,7 +270,7 @@ button { font-family: inherit; }
 }
 .seg button:last-child { border-right: none; }
 .seg button:hover { background: var(--paper-sunken); }
-.seg button.active { background: var(--accent); color: #fff; }
+.seg button.active { background: var(--accent); color: var(--accent-on); }
 .seg button[data-key="severity"] { display: inline-flex; align-items: center; gap: 4px; }
 .seg button:focus-visible, .filter-chips button:focus-visible, input:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -291,7 +292,7 @@ button { font-family: inherit; }
   cursor: pointer;
 }
 .filter-chips button:hover { background: var(--paper-sunken); }
-.filter-chips button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.filter-chips button.active { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
 .filter-chips button.blocked-toggle.active { background: var(--sev-critical); color: #fff; border-color: var(--sev-critical); }
 
 .search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 340px; }
@@ -407,7 +408,7 @@ button { font-family: inherit; }
 .artefact-row .a-bar span { display: block; height: 100%; background: var(--st-done); }
 .artefact-row .a-frac { font-family: var(--font-mono); color: var(--ink-faint); flex: none; min-width: 28px; text-align: right; }
 .dot-sm { width: 6px; height: 6px; border-radius: 50%; flex: none; }
-.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 4px; border-top: 1px dashed var(--line); }
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 4px; border-top: 1px dashed var(--rule-strong); }
 .card-foot .updated { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
 .card-foot .deps { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
 /* box-shadow, not outline or border: .card:focus-visible owns outline and a
@@ -683,7 +684,7 @@ footer.note .footer-lockup {
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: var(--accent);
-  color: var(--paper-raised);
+  color: var(--accent-on);
   padding: 6px 14px;
   font-size: 12.5px;
   cursor: pointer;

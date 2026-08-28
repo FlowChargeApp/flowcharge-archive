@@ -10,6 +10,7 @@ import path from 'node:path';
 import { registerIpcHandlers } from './ipc-handlers.cjs';
 import { registerAgenticToolsIpcHandlers } from './agentic-tools-ipc-handlers.cjs';
 import { registerUpdateCheckIpcHandlers } from './update-check-ipc-handlers.cjs';
+import { registerThemeIpcHandlers } from './theme-ipc-handlers.cjs';
 
 // The URL of the server this process itself started, on the ephemeral port that
 // server reported binding — never a compile-time guess about who answers on a
@@ -20,6 +21,11 @@ export let SERVER_URL = '';
 
 function createWindow(url: string): void {
   const mainWindow = new BrowserWindow({
+    // The dark --paper value from Phase 4's palette, matching the dark default
+    // the renderer resolves to. Without it the native window paints white
+    // before the first frame, which is the flash the pre-paint script exists to
+    // prevent.
+    backgroundColor: '#22252E',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -95,6 +101,7 @@ app.whenReady().then(async () => {
   registerIpcHandlers();
   await registerAgenticToolsIpcHandlers();
   await registerUpdateCheckIpcHandlers();
+  registerThemeIpcHandlers();
   createWindow(SERVER_URL);
 });
 
