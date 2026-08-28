@@ -9,14 +9,10 @@
 </head>
 <body>
 
-<header class="masthead">
-  <div>
-    <div class="brand-row">
-      <img class="wordmark" src="img/flowcharge-wordmark.png" alt="FlowCharge" width="770" height="124">
-    </div>
-    <div class="tagline">Registered projects</div>
-  </div>
-  <button type="button" id="manage-integrations-button">Manage integrations</button>
+<header class="toolbar">
+  <img class="tb-wordmark" src="img/flowcharge-wordmark.png" alt="FlowCharge" width="770" height="124">
+  <img class="tb-mark" src="img/flowcharge-mark.png" alt="" aria-hidden="true" width="1000" height="1000">
+  <button type="button" id="manage-integrations-button" class="tb-button">Manage integrations</button>
   <div class="seg" id="theme-seg" role="group" aria-label="Theme">
     <button type="button" data-mode="system" aria-label="Match system theme" title="System">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
@@ -29,6 +25,11 @@
     </button>
   </div>
 </header>
+
+<div class="toolbar-crumb">
+  <span class="tb-title">Projects</span>
+  <div class="tb-version" id="app-version" hidden></div>
+</div>
 
 <!-- Ships hidden and sits in normal flow as a sibling of everything below it,
      so no innerHTML rebuild on this page can reach it. update-banner.js is the
@@ -59,7 +60,6 @@
   extracted fresh from its <code>flowcharge/</code> frontmatter on every load. The list of projects is stored
   machine-locally in <code>.praxis-projects.json</code> at this repository's root — it is never committed and
   never leaves this machine.
-  <div id="app-version" hidden></div>
 </footer>
 
 <dialog id="integrations-modal" aria-labelledby="integrations-modal-title">
