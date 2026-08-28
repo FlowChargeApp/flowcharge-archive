@@ -1,11 +1,3 @@
-@font-face {
-  font-family: "Fraunces";
-  src: url("fonts/fraunces-latin.woff2") format("woff2");
-  font-weight: 600 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* ---------------------------------------------------------------------------
    The FlowCharge chrome palette.
 
@@ -44,7 +36,6 @@
   --accent-soft: #DBE0E3;
   --accent-ink: #2F3440;
   --accent-on: #FFFFFF;
-  --rule-strong: #9A7A56;
 
   /* Toolbar chrome. --toolbar-bg light is the palette's bronze swatch verbatim.
      --toolbar-shade is the mix target for hover and active states: darker than
@@ -89,7 +80,7 @@
   --chain: #6B3FA0;
   --chain-soft: #BFA3E6;
 
-  --font-display: "Fraunces", ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-display: var(--font-body);
   --font-body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
 
@@ -110,7 +101,6 @@
   --accent-soft: #333845;
   --accent-ink: #D5E0E9;
   --accent-on: #22252E;
-  --rule-strong: #A2805B;
 
   /* Toolbar chrome. --toolbar-bg dark is the original dashboard's page
      background, and --tile-bg dark is its raised-surface colour.
@@ -279,6 +269,7 @@ button { font-family: inherit; }
 /* ---------- KPI strip ---------- */
 .kpi-strip {
   display: grid;
+  margin-top: 21px;
   grid-template-columns: repeat(4, minmax(200px, 1fr));
   gap: 1px;
   background: var(--line);
@@ -490,14 +481,38 @@ button { font-family: inherit; }
   white-space: nowrap;
   flex-shrink: 0;
 }
+/* The dot is the shared .dot-sm rule below, and its colour arrives inline from
+   statusIndicator in app.ts, so no colour belongs here. The wrapper exists so
+   the dot always has a flex parent: .ws-item-summary is display: list-item, and
+   an inline .dot-sm there would collapse to nothing. The 6px gap is the gap
+   .artefact-row sets, so a card row's dot-to-word spacing matches the plan row.
+   The label carries no font-size and inherits its surroundings. */
+.st-ind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.st-ind-label { font-family: var(--font-mono); color: var(--ink-faint); }
+/* .artefact-row and .ws-section-head are flex and space the indicator with
+   their own gap. .ws-item-summary is display: list-item, so it has none, and
+   the indicator would touch the title. Its own margin, the way .ws-item-id
+   below already carries one. */
+.ws-item-summary .st-ind { margin-left: 6px; }
 .card-artefacts { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
 .artefact-row { display: flex; align-items: center; gap: 6px; font-size: 10.8px; }
 .artefact-row .a-id { font-family: var(--font-mono); color: var(--ink-soft); width: 42px; flex: none; }
 .artefact-row .a-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--paper-sunken); overflow: hidden; }
 .artefact-row .a-bar span { display: block; height: 100%; background: var(--st-done); }
 .artefact-row .a-frac { font-family: var(--font-mono); color: var(--ink-faint); flex: none; min-width: 28px; text-align: right; }
+/* Both selectors carry .artefact-row on purpose. An unscoped .is-dropped rule
+   would leak into the modal, where line 460's .is-dropped .card-title already
+   sits unscoped. The bar fade shows only when at least one item is checked. */
+.artefact-row.is-dropped .a-bar span { background: var(--st-dropped); opacity: 0.55; }
+.artefact-row.is-dropped .a-frac { color: var(--ink-faint); opacity: 0.6; }
 .dot-sm { width: 6px; height: 6px; border-radius: 50%; flex: none; }
-.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 4px; border-top: 1px dashed var(--rule-strong); }
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 4px; border-top: 1px dashed var(--line); }
 .card-foot .updated { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
 .card-foot .deps { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
 /* box-shadow, not outline or border: .card:focus-visible owns outline and a
@@ -566,26 +581,6 @@ button { font-family: inherit; }
 .sev-legend-row .label { flex: 1; }
 .sev-legend-row .val { font-family: var(--font-mono); font-weight: 600; }
 
-footer.note {
-  padding: 0 clamp(16px, 4vw, 40px) 34px;
-  color: var(--ink-faint);
-  font-size: 11.5px;
-  max-width: 760px;
-}
-footer.note code {
-  font-family: var(--font-mono);
-  background: var(--paper-sunken);
-  padding: 1px 5px;
-  border-radius: 4px;
-}
-footer.note .footer-lockup {
-  display: block;
-  height: 40px;
-  width: auto;
-  opacity: 0.75;
-  margin-bottom: 10px;
-}
-
 .load-state {
   padding: 60px clamp(16px, 4vw, 40px);
   color: var(--ink-soft);
@@ -608,14 +603,17 @@ footer.note .footer-lockup {
 }
 
 /* ---------- Home page ---------- */
-.home { padding: 24px clamp(16px, 4vw, 40px) 30px; }
+.home { margin-top: 21px; padding: 24px clamp(16px, 4vw, 40px) 30px; }
 .home-heading {
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 600;
   margin: 0 0 12px;
 }
-.home-heading + * { margin-bottom: 28px; }
+/* The add-project control clears the tile grid. #add-form is the heading's adjacent
+   sibling; #choose-folder-button replaces it in the native-picker build, so both are
+   named — only one is ever visible, and a hidden one renders no margin. */
+.home-heading + *, #choose-folder-button { margin-bottom: 28px; }
 
 #project-tiles {
   display: grid;
@@ -994,6 +992,7 @@ footer.note .footer-lockup {
   color: var(--ink);
   overflow-wrap: anywhere;
 }
+.ws-section.is-dropped .ws-section-title { text-decoration: line-through; text-decoration-color: var(--ink-faint); }
 
 /* Collapsed rows. The default disclosure marker is kept deliberately — it is
    the platform affordance this feature reuses rather than reimplements. */
@@ -1014,6 +1013,7 @@ footer.note .footer-lockup {
   color: var(--ink-faint);
 }
 .ws-check.is-checked { color: var(--st-done); }
+.ws-item.is-dropped .ws-check.is-checked { color: var(--st-dropped); }
 .ws-item-id {
   font-family: var(--font-mono);
   font-size: 11px;

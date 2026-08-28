@@ -42,9 +42,6 @@
 </div>
 
 <section class="home">
-  <h1 class="home-heading">Your projects</h1>
-  <div id="project-tiles"></div>
-
   <h2 class="home-heading">Add a project</h2>
   <form class="add-form" id="add-form" hidden>
     <input type="text" id="project-path" autocomplete="off" placeholder="/Users/you/Work/your-project">
@@ -52,15 +49,9 @@
   </form>
   <button type="button" id="choose-folder-button" hidden>Choose folder</button>
   <div id="add-error"></div>
-</section>
 
-<footer class="note">
-  <img class="footer-lockup" src="img/flowcharge-lockup.png" alt="" aria-hidden="true" width="628" height="80">
-  A project is any directory containing a <code>flowcharge/</code> folder. Each tile opens that project's board,
-  extracted fresh from its <code>flowcharge/</code> frontmatter on every load. The list of projects is stored
-  machine-locally in <code>.praxis-projects.json</code> at this repository's root — it is never committed and
-  never leaves this machine.
-</footer>
+  <div id="project-tiles"></div>
+</section>
 
 <dialog id="integrations-modal" aria-labelledby="integrations-modal-title">
   <div class="ws-modal-inner">

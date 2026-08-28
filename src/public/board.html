@@ -105,14 +105,6 @@
   </div>
 </div>
 
-<footer class="note">
-  <img class="footer-lockup" src="img/flowcharge-lockup.png" alt="" aria-hidden="true" width="628" height="80">
-  Reads the selected project's <code>flowcharge/</code> frontmatter live through the dashboard server, on load and
-  then every few seconds — so an open board keeps showing the project's current state without a reload, with
-  nothing to regenerate first.
-  “Needs attention” recomputes elapsed days from each artefact's own <code>updated</code> date against your clock.
-</footer>
-
 <!-- Card detail modal. No `open` attribute — app.ts calls showModal(). All content
      lives in .ws-modal-inner because #ws-modal carries no padding: backdrop
      dismissal tests `e.target === dialog`, and padding on the dialog would make a

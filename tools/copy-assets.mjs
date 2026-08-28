@@ -17,9 +17,7 @@ for (const name of [
   'index.html',
   'board.html',
   'styles.css',
-  'fonts/fraunces-latin.woff2',
   'img/flowcharge-wordmark.png',
-  'img/flowcharge-lockup.png',
   'img/flowcharge-mark.png',
 ]) {
   const dest = path.join(distPublic, name);

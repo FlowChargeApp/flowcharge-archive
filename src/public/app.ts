@@ -139,6 +139,23 @@ import { unwrapIpc } from './ipc-adapter';
     return ({ plan: 'PLN', issuelist: 'IL', tasklist: 'TL', workstream: 'WS' } as Record<string, string>)[t] || t;
   }
 
+  // The status indicator: a coloured dot and the status word, the pairing the
+  // artefact row's plan branch has always used. The CALLER decides WHEN a status
+  // deserves one; this decides only how one LOOKS. It names no specific status,
+  // so every call site passes its own and no --st-* token name is duplicated
+  // across them. The label is the raw status word, matching the plan branch and
+  // #ws-modal-status; STATUS_LABEL stays on the column heads and the KPI chips.
+  // The wrapper is not decoration: .dot-sm sets no display, so the dot needs a
+  // flex parent of its own to keep its box inside the list-item item summary.
+  function statusIndicator(status: string): HTMLElement {
+    var wrap = el('span', 'st-ind');
+    var dot = el('span', 'dot-sm');
+    dot.style.background = 'var(--st-' + status + ')';
+    wrap.appendChild(dot);
+    wrap.appendChild(el('span', 'st-ind-label', status));
+    return wrap;
+  }
+
   // Scrolls the board to the card named by a dependency ID and flashes it.
   // A dangling ID — no card on the board — is a silent no-op by design.
   function jumpToDep(id: string): void {
@@ -293,6 +310,12 @@ import { unwrapIpc } from './ipc-adapter';
           barWrap.appendChild(seg);
           row.appendChild(barWrap);
           row.appendChild(el('span', 'a-frac tab', a.done! + '/' + a.total!));
+          // At 0 of N the bar's filled segment has zero width, so the badge and
+          // the faded fraction are the only cue a dropped list gets here.
+          if (a.status === 'dropped') {
+            row.classList.add('is-dropped');
+            row.appendChild(statusIndicator('dropped'));
+          }
         } else {
           var dot = el('span', 'dot-sm');
           dot.style.background = 'var(--st-' + a.status + ')';
@@ -623,17 +646,25 @@ import { unwrapIpc } from './ipc-adapter';
     var head = el('div', 'ws-section-head');
     head.appendChild(el('span', 'ws-section-id', artefact.id));
     head.appendChild(el('h3', 'ws-section-title', artefact.title));
+    if (artefact.status === 'dropped') {
+      sec.classList.add('is-dropped');
+      head.appendChild(statusIndicator('dropped'));
+    }
     sec.appendChild(head);
     return sec;
   }
 
   // Shared summary row for every collapsible item, issue or task alike.
-  function buildItem(checked: boolean, id: string, title: string, fields: Record<string, PraxisYamlValue>): HTMLElement {
+  function buildItem(checked: boolean, id: string, title: string, fields: Record<string, PraxisYamlValue>, status?: string): HTMLElement {
     var d = el('details', 'ws-item');
     var sum = el('summary', 'ws-item-summary');
     sum.appendChild(el('span', 'ws-check' + (checked ? ' is-checked' : ''), checked ? '✓' : '○'));
     sum.appendChild(el('span', 'ws-item-id', id));
     sum.appendChild(el('span', 'ws-item-title', title));
+    if (status === 'dropped') {
+      d.classList.add('is-dropped');
+      sum.appendChild(statusIndicator('dropped'));
+    }
     d.appendChild(sum);
     lazyBody(d, function () { return renderMap(fields); });
     return d;
@@ -836,7 +867,7 @@ import { unwrapIpc } from './ipc-adapter';
         body.appendChild(el('div', 'ws-modal-empty', 'This issue list is present but produced no items — nothing in it was recognised as an issue entry.'));
       } else {
         list.items.forEach(function (item) {
-          body.appendChild(buildItem(item.checked, item.id, item.title, item.fields));
+          body.appendChild(buildItem(item.checked, item.id, item.title, item.fields, item.status));
         });
       }
       sec.appendChild(body);
