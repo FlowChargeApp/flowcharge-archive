@@ -481,17 +481,25 @@ button { font-family: inherit; }
   white-space: nowrap;
   flex-shrink: 0;
 }
-/* Shape only. Both colours arrive inline from statusBadge in app.ts, so a
-   rule-level color or background here would fight them. */
-.st-badge {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  letter-spacing: 0.02em;
+/* The dot is the shared .dot-sm rule below, and its colour arrives inline from
+   statusIndicator in app.ts, so no colour belongs here. The wrapper exists so
+   the dot always has a flex parent: .ws-item-summary is display: list-item, and
+   an inline .dot-sm there would collapse to nothing. The 6px gap is the gap
+   .artefact-row sets, so a card row's dot-to-word spacing matches the plan row.
+   The label carries no font-size and inherits its surroundings. */
+.st-ind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   white-space: nowrap;
   flex-shrink: 0;
 }
+.st-ind-label { font-family: var(--font-mono); color: var(--ink-faint); }
+/* .artefact-row and .ws-section-head are flex and space the indicator with
+   their own gap. .ws-item-summary is display: list-item, so it has none, and
+   the indicator would touch the title. Its own margin, the way .ws-item-id
+   below already carries one. */
+.ws-item-summary .st-ind { margin-left: 6px; }
 .card-artefacts { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
 .artefact-row { display: flex; align-items: center; gap: 6px; font-size: 10.8px; }
 .artefact-row .a-id { font-family: var(--font-mono); color: var(--ink-soft); width: 42px; flex: none; }

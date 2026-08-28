@@ -139,14 +139,21 @@ import { unwrapIpc } from './ipc-adapter';
     return ({ plan: 'PLN', issuelist: 'IL', tasklist: 'TL', workstream: 'WS' } as Record<string, string>)[t] || t;
   }
 
-  // The status pill. The CALLER decides WHEN a status deserves a badge; this
-  // decides only how one LOOKS. It names no specific status, so every call site
-  // passes its own and no --st-* token name is duplicated across them.
-  function statusBadge(status: string): HTMLElement {
-    var b = el('span', 'st-badge', STATUS_LABEL[status]);
-    b.style.background = 'var(--st-' + status + '-bg)';
-    b.style.color = 'var(--st-' + status + ')';
-    return b;
+  // The status indicator: a coloured dot and the status word, the pairing the
+  // artefact row's plan branch has always used. The CALLER decides WHEN a status
+  // deserves one; this decides only how one LOOKS. It names no specific status,
+  // so every call site passes its own and no --st-* token name is duplicated
+  // across them. The label is the raw status word, matching the plan branch and
+  // #ws-modal-status; STATUS_LABEL stays on the column heads and the KPI chips.
+  // The wrapper is not decoration: .dot-sm sets no display, so the dot needs a
+  // flex parent of its own to keep its box inside the list-item item summary.
+  function statusIndicator(status: string): HTMLElement {
+    var wrap = el('span', 'st-ind');
+    var dot = el('span', 'dot-sm');
+    dot.style.background = 'var(--st-' + status + ')';
+    wrap.appendChild(dot);
+    wrap.appendChild(el('span', 'st-ind-label', status));
+    return wrap;
   }
 
   // Scrolls the board to the card named by a dependency ID and flashes it.
@@ -307,7 +314,7 @@ import { unwrapIpc } from './ipc-adapter';
           // the faded fraction are the only cue a dropped list gets here.
           if (a.status === 'dropped') {
             row.classList.add('is-dropped');
-            row.appendChild(statusBadge('dropped'));
+            row.appendChild(statusIndicator('dropped'));
           }
         } else {
           var dot = el('span', 'dot-sm');
@@ -641,7 +648,7 @@ import { unwrapIpc } from './ipc-adapter';
     head.appendChild(el('h3', 'ws-section-title', artefact.title));
     if (artefact.status === 'dropped') {
       sec.classList.add('is-dropped');
-      head.appendChild(statusBadge('dropped'));
+      head.appendChild(statusIndicator('dropped'));
     }
     sec.appendChild(head);
     return sec;
@@ -656,7 +663,7 @@ import { unwrapIpc } from './ipc-adapter';
     sum.appendChild(el('span', 'ws-item-title', title));
     if (status === 'dropped') {
       d.classList.add('is-dropped');
-      sum.appendChild(statusBadge('dropped'));
+      sum.appendChild(statusIndicator('dropped'));
     }
     d.appendChild(sum);
     lazyBody(d, function () { return renderMap(fields); });
