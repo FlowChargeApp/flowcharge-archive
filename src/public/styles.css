@@ -481,6 +481,17 @@ button { font-family: inherit; }
   white-space: nowrap;
   flex-shrink: 0;
 }
+/* Shape only. Both colours arrive inline from statusBadge in app.ts, so a
+   rule-level color or background here would fight them. */
+.st-badge {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .card-artefacts { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
 .artefact-row { display: flex; align-items: center; gap: 6px; font-size: 10.8px; }
 .artefact-row .a-id { font-family: var(--font-mono); color: var(--ink-soft); width: 42px; flex: none; }

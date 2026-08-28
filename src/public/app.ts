@@ -139,6 +139,16 @@ import { unwrapIpc } from './ipc-adapter';
     return ({ plan: 'PLN', issuelist: 'IL', tasklist: 'TL', workstream: 'WS' } as Record<string, string>)[t] || t;
   }
 
+  // The status pill. The CALLER decides WHEN a status deserves a badge; this
+  // decides only how one LOOKS. It names no specific status, so every call site
+  // passes its own and no --st-* token name is duplicated across them.
+  function statusBadge(status: string): HTMLElement {
+    var b = el('span', 'st-badge', STATUS_LABEL[status]);
+    b.style.background = 'var(--st-' + status + '-bg)';
+    b.style.color = 'var(--st-' + status + ')';
+    return b;
+  }
+
   // Scrolls the board to the card named by a dependency ID and flashes it.
   // A dangling ID — no card on the board — is a silent no-op by design.
   function jumpToDep(id: string): void {
