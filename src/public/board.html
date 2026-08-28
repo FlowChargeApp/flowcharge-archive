@@ -9,22 +9,9 @@
 </head>
 <body>
 
-<header class="masthead">
-  <div>
-    <a class="back-link" href="/">← Projects</a>
-    <div class="brand-row">
-      <img class="wordmark" src="img/flowcharge-wordmark.png" alt="FlowCharge" width="770" height="124">
-      <span class="brand-divider" aria-hidden="true"></span>
-      <h1 id="board-title">Board</h1>
-    </div>
-    <div class="tagline">Workstream state</div>
-  </div>
-  <div class="meta">
-    Data generated <strong id="gen-date">—</strong><br>
-    <span id="meta-counts"></span>
-    <span id="branch-line" hidden><br>Branch <strong id="branch-name"></strong></span><br>
-    <span id="live-status"></span>
-  </div>
+<header class="toolbar">
+  <img class="tb-wordmark" src="img/flowcharge-wordmark.png" alt="FlowCharge" width="770" height="124">
+  <img class="tb-mark" src="img/flowcharge-mark.png" alt="" aria-hidden="true" width="1000" height="1000">
   <div class="seg" id="theme-seg" role="group" aria-label="Theme">
     <button type="button" data-mode="system" aria-label="Match system theme" title="System">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
@@ -37,6 +24,25 @@
     </button>
   </div>
 </header>
+
+<div class="toolbar-crumb">
+  <a class="tb-back" href="/">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+    Projects
+  </a>
+  <span class="tb-crumb-sep" aria-hidden="true">›</span>
+  <h1 class="tb-title" id="board-title">Board</h1>
+</div>
+
+<div class="toolbar-sub">
+  <div class="tb-meta">
+    <span class="tb-meta-item">Generated <strong id="gen-date">—</strong></span>
+    <span class="tb-meta-item" id="meta-counts"></span>
+    <span class="tb-meta-item" id="branch-line" hidden>Branch <strong id="branch-name"></strong></span>
+    <span class="tb-meta-item" id="live-status"></span>
+  </div>
+  <div class="tb-version" id="app-version" hidden></div>
+</div>
 
 <!-- Ships hidden and sits in normal flow as a sibling of everything below it,
      so no innerHTML rebuild on this page can reach it. update-banner.js is the
@@ -105,7 +111,6 @@
   then every few seconds — so an open board keeps showing the project's current state without a reload, with
   nothing to regenerate first.
   “Needs attention” recomputes elapsed days from each artefact's own <code>updated</code> date against your clock.
-  <div id="app-version" hidden></div>
 </footer>
 
 <!-- Card detail modal. No `open` attribute — app.ts calls showModal(). All content

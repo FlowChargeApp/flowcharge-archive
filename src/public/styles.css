@@ -46,6 +46,26 @@
   --accent-on: #FFFFFF;
   --rule-strong: #9A7A56;
 
+  /* Toolbar chrome. --toolbar-bg light is the palette's bronze swatch verbatim.
+     --toolbar-shade is the mix target for hover and active states: darker than
+     the bar in light mode, lighter in dark mode. --tile-bg light is bronze held
+     at H 31.3deg and S 28.1%, with L raised from 49.6% to 61.6%; the literal
+     +3.33-point step was tried first and read as too subtle. --crumb-ink light
+     is the cream #E9E1D5; a darker ink and plain white were both tried and
+     rejected against --tile-bg. --version-fade differs per theme because the
+     same fractional fade reads differently on a near-black bar than on a
+     mid-lightness tan. --toolbar-ink-soft and --toolbar-ink-faint are
+     translucent white here and opaque greys in the dark block; that asymmetry
+     is deliberate and is what the mockups carry. */
+  --toolbar-bg: #A2805B;
+  --toolbar-ink: #FFFFFF;
+  --toolbar-ink-soft: rgba(255,255,255,0.8);
+  --toolbar-ink-faint: rgba(255,255,255,0.55);
+  --toolbar-shade: #000000;
+  --tile-bg: #B99E82;
+  --crumb-ink: #E9E1D5;
+  --version-fade: 0.9;
+
   --st-backlog: #6B7280;
   --st-ready: #2E63A6;
   --st-in-progress: #A8721B;
@@ -91,6 +111,23 @@
   --accent-ink: #D5E0E9;
   --accent-on: #22252E;
   --rule-strong: #A2805B;
+
+  /* Toolbar chrome. --toolbar-bg dark is the original dashboard's page
+     background, and --tile-bg dark is its raised-surface colour.
+     --toolbar-shade flips to white here because the mix target has to be
+     lighter than a near-black bar. --version-fade is lower than the light
+     block's because the same fractional fade reads differently on a near-black
+     bar than on a mid-lightness tan. --toolbar-ink-soft and --toolbar-ink-faint
+     are opaque greys here and translucent white in the light block; that
+     asymmetry is deliberate and is what the mockups carry. */
+  --toolbar-bg: #10141A;
+  --toolbar-ink: #D5E0E9;
+  --toolbar-ink-soft: #9FA8B1;
+  --toolbar-ink-faint: #8D959E;
+  --toolbar-shade: #FFFFFF;
+  --tile-bg: #171D24;
+  --crumb-ink: #D5E0E9;
+  --version-fade: 0.75;
 
   --st-backlog: #9AA3AC;
   --st-ready: #7FADE6;
@@ -139,54 +176,105 @@ a { color: var(--accent); }
 .tab { font-variant-numeric: tabular-nums; }
 button { font-family: inherit; }
 
-/* ---------- Masthead ---------- */
-.masthead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px clamp(16px, 4vw, 40px) 18px;
-  border-bottom: 1px solid var(--line);
-  flex-wrap: wrap;
+/* ---------- Toolbar (app chrome) ---------- */
+/* Three stacked bars, not one band. The main bar holds only fixed-width items on
+   both sides, so the centred mark can be positioned absolutely and can never be
+   crowded off-centre. None of the three bars carries a border: they are set apart
+   by their own background colours. */
+.toolbar {
+  position: relative;
+  display: flex; align-items: center; gap: 10px; height: 44px;
+  padding: 0 clamp(10px, 2vw, 16px);
+  background: var(--toolbar-bg);
 }
-.masthead h1 {
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: 0.2px;
-  text-wrap: balance;
+/* 26px * 1.2 ~= 31px, plus top clearance so it no longer brushes the toolbar edge. */
+.tb-wordmark { display: block; flex: none; height: 31px; width: auto; margin-top: 6px; }
+
+/* The standalone arrow mark, centred like a badge on a car's boot. */
+.tb-mark {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  height: 38px; width: auto;
 }
-.masthead .brand-row { display: flex; align-items: center; gap: 10px; }
-.masthead .wordmark {
-  display: block;
-  height: 62px;
-  width: auto;
+/* The badge is a flourish, not load-bearing information — the first thing to give
+   up the fight for space once the toolbar gets this narrow. */
+@media (max-width: 520px) { .tb-mark { display: none; } }
+
+/* The breadcrumb row: back navigation and the title on the board, the "Projects"
+   label and the version on the home screen. Sits on --tile-bg, so it uses
+   --crumb-ink, not --ink and not --toolbar-ink. */
+.toolbar-crumb {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  min-height: 26px; padding: 4px clamp(10px, 2vw, 16px);
+  background: var(--tile-bg);
 }
-.masthead .brand-divider {
-  flex: none;
-  width: 1px;
-  height: 22px;
-  background: var(--line-strong);
+.tb-back {
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
+  font-size: 12.5px; color: var(--crumb-ink); text-decoration: none;
 }
-.masthead .tagline {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-top: 4px;
+.tb-back:hover { color: var(--accent); }
+.tb-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.tb-crumb-sep { flex: none; font-size: 12.5px; color: var(--crumb-ink); opacity: 0.7; }
+/* font-family is explicit because this element is an <h1> on the board screen, and
+   would otherwise inherit --font-display. */
+.tb-title {
+  font-family: var(--font-body);
+  font-size: 13px; font-weight: 600; color: var(--crumb-ink); margin: 0;
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.masthead .meta {
-  text-align: right;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--ink-soft);
-  line-height: 1.6;
+
+/* The info line, board screen only. Back on normal page tones, since this bar sits
+   on --paper. It wraps instead of hiding: none of it is decorative. */
+.toolbar-sub {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
+  gap: 6px 12px; min-height: 26px; padding: 4px clamp(10px, 2vw, 16px);
+  background: var(--paper);
 }
-.masthead .meta strong { color: var(--ink); font-weight: 600; }
-.masthead .meta #live-status { color: var(--ink-faint); }
-.masthead .meta #live-status.is-stale { color: var(--sev-high); }
+.tb-meta {
+  display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 2px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft);
+}
+.tb-meta strong { color: var(--ink); font-weight: 600; }
+.tb-meta-item:empty { display: none; }
+.tb-meta-item + .tb-meta-item::before { content: "·"; color: var(--ink-faint); margin: 0 6px; }
+.tb-meta #live-status { color: var(--st-done); }
+.tb-meta #live-status.is-stale { color: var(--sev-high); }
+
+.tb-version {
+  flex: none; font-family: var(--font-mono); font-size: 10.5px; white-space: nowrap;
+}
+/* Two homes, two treatments: cream and faded on the tan crumb bar, plain faint ink
+   on the --paper info bar. */
+.toolbar-crumb .tb-version { margin-left: auto; color: var(--crumb-ink); opacity: var(--version-fade); }
+.toolbar-sub .tb-version { color: var(--ink-faint); }
+
+/* Home screen only. Background-only hover: a shade step off --toolbar-bg, never a
+   text-weight or border-colour change, so the button's box never resizes. */
+.tb-button {
+  flex: none; border: 1px solid var(--toolbar-ink-faint); border-radius: 6px;
+  background: transparent; color: var(--toolbar-ink-soft);
+  padding: 3px 10px; font-size: 12px; cursor: pointer;
+}
+.tb-button:hover { background: color-mix(in srgb, var(--toolbar-bg) 90%, var(--toolbar-shade) 10%); color: var(--toolbar-ink); }
+.tb-button:focus-visible { outline: 2px solid var(--toolbar-ink); outline-offset: 2px; }
+
+/* Right-alignment: the first of the right-hand items takes the free space. On the
+   board that is the toggle; on the home screen it is the integrations button, and
+   the toggle then sits immediately beside it. */
+.toolbar .seg { margin-left: auto; flex: none; border-radius: 5px; border-color: var(--toolbar-ink-faint); }
+.toolbar .tb-button { margin-left: auto; }
+.toolbar .tb-button ~ .seg { margin-left: 0; }
+
+/* Icon-only, mirroring the sibling website's sun/moon toggle. A third glyph covers
+   "system", which the website's binary toggle does not have. */
+.toolbar .seg button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 22px; padding: 0; background: transparent; color: var(--toolbar-ink-soft);
+  border-right: 1px solid var(--toolbar-ink-faint);
+}
+.toolbar .seg button:last-child { border-right: none; }
+.toolbar .seg button svg { width: 13px; height: 13px; }
+.toolbar .seg button:hover { background: color-mix(in srgb, var(--toolbar-bg) 90%, var(--toolbar-shade) 10%); color: var(--toolbar-ink); }
+.toolbar .seg button.active { background: color-mix(in srgb, var(--toolbar-bg) 90%, var(--toolbar-shade) 10%); color: var(--toolbar-ink); }
 
 /* ---------- KPI strip ---------- */
 .kpi-strip {
