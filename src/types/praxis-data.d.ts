@@ -76,6 +76,7 @@ interface PraxisIssueDetail {
   id: string;       // ISS-1
   title: string;
   checked: boolean;
+  status: string;   // per-item YAML status, '' when the item has no fence
   fields: Record<string, PraxisYamlValue>;   // {} when the item has no yaml fence
 }
 

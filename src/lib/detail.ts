@@ -109,6 +109,7 @@ function parseIssueItems(text: string): PraxisIssueDetail[] {
       id: entry.m[2],
       title: entry.m[3].trim(),
       checked: entry.m[1].toLowerCase() === 'x',
+      status: typeof entry.fields.status === 'string' ? entry.fields.status.toLowerCase() : '',
       fields: entry.fields,
     };
   });

@@ -1005,6 +1005,7 @@ button { font-family: inherit; }
   color: var(--ink-faint);
 }
 .ws-check.is-checked { color: var(--st-done); }
+.ws-item.is-dropped .ws-check.is-checked { color: var(--st-dropped); }
 .ws-item-id {
   font-family: var(--font-mono);
   font-size: 11px;

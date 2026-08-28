@@ -648,12 +648,16 @@ import { unwrapIpc } from './ipc-adapter';
   }
 
   // Shared summary row for every collapsible item, issue or task alike.
-  function buildItem(checked: boolean, id: string, title: string, fields: Record<string, PraxisYamlValue>): HTMLElement {
+  function buildItem(checked: boolean, id: string, title: string, fields: Record<string, PraxisYamlValue>, status?: string): HTMLElement {
     var d = el('details', 'ws-item');
     var sum = el('summary', 'ws-item-summary');
     sum.appendChild(el('span', 'ws-check' + (checked ? ' is-checked' : ''), checked ? '✓' : '○'));
     sum.appendChild(el('span', 'ws-item-id', id));
     sum.appendChild(el('span', 'ws-item-title', title));
+    if (status === 'dropped') {
+      d.classList.add('is-dropped');
+      sum.appendChild(statusBadge('dropped'));
+    }
     d.appendChild(sum);
     lazyBody(d, function () { return renderMap(fields); });
     return d;
@@ -856,7 +860,7 @@ import { unwrapIpc } from './ipc-adapter';
         body.appendChild(el('div', 'ws-modal-empty', 'This issue list is present but produced no items — nothing in it was recognised as an issue entry.'));
       } else {
         list.items.forEach(function (item) {
-          body.appendChild(buildItem(item.checked, item.id, item.title, item.fields));
+          body.appendChild(buildItem(item.checked, item.id, item.title, item.fields, item.status));
         });
       }
       sec.appendChild(body);
