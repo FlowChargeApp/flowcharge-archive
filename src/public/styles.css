@@ -346,15 +346,15 @@ button { font-family: inherit; }
   letter-spacing: 0.07em;
   color: var(--ink-faint);
 }
-.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .seg button {
   border: none;
   background: var(--paper-raised);
-  color: var(--ink-soft);
+  color: var(--line-strong);
   padding: 5px 12px;
   font-size: 12.5px;
   cursor: pointer;
-  border-right: 1px solid var(--line-strong);
+  border-right: 1px solid var(--line);
 }
 .seg button:last-child { border-right: none; }
 .seg button:hover { background: var(--paper-sunken); }
@@ -387,13 +387,14 @@ button { font-family: inherit; }
 .search-wrap input {
   width: 100%;
   padding: 6px 10px 6px 28px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--paper-raised);
-  color: var(--ink);
+  color: var(--line-strong);
   font-size: 13px;
 }
-.search-wrap svg { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
+.search-wrap input::placeholder { color: var(--line-strong); opacity: 0.75; }
+.search-wrap svg { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--line-strong); opacity: 1; }
 .result-count { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); margin-left: auto; }
 
 /* ---------- Board ---------- */
@@ -659,7 +660,7 @@ footer.note .footer-lockup {
   gap: 6px;
 }
 .tile-action {
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--paper-raised);
   color: var(--ink-soft);
@@ -748,13 +749,13 @@ footer.note .footer-lockup {
   min-width: 240px;
   max-width: 520px;
   padding: 6px 10px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--paper-raised);
-  color: var(--ink);
-  font-family: var(--font-mono);
+  color: var(--line-strong);
   font-size: 12.5px;
 }
+.add-form input::placeholder { color: var(--line-strong); opacity: 0.75; }
 .add-form button, #choose-folder-button {
   border: 1px solid var(--line-strong);
   border-radius: 6px;
