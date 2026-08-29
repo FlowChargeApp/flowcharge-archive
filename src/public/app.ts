@@ -1246,8 +1246,6 @@ import { unwrapIpc } from './ipc-adapter';
     byId('board-title').textContent = raw.source
       ? raw.source.split('/').pop()!
       : 'Board';
-    byId('meta-counts').textContent =
-      workstreams.length + ' workstreams · ' + issues.length + ' issues';
     if (raw.branch) {
       byId('branch-name').textContent = raw.branch;
       byId('branch-line').hidden = false;
