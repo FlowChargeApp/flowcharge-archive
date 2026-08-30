@@ -9,6 +9,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import { ISSUE_ITEM, artefactIdNumber, extractPraxisData } from './extract.js';
 import { FIXTURE_GENERATIONS, withFixtureProject } from './fixture-project.js';
@@ -151,3 +154,84 @@ function data(root: string): PraxisArtefact[] {
   if (ws === undefined) throw new Error('fixture workstream missing');
   return ws.artefacts;
 }
+
+// The frontmatter block every body fixture below sits under. It is a MINIMAL
+// valid block — `---` on its own first line, keys, then a closing `---` — and
+// the closing delimiter is load-bearing: without it stripFrontmatter returns the
+// whole file and every case would assert against frontmatter text instead of a
+// body. The trailing blank line is stripped by stripFrontmatter, so a body is
+// read from its first non-newline character.
+const BODY_FIXTURE_FRONTMATTER = `---
+id: WS-1-aa11bb
+type: workstream
+slug: fixture
+title: "Body fixture"
+status: in-progress
+created: 2026-01-01
+updated: 2026-01-01
+tags: []
+depends_on: []
+---
+
+`;
+
+// Writes a one-workstream tree carrying the CALLER'S body, runs `run` against
+// its root, and removes the tree again. The body is written verbatim, so a
+// caller can pass a body holding a `---` line, blank lines, or no text at all.
+//
+// Module-local on purpose: it is neither exported nor imported anywhere, unlike
+// the shared builder in fixture-project.ts, which both suites import. That
+// builder is left untouched — detail.test.ts asserts against its body today.
+function withBodyProject(body: string, run: (root: string) => void): void {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-body-test-'));
+  try {
+    const dir = path.join(root, 'flowcharge', 'workstreams', 'WS-1-aa11bb-fixture');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'workstream.md'), BODY_FIXTURE_FRONTMATTER + body);
+    run(root);
+  } finally {
+    // Removed even when an assertion throws, so a failing run leaves no tree behind.
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
+// The split('---') corruption guard. A body line that starts `---` was cut at
+// that line before the fix, because the old computation split on the delimiter
+// instead of slicing from the END of the anchored frontmatter match.
+test('a body line that starts --- survives intact', () => {
+  withBodyProject('Intro line.\n--- a body line, not a delimiter\nTail line.', (root) => {
+    const ws = extractPraxisData(root).workstreams[0];
+    if (ws === undefined) throw new Error('fixture workstream missing');
+    assert.equal(ws.body, 'Intro line.\n--- a body line, not a delimiter\nTail line.');
+  });
+});
+
+test('a multi-paragraph body keeps its blank lines and its newlines', () => {
+  withBodyProject('First paragraph.\n\nSecond paragraph.\n\nThird paragraph.', (root) => {
+    const ws = extractPraxisData(root).workstreams[0];
+    if (ws === undefined) throw new Error('fixture workstream missing');
+    assert.equal(ws.body, 'First paragraph.\n\nSecond paragraph.\n\nThird paragraph.');
+  });
+});
+
+// The three-line truncation guard: the old computation kept the first three
+// lines and joined them with a space, so a longer body reached the payload as a
+// one-line blurb.
+test('a body of more than three lines comes back whole, not joined by spaces', () => {
+  withBodyProject('Line one.\nLine two.\nLine three.\nLine four.\nLine five.', (root) => {
+    const ws = extractPraxisData(root).workstreams[0];
+    if (ws === undefined) throw new Error('fixture workstream missing');
+    assert.equal(ws.body, 'Line one.\nLine two.\nLine three.\nLine four.\nLine five.');
+  });
+});
+
+// `body` is typed `string` and is read straight into the modal, so an absent
+// body has to be an empty string. `undefined` would print as an empty slot here
+// but fails the type contract the modal reads under.
+test('a workstream with frontmatter and no body yields an empty string', () => {
+  withBodyProject('', (root) => {
+    const ws = extractPraxisData(root).workstreams[0];
+    if (ws === undefined) throw new Error('fixture workstream missing');
+    assert.equal(ws.body, '');
+  });
+});

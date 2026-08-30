@@ -142,8 +142,6 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
     if (wsFile === undefined) continue;
     const wsText = fs.readFileSync(wsFile, 'utf8');
     const wsFm = parseFrontmatter(wsText);
-    const parts = wsText.split('---');
-    const body = (parts.length >= 3 ? parts.slice(2).join('---') : '').trim();
 
     const artefacts = [];
     for (const f of fs.readdirSync(dir)) {
@@ -211,7 +209,7 @@ function walkWorkstreams(base: string, archived: boolean, issues: PraxisIssue[])
       created: fmStr(wsFm.created),
       updated: fmStr(wsFm.updated),
       depends_on: Array.isArray(wsFm.depends_on) ? wsFm.depends_on : (wsFm.depends_on ? [wsFm.depends_on] : []),
-      body: body.split('\n').filter(Boolean).slice(0, 3).join(' '),
+      body: stripFrontmatter(wsText).trim(),
       archived,
       artefacts,
       description: typeof wsFm.description === 'string' ? wsFm.description : undefined,
