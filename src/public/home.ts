@@ -569,7 +569,9 @@ import type {
   // so an already-installed target shows its status immediately without requiring
   // installSelected() to run first (ISS-11-sbxv53), and independent of this app's own
   // install-tracking ledger (ISS-12-yngl4x). Rows render as soon as detectTools()
-  // resolves; the presence checks fill in their chips once all resolve. A scope toggle
+  // resolves; each presence check is isolated behind its own .catch, so a failed probe
+  // leaves that one tool without a presence entry while every other row keeps its own
+  // result and stays on screen. A scope toggle
   // re-derives eligibility and chip visibility from the last-fetched rows/presence map
   // instead (refreshIntegrationsEligibility) — never a new IPC call.
   function loadIntegrationsDetection() {
@@ -594,7 +596,14 @@ import type {
           .then(unwrapIpc)
           .then(function (result) {
             integrationsSkillPresence[row.toolId] = result;
-          });
+          })
+          // ISS-26-abmbhc: one probe's failure must not reject the aggregate below
+          // and route into the outer .catch, which would discard every correct row
+          // that already rendered. A failed probe records no presence entry, so that
+          // one tool falls back to the same unknown-presence state a tool with no
+          // basePath already has: its install chip stays hidden. Every other row,
+          // and Install selected, are untouched.
+          .catch(function () { /* unknown presence for this tool only */ });
       });
       return Promise.all(checks).then(refreshIntegrationsEligibility);
     })
