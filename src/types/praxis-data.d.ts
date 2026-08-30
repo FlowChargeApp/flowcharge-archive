@@ -1,5 +1,5 @@
 // Ambient global declarations describing the data.json payload the extractor
-// writes and the dashboard reads. Shared by both compilations without an import
+// writes and the app reads. Shared by both compilations without an import
 // on either side — adding a top-level import or export here would turn this file
 // into a module and the interfaces would stop being global.
 

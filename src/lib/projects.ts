@@ -27,7 +27,7 @@ export function projectId(absPath: string): string {
   return crypto.createHash('sha1').update(absPath).digest('hex').slice(0, 8);
 }
 
-// The dashboard repo is its own first project, built through the same id and name
+// This app's repo is its own first project, built through the same id and name
 // logic as every other entry so its board URL is stable and bookmarkable. Synthesised
 // at read time, never persisted — the `added` date is simply today.
 function selfEntry(): ProjectEntry {
