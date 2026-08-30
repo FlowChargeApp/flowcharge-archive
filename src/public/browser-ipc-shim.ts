@@ -12,6 +12,13 @@
 // ipc-adapter's `declare global` block, which applies program-wide and needs no
 // import here. Both entry files, home.ts and app.ts, import this module first,
 // so the guard below runs before any page code touches window.praxisAPI.
+//
+// This file now installs TWO guarded surfaces: window.praxisAPI over /api/*, and
+// window.praxisSkillInstallAPI over /api/integrations/*. Each one installs itself
+// only when the global is absent. In Electron, preload.cts runs before this script
+// and injects both, so both guards are no-ops there. The second surface's type
+// reaches this file through lib/agentic-tools-api.ts's `declare global` block,
+// which applies program-wide and needs no import here.
 
 import type { PraxisIpcResult } from './ipc-adapter';
 
@@ -76,6 +83,26 @@ if (!window.praxisAPI) {
       return fetchIpc<{ version: string }>('GET', '/api/version').then(function (result) {
         return result.ok ? result.data.version : null;
       });
+    },
+  };
+}
+
+if (!window.praxisSkillInstallAPI) {
+  window.praxisSkillInstallAPI = {
+    detectTools: function () {
+      return fetchIpc('GET', '/api/integrations/tools');
+    },
+    installSelected: function (targets) {
+      return fetchIpc('POST', '/api/integrations/installs', { targets: targets });
+    },
+    getInstallStatus: function () {
+      return fetchIpc('GET', '/api/integrations/installs');
+    },
+    removeInstallation: function (toolId, scope) {
+      return fetchIpc('POST', '/api/integrations/installs/remove', { toolId: toolId, scope: scope });
+    },
+    checkInstalledSkills: function (target) {
+      return fetchIpc('POST', '/api/integrations/skill-presence', target);
     },
   };
 }

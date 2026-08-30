@@ -7,14 +7,11 @@
 // imports with no binding, reproducing the order their script tags used to give
 // them.
 //
-// The shapes declared here are structural mirrors of
-// electron/agentic-tools-ipc-handlers.cts's, matching this codebase's established
-// mirror-not-import pattern (see that file's own header comment). The Window
-// augmentation stays at file scope — NOT inside the IIFE below — and sits inside
-// a global-augmentation block, so it merges with the Window that lib.dom.d.ts
-// declares; an interface inside a function body would only shadow Window locally.
-// InstallScope is not redeclared here because it is imported from
-// './lib/agentic-tools-scope'.
+// The skill-install surface's shapes are not declared here. './lib/agentic-tools-api'
+// owns them, because browser-ipc-shim.ts needs the same shapes and neither file can
+// own what the other also imports. That module also carries the window.praxisSkillInstallAPI
+// augmentation, inside a global-augmentation block so it merges with the Window that
+// lib.dom.d.ts declares. InstallScope comes from './lib/agentic-tools-scope'.
 
 import './browser-ipc-shim';
 import './app-version';
@@ -24,67 +21,13 @@ import { unwrapIpc } from './ipc-adapter';
 import type { PraxisIpcResult } from './ipc-adapter';
 import { resolveBasePathForScope, isEligibleAtScope } from './lib/agentic-tools-scope';
 import type { InstallScope } from './lib/agentic-tools-scope';
-
-type DetectionConfidence = 'confirmed' | 'likely' | 'weak' | 'not-detected';
-
-interface DetectionResult {
-  toolId: string;
-  confidence: DetectionConfidence;
-  resolvedConfigDir: string | null;
-  matchedSignals: string[];
-  needsManualVerification: boolean;
-}
-
-interface ToolDetectionRow {
-  toolId: string;
-  displayName: string;
-  category: 'cli' | 'gui-app';
-  detection: DetectionResult;
-}
-
-interface InstallResult {
-  toolId: string;
-  status: 'installed' | 'updated' | 'up-to-date' | 'skipped-no-format';
-  resolvedPath: string | null;
-}
-
-interface InstallRecord {
-  toolId: string;
-  resolvedPath: string;
-  format: string;
-  scope: InstallScope;
-  installedAt: string;
-  updatedAt: string;
-  contentHash: string;
-}
-
-// Mirrors agentic-tools-skill-presence.ts's SkillPresenceResult union — kept in
-// sync by hand, same mirror-not-import pattern as every other shape here.
-type SkillPresenceResult =
-  | {
-      checkKind: 'per-skill';
-      status: 'fully-installed' | 'missing-incomplete' | 'not-installed';
-      presentSkillIds: string[];
-      missingSkillIds: string[];
-    }
-  | { checkKind: 'shared-file'; exists: boolean }
-  | { checkKind: 'no-format' };
-
-declare global {
-  interface Window {
-    praxisSkillInstallAPI: {
-      detectTools(): Promise<PraxisIpcResult<ToolDetectionRow[]>>;
-      installSelected(
-        targets: { toolId: string; basePath: string; scope: InstallScope }[]
-      ): Promise<PraxisIpcResult<InstallResult[]>>;
-      getInstallStatus(): Promise<PraxisIpcResult<InstallRecord[]>>;
-      removeInstallation(toolId: string, scope: InstallScope): Promise<PraxisIpcResult<void>>;
-      checkInstalledSkills(
-        target: { toolId: string; basePath: string; scope: InstallScope }
-      ): Promise<PraxisIpcResult<SkillPresenceResult>>;
-    };
-  }
-}
+import type {
+  DetectionConfidence,
+  InstallResult,
+  PraxisSkillInstallAPI,
+  SkillPresenceResult,
+  ToolDetectionRow
+} from './lib/agentic-tools-api';
 
 (function () {
   var ABSOLUTE_PATH_MESSAGE = 'Path must be absolute — enter a full path starting with /';
@@ -135,6 +78,13 @@ declare global {
     return svg;
   }
   function byId(id: string): HTMLElement { return document.getElementById(id)!; }
+
+  // The file's only reader of the skill-install global. The surface is optional —
+  // the Electron preload installs it, and browser-ipc-shim.ts installs a fetch-backed
+  // one in a plain tab — so every caller must handle a null here rather than throw.
+  function skillInstallAPI(): PraxisSkillInstallAPI | null {
+    return window.praxisSkillInstallAPI ?? null;
+  }
 
   function setError(message: string) {
     byId('add-error').textContent = message;
@@ -628,8 +578,28 @@ declare global {
     updateInstallSelectedButtonState();
   }
 
+  // The single failure renderer for the integrations modal: both the missing-surface
+  // guard and loadIntegrationsDetection's .catch render this same box, so the two
+  // failure paths cannot drift apart. It takes plain strings, so each caller keeps
+  // ownership of where its detail text comes from.
+  function renderIntegrationsFailure(heading: string, detail: string) {
+    integrationsRowEntries = [];
+    integrationsSkillPresence = {};
+    var panelCli = byId('integrations-panel-cli');
+    var panelGuiApp = byId('integrations-panel-gui-app');
+    panelCli.innerHTML = '';
+    panelGuiApp.innerHTML = '';
+    var box = el('div', 'tiles-empty');
+    box.appendChild(el('h3', null, heading));
+    box.appendChild(el('p', null, 'Detail: ' + detail));
+    panelCli.appendChild(box);
+    updateInstallSelectedButtonState();
+  }
+
   // Called on dialog open and on #integrations-rescan click — the only two places
-  // that call window.praxisSkillInstallAPI.detectTools(). Also fetches a real
+  // that call skillInstallAPI().detectTools(). When the accessor returns null the
+  // surface is absent in this build, so the failure box is rendered and a resolved
+  // promise is returned, keeping both callers thenable. Also fetches a real
   // filesystem presence check (checkInstalledSkills) per eligible-at-Global-scope row,
   // so an already-installed target shows its status immediately without requiring
   // installSelected() to run first (ISS-11-sbxv53), and independent of this app's own
@@ -638,12 +608,22 @@ declare global {
   // re-derives eligibility and chip visibility from the last-fetched rows/presence map
   // instead (refreshIntegrationsEligibility) — never a new IPC call.
   function loadIntegrationsDetection() {
-    return window.praxisSkillInstallAPI.detectTools().then(unwrapIpc).then(function (rows) {
+    // `const`, not this file's usual `var`: TypeScript only keeps a null-narrowing
+    // alive inside the nested .then callbacks below for an immutable binding.
+    const api = skillInstallAPI();
+    if (api === null) {
+      renderIntegrationsFailure(
+        "Couldn't detect installed tools",
+        'The integrations service is not available in this build'
+      );
+      return Promise.resolve();
+    }
+    return api.detectTools().then(unwrapIpc).then(function (rows) {
       renderIntegrationsRows(rows);
       var checks = rows.map(function (row) {
         var basePath = resolveBasePathForScope({ kind: 'global' }, row.detection);
         if (basePath === null) return null;
-        return window.praxisSkillInstallAPI.checkInstalledSkills(
+        return api.checkInstalledSkills(
           { toolId: row.toolId, basePath: basePath, scope: { kind: 'global' } }
         )
           .then(unwrapIpc)
@@ -654,17 +634,7 @@ declare global {
       return Promise.all(checks).then(refreshIntegrationsEligibility);
     })
       .catch(function (err) {
-        integrationsRowEntries = [];
-        integrationsSkillPresence = {};
-        var panelCli = byId('integrations-panel-cli');
-        var panelGuiApp = byId('integrations-panel-gui-app');
-        panelCli.innerHTML = '';
-        panelGuiApp.innerHTML = '';
-        var box = el('div', 'tiles-empty');
-        box.appendChild(el('h3', null, "Couldn't detect installed tools"));
-        box.appendChild(el('p', null, 'Detail: ' + err.message));
-        panelCli.appendChild(box);
-        updateInstallSelectedButtonState();
+        renderIntegrationsFailure("Couldn't detect installed tools", err.message);
       });
   }
 
@@ -679,6 +649,17 @@ declare global {
   // This is a genuine, user-visible filesystem side effect, not a simulated one — verify
   // only against a disposable/throwaway target, never a real, important tool config.
   function installIntegrationsSelected() {
+    // Guarded before the button is disabled, so an absent surface cannot leave
+    // Install selected permanently disabled with nothing to re-enable it.
+    var api = skillInstallAPI();
+    if (api === null) {
+      window.alert(
+        "Couldn't install the selected tools. Detail: "
+        + 'The integrations service is not available in this build'
+      );
+      return;
+    }
+
     var eligibleEntries = integrationsRowEntries.filter(function (entry) {
       return entry.checkbox.checked && !entry.checkbox.disabled;
     });
@@ -692,7 +673,7 @@ declare global {
     });
 
     integrationsInstallSelectedButton.disabled = true;
-    window.praxisSkillInstallAPI.installSelected(targets)
+    api.installSelected(targets)
       .then(unwrapIpc)
       .then(function (results) {
         results.forEach(function (result) {

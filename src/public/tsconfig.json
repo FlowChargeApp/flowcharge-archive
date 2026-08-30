@@ -10,5 +10,5 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["app.ts", "home.ts", "theme.ts", "theme-init.ts", "theme-toggle.ts", "ipc-adapter.ts", "browser-ipc-shim.ts", "app-version.ts", "update-banner.ts", "../types/praxis-data.d.ts", "lib/agentic-tools-scope.ts"]
+  "include": ["app.ts", "home.ts", "theme.ts", "theme-init.ts", "theme-toggle.ts", "ipc-adapter.ts", "browser-ipc-shim.ts", "app-version.ts", "update-banner.ts", "../types/praxis-data.d.ts", "lib/agentic-tools-scope.ts", "lib/agentic-tools-api.ts"]
 }
