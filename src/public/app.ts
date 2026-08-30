@@ -1016,7 +1016,7 @@ import { unwrapIpc } from './ipc-adapter';
       blockedReasonEl.textContent = '';
       blockedEl.hidden = true;
     }
-    var desc = w.description ? w.description.trim() : '';
+    var desc = w.body ? w.body.trim() : '';
     if (desc) {
       descEl.textContent = desc;
       descEl.classList.add('is-clamped');
