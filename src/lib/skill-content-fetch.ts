@@ -36,7 +36,7 @@ export interface InstallContent {
 // Templated so a future host swap (e.g. github.com) is a one-line constant
 // change.
 export const PRAXIS_REPO_BASE_URL = 'http://100.87.185.97:8110/akoukoullis/Praxis';
-export const PRAXIS_REPO_REF = 'master';
+export const PRAXIS_REPO_REF = 'main';
 
 // Hard ceilings on the archive download and its decompression. The real
 // archive is a git-archive tarball of a skills directory — a few megabytes at
