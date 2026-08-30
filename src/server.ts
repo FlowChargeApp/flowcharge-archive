@@ -1,6 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import net from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractPraxisData, ID_SUFFIX } from './lib/extract.js';
@@ -8,6 +9,21 @@ import { hasWorkstreamTree, resolveTreeLayout } from './lib/tree-layout.js';
 import { readProjects, findProject, addProject, removeProject, renameProject } from './lib/projects.js';
 import { readBranch } from './lib/git.js';
 import { extractWorkstreamDetail } from './lib/detail.js';
+// The agentic-tools engine, imported statically. This file's ESM output and
+// src/lib's are the same compilation, so the dynamic-import wiring
+// electron/agentic-tools-ipc-handlers.cts needs does not apply here.
+import { detectAllTools } from './lib/agentic-tools-detect.js';
+import { checkSkillPresence } from './lib/agentic-tools-skill-presence.js';
+import { installToTarget, removeInstallation } from './lib/agentic-tools-install.js';
+import { parseInstallRegistry, findInstallRecord } from './lib/agentic-tools-install-tracking.js';
+import { createNodeFsAccess, createNodeFsWriteAccess } from './lib/agentic-tools-fs-adapter.js';
+import { TOOL_CATALOGUE } from './lib/agentic-tools-catalogue.js';
+import { CANONICAL_PRAXIS_SKILL_IDS } from './lib/agentic-tools-canonical-skills.js';
+import { getInstallContent } from './lib/skill-content-fetch.js';
+import type { DetectionResult } from './lib/agentic-tools-signals.js';
+import type { OS } from './lib/agentic-tools-catalogue.js';
+import type { InstallResult } from './lib/agentic-tools-install.js';
+import type { InstallScope } from './lib/agentic-tools-install-tracking.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, 'public');
@@ -63,6 +79,17 @@ const APP_VERSION: string | null = (() => {
     return null;
   }
 })();
+
+// The install registry both transports share. `__dirname` is `dist/` in the
+// compiled output, so this resolves to the same file
+// electron/agentic-tools-ipc-handlers.cts:234-235 resolves to. PRAXIS_DATA_DIR
+// is deliberately NOT consulted here: both transports must resolve one registry
+// file, and the Electron handler does not consult it either.
+const INSTALL_REGISTRY_PATH = path.join(__dirname, '..', '.praxis-installs.json');
+
+// The one write adapter the integrations routes hand to the install engine,
+// built once at module scope rather than per request.
+const installFsWrite = createNodeFsWriteAccess();
 
 function isLoopbackHost(candidate: string): boolean {
   return LOOPBACK_HOSTS.has(candidate);
@@ -129,6 +156,90 @@ function passesOriginCheck(req: http.IncomingMessage, res: http.ServerResponse):
   }
 
   return true;
+}
+
+// The peer-address gate the /api/integrations/* branch sits behind. This is a
+// DIFFERENT guard from isLoopbackHost above, which inspects a Host header
+// rather than the socket's actual peer; neither replaces the other and both
+// stay. Node reports an IPv4 loopback client as '::ffff:127.0.0.1' when the
+// socket is IPv6, so that form is accepted too — omitting it would silently
+// refuse legitimate local requests. An absent address fails closed.
+function isLoopbackRemote(req: http.IncomingMessage): boolean {
+  const remote = req.socket.remoteAddress;
+  if (remote === undefined) return false;
+  return remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+}
+
+// Maps Node's os.platform() to the catalogue's OS union. A hand-mirror of
+// electron/agentic-tools-ipc-handlers.cts:100-111 — same switch, kept in sync
+// by hand, because that file cannot import from src/lib at compile time. An
+// unmapped platform (e.g. 'aix', 'freebsd') returns null rather than guessing a
+// bucket, so the caller answers 500 instead of calling detectAllTools with a
+// fabricated OS. The OS type itself is imported, not redeclared: src/server.ts
+// can import it, unlike the Electron file.
+function mapNodePlatformToOs(platform: NodeJS.Platform): OS | null {
+  switch (platform) {
+    case 'darwin':
+      return 'macos';
+    case 'linux':
+      return 'linux';
+    case 'win32':
+      return 'windows';
+    default:
+      return null;
+  }
+}
+
+// Runs the same detection sweep the /api/integrations/tools route runs, so this
+// process derives a global scope's permitted root itself instead of trusting
+// the basePath the client chose. A hand-mirror of
+// electron/agentic-tools-ipc-handlers.cts:266-273. Called at most once per
+// request and never cached across requests: detectAllTools touches the
+// filesystem for every catalogue tool, so once per request is right, but a tool
+// installed mid-session must become permitted without a restart.
+async function detectionsForPermittedRoots(): Promise<DetectionResult[]> {
+  const platform = os.platform();
+  const mappedOs = mapNodePlatformToOs(platform);
+  if (mappedOs === null) {
+    throw new Error(`Unsupported OS: ${platform}`);
+  }
+  return detectAllTools(createNodeFsAccess(), mappedOs);
+}
+
+// Answers, for one (toolId, scope) pair, the single filesystem root this
+// process permits a write or a delete under — derived here, never taken from
+// the client. A hand-mirror of
+// electron/agentic-tools-ipc-handlers.cts:284-309. A 'project' scope is
+// permitted only at a path that is in the project registry right now; a
+// 'global' scope only at that tool's own detected config directory, read from
+// `detections` at the tool's index in TOOL_CATALOGUE — the same index alignment
+// the tools route relies on. Returns null when there is no permitted root,
+// including for an unrecognised scope kind, so the caller refuses rather than
+// guesses.
+function permittedRootFor(
+  toolId: string,
+  scope: InstallScope,
+  detections: DetectionResult[],
+): string | null {
+  if (scope.kind === 'project') {
+    if (typeof scope.projectPath !== 'string' || scope.projectPath === '') return null;
+    const resolved = path.resolve(scope.projectPath);
+    // readProjects() is re-read per call on purpose, exactly as the Electron
+    // handler re-reads it: a project registered during this session must not be
+    // wrongly refused.
+    const registered = readProjects().some(
+      (entry) => typeof entry.path === 'string' && path.resolve(entry.path) === resolved,
+    );
+    return registered ? resolved : null;
+  }
+  if (scope.kind === 'global') {
+    const index = TOOL_CATALOGUE.findIndex((tool) => tool.id === toolId);
+    if (index === -1) return null;
+    const detection = detections[index];
+    if (detection === undefined || detection.resolvedConfigDir === null) return null;
+    return path.resolve(detection.resolvedConfigDir);
+  }
+  return null;
 }
 
 // True only when the header's media type is exactly application/json. Real
@@ -274,6 +385,254 @@ function handleRenameProject(req: http.IncomingMessage, res: http.ServerResponse
   });
 }
 
+// The one target shape every mutating integrations route accepts, matching
+// electron/agentic-tools-ipc-handlers.cts:223-227.
+interface InstallTargetRequest {
+  toolId: string;
+  basePath: string;
+  scope: InstallScope;
+}
+
+// Shape guards for a body that arrived over HTTP and is structurally typed
+// only. Both live at the route boundary, exactly as handleAddProject's path
+// validation does, and never in src/lib.
+function isInstallScope(value: unknown): value is InstallScope {
+  if (typeof value !== 'object' || value === null) return false;
+  const scope = value as { kind?: unknown; projectPath?: unknown };
+  if (scope.kind === 'global') return true;
+  if (scope.kind === 'project') {
+    return typeof scope.projectPath === 'string' && scope.projectPath !== '';
+  }
+  return false;
+}
+
+function isInstallTargetRequest(value: unknown): value is InstallTargetRequest {
+  if (typeof value !== 'object' || value === null) return false;
+  const target = value as { toolId?: unknown; basePath?: unknown; scope?: unknown };
+  return (
+    typeof target.toolId === 'string' &&
+    target.toolId !== '' &&
+    typeof target.basePath === 'string' &&
+    target.basePath !== '' &&
+    isInstallScope(target.scope)
+  );
+}
+
+const INSTALL_TARGET_SHAPE =
+  'Each target must be of the form {"toolId": "...", "basePath": "/absolute/path", ' +
+  '"scope": {"kind": "global"}} or {"kind": "project", "projectPath": "/absolute/path"}';
+
+// The wording every integrations route uses for an unexpected throw: the
+// error's own message, matching what the Electron channels put in their failed
+// PraxisIpcResult.
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+// GET /api/integrations/tools — mirrors the detectTools IPC channel
+// (electron/agentic-tools-ipc-handlers.cts:459-477). Answers the BARE
+// ToolDetectionRow[] with an HTTP status, never a PraxisIpcResult envelope: the
+// shim's fetchIpc reconstructs that client-side from the status and body.
+// Async handlers catch their own throws, because handleApi's try/catch returns
+// before the promise settles and an unhandled rejection would take the process
+// down.
+async function handleIntegrationsTools(res: http.ServerResponse): Promise<void> {
+  try {
+    const platform = os.platform();
+    const mappedOs = mapNodePlatformToOs(platform);
+    if (mappedOs === null) {
+      sendJson(res, 500, { error: `Unsupported OS: ${platform}` });
+      return;
+    }
+    const results = await detectAllTools(createNodeFsAccess(), mappedOs);
+    const rows = TOOL_CATALOGUE.map((tool, index) => ({
+      toolId: tool.id,
+      displayName: tool.displayName,
+      category: tool.category,
+      detection: results[index],
+    }));
+    sendJson(res, 200, rows);
+  } catch (err) {
+    sendJson(res, 500, { error: errorMessage(err) });
+  }
+}
+
+// POST /api/integrations/skill-presence — mirrors the checkInstalledSkills IPC
+// channel (electron/agentic-tools-ipc-handlers.cts:479-493) exactly. There is
+// deliberately NO permitted-root check on basePath: this route is an
+// arbitrary-path existence probe by design, matching the Electron path, and the
+// loopback gate is what bounds it. Adding a check here would make the two
+// transports differ.
+function handleIntegrationsSkillPresence(req: http.IncomingMessage, res: http.ServerResponse): void {
+  readRequestBody(req, res, 'POST /api/integrations/skill-presence — request stream error:', async (raw) => {
+    try {
+      let body: unknown;
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        sendJson(res, 400, { error: `Request body must be valid JSON. ${INSTALL_TARGET_SHAPE}` });
+        return;
+      }
+      if (!isInstallTargetRequest(body)) {
+        sendJson(res, 400, { error: INSTALL_TARGET_SHAPE });
+        return;
+      }
+      const tool = TOOL_CATALOGUE.find((t) => t.id === body.toolId);
+      if (tool === undefined) {
+        sendJson(res, 404, { error: `Unknown toolId: ${body.toolId}` });
+        return;
+      }
+      const result = await checkSkillPresence(tool, body.basePath, CANONICAL_PRAXIS_SKILL_IDS, createNodeFsAccess());
+      sendJson(res, 200, result);
+    } catch (err) {
+      sendJson(res, 500, { error: errorMessage(err) });
+    }
+  });
+}
+
+// GET /api/integrations/installs — mirrors the getInstallStatus IPC channel
+// (electron/agentic-tools-ipc-handlers.cts:411-419). readTextFile answers null
+// for a missing file rather than throwing, so the null check is what keeps a
+// first run a 200 with [] instead of a 500.
+async function handleIntegrationsInstallsGet(res: http.ServerResponse): Promise<void> {
+  try {
+    const raw = await installFsWrite.readTextFile(INSTALL_REGISTRY_PATH);
+    const records = raw === null ? [] : parseInstallRegistry(raw);
+    sendJson(res, 200, records);
+  } catch (err) {
+    sendJson(res, 500, { error: errorMessage(err) });
+  }
+}
+
+// POST /api/integrations/installs — mirrors the installSelected IPC channel
+// (electron/agentic-tools-ipc-handlers.cts:361-408), including its ordering.
+// This route performs REAL file writes into real tool config directories, so
+// every target is validated against a root this process derived BEFORE any
+// target is installed: validating inside the install loop would let a bad path
+// be smuggled in behind earlier good ones. Overlapping requests are left
+// unserialized, identical to today's Electron behaviour.
+function handleIntegrationsInstallsPost(req: http.IncomingMessage, res: http.ServerResponse): void {
+  readRequestBody(req, res, 'POST /api/integrations/installs — request stream error:', async (raw) => {
+    try {
+      let body: unknown;
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        sendJson(res, 400, { error: `Request body must be valid JSON of the form {"targets": [...]}. ${INSTALL_TARGET_SHAPE}` });
+        return;
+      }
+      const rawTargets = (body as { targets?: unknown } | null)?.targets;
+      if (!Array.isArray(rawTargets)) {
+        sendJson(res, 400, { error: `Missing \`targets\` — send a JSON body of the form {"targets": [...]}. ${INSTALL_TARGET_SHAPE}` });
+        return;
+      }
+      const targets: InstallTargetRequest[] = [];
+      for (const candidate of rawTargets) {
+        if (!isInstallTargetRequest(candidate)) {
+          sendJson(res, 400, { error: INSTALL_TARGET_SHAPE });
+          return;
+        }
+        targets.push(candidate);
+      }
+
+      // Exact equality is the right comparison, not containment: the client's
+      // resolveBasePathForScope returns exactly resolvedConfigDir or exactly
+      // projectPath, so a legitimate basePath always equals the permitted root
+      // and is never merely inside it.
+      const needsDetection = targets.some((target) => target.scope.kind === 'global');
+      const detections = needsDetection ? await detectionsForPermittedRoots() : [];
+      for (const target of targets) {
+        // An unknown toolId never reaches installToTarget — the loop below
+        // records it as skipped-no-format — so it needs no permitted root.
+        if (!TOOL_CATALOGUE.some((t) => t.id === target.toolId)) continue;
+        const permittedRoot = permittedRootFor(target.toolId, target.scope, detections);
+        if (permittedRoot === null || path.resolve(target.basePath) !== permittedRoot) {
+          sendJson(res, 400, {
+            error: `Refused install path outside the permitted root for ${target.toolId}: ${target.basePath}`,
+          });
+          return;
+        }
+      }
+
+      const results: InstallResult[] = [];
+      for (const target of targets) {
+        const tool = TOOL_CATALOGUE.find((t) => t.id === target.toolId);
+        if (tool === undefined) {
+          results.push({ toolId: target.toolId, status: 'skipped-no-format', resolvedPath: null });
+          continue;
+        }
+        const content = await getInstallContent(target.toolId);
+        const result = await installToTarget(
+          { tool, basePath: target.basePath, scope: target.scope },
+          content,
+          INSTALL_REGISTRY_PATH,
+          { fsWrite: installFsWrite },
+        );
+        results.push(result);
+      }
+      sendJson(res, 200, results);
+    } catch (err) {
+      sendJson(res, 500, { error: errorMessage(err) });
+    }
+  });
+}
+
+// POST /api/integrations/installs/remove — mirrors the removeInstallation IPC
+// channel (electron/agentic-tools-ipc-handlers.cts:421-457). The engine's
+// removeInstallation deletes the record's resolvedPath recursively, so the
+// boundary check runs first, against a root this process derived rather than
+// one the client supplied. The 200 body is the literal null, because the shim's
+// fetchIpc assigns the parsed body straight to `data`.
+function handleIntegrationsInstallRemove(req: http.IncomingMessage, res: http.ServerResponse): void {
+  readRequestBody(req, res, 'POST /api/integrations/installs/remove — request stream error:', async (raw) => {
+    try {
+      let body: unknown;
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        sendJson(res, 400, { error: 'Request body must be valid JSON of the form {"toolId": "...", "scope": {"kind": "global"}}' });
+        return;
+      }
+      const candidate = body as { toolId?: unknown; scope?: unknown } | null;
+      const toolId = candidate?.toolId;
+      const scope = candidate?.scope;
+      if (typeof toolId !== 'string' || toolId === '' || !isInstallScope(scope)) {
+        sendJson(res, 400, { error: 'Missing `toolId` or `scope` — send a JSON body of the form {"toolId": "...", "scope": {"kind": "global"}}' });
+        return;
+      }
+
+      const rawRegistry = await installFsWrite.readTextFile(INSTALL_REGISTRY_PATH);
+      const records = rawRegistry === null ? [] : parseInstallRegistry(rawRegistry);
+      const record = findInstallRecord(records, toolId, scope);
+      if (record === undefined) {
+        // No record: removeInstallation is documented idempotent and would
+        // return without touching the filesystem, so keep that silent no-op
+        // rather than turning it into a failure.
+        sendJson(res, 200, null);
+        return;
+      }
+
+      const detections = scope.kind === 'global' ? await detectionsForPermittedRoots() : [];
+      const permittedRoot = permittedRootFor(toolId, scope, detections);
+      const resolvedTarget = path.resolve(record.resolvedPath);
+      // The trailing path.sep is what makes this a boundary rather than a bare
+      // prefix: without it a sibling whose name merely begins with the root's
+      // name would pass. Equality with the root is refused too — a tracked
+      // install is always a path under its base, never the base.
+      if (permittedRoot === null || !resolvedTarget.startsWith(permittedRoot + path.sep)) {
+        sendJson(res, 400, {
+          error: `Refused remove path outside the permitted root for ${toolId}: ${record.resolvedPath}`,
+        });
+        return;
+      }
+      await removeInstallation(toolId, scope, INSTALL_REGISTRY_PATH, { fsWrite: installFsWrite });
+      sendJson(res, 200, null);
+    } catch (err) {
+      sendJson(res, 500, { error: errorMessage(err) });
+    }
+  });
+}
+
 // Every branch below answers with JSON and swallows its own throws: an uncaught
 // exception inside an http.createServer handler takes the whole process down.
 function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath: string): void {
@@ -410,6 +769,62 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
     }
     sendJson(res, 200, { version: APP_VERSION });
     return;
+  }
+
+  if (reqPath.startsWith('/api/integrations/')) {
+    // The loopback gate, above every route match and before any body is read,
+    // in the same position and with the same uniform rejection shape as the
+    // Content-Type check at the top of this function. These routes write and
+    // recursively delete files under real tool config directories on a server
+    // with no authentication, so they are refused to any non-local peer. This
+    // is a peer-address check, distinct from the Host-header check
+    // passesOriginCheck already performs; neither replaces the other.
+    if (!isLoopbackRemote(req)) {
+      sendJson(res, 403, { error: 'Integrations are available only from this machine' });
+      return;
+    }
+
+    if (reqPath === '/api/integrations/tools') {
+      if (method !== 'GET') {
+        sendJson(res, 405, { error: 'Method not allowed' });
+        return;
+      }
+      void handleIntegrationsTools(res);
+      return;
+    }
+
+    if (reqPath === '/api/integrations/skill-presence') {
+      if (method !== 'POST') {
+        sendJson(res, 405, { error: 'Method not allowed' });
+        return;
+      }
+      handleIntegrationsSkillPresence(req, res);
+      return;
+    }
+
+    if (reqPath === '/api/integrations/installs') {
+      if (method === 'GET') {
+        void handleIntegrationsInstallsGet(res);
+        return;
+      }
+      if (method === 'POST') {
+        handleIntegrationsInstallsPost(req, res);
+        return;
+      }
+      sendJson(res, 405, { error: 'Method not allowed' });
+      return;
+    }
+
+    if (reqPath === '/api/integrations/installs/remove') {
+      if (method !== 'POST') {
+        sendJson(res, 405, { error: 'Method not allowed' });
+        return;
+      }
+      handleIntegrationsInstallRemove(req, res);
+      return;
+    }
+
+    // An unmatched /api/integrations/ path falls through to the 404 below.
   }
 
   sendJson(res, 404, { error: 'Not found' });
