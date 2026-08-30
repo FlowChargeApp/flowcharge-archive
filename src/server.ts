@@ -885,7 +885,7 @@ export const serverReady: Promise<number> = new Promise<number>((resolve, reject
   // imported this module. Not narrowed to one code, because any of them means
   // the same thing here: this server never started.
   server.on('error', (err) => {
-    console.error(`Praxis Dashboard could not bind ${host}:${port}:`, err);
+    console.error(`FlowCharge could not bind ${host}:${port}:`, err);
     reject(err);
   });
 
@@ -896,13 +896,13 @@ export const serverReady: Promise<number> = new Promise<number>((resolve, reject
     const address = server.address();
     resolve(typeof address === 'object' && address !== null ? address.port : port);
 
-    console.log(`Praxis Dashboard running at http://${host}:${port}`);
+    console.log(`FlowCharge running at http://${host}:${port}`);
     if (!isLoopbackHost(host)) {
       console.warn(
-        `WARNING: bound to ${host}, which is not loopback-only — this dashboard is now ` +
+        `WARNING: bound to ${host}, which is not loopback-only — FlowCharge is now ` +
         `reachable from other devices on the network. There is no authentication: any ` +
         `device that can reach ${host}:${port} can read every registered project's ` +
-        `prxwork/ content and can add, rename, or remove project registry entries. ` +
+        `flowcharge/ content and can add, rename, or remove project registry entries. ` +
         `Registered project paths are resolved on THIS machine's filesystem regardless ` +
         `of which machine's browser makes the request.`
       );
