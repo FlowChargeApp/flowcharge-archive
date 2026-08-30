@@ -7,14 +7,11 @@
 // imports with no binding, reproducing the order their script tags used to give
 // them.
 //
-// The shapes declared here are structural mirrors of
-// electron/agentic-tools-ipc-handlers.cts's, matching this codebase's established
-// mirror-not-import pattern (see that file's own header comment). The Window
-// augmentation stays at file scope — NOT inside the IIFE below — and sits inside
-// a global-augmentation block, so it merges with the Window that lib.dom.d.ts
-// declares; an interface inside a function body would only shadow Window locally.
-// InstallScope is not redeclared here because it is imported from
-// './lib/agentic-tools-scope'.
+// The skill-install surface's shapes are not declared here. './lib/agentic-tools-api'
+// owns them, because browser-ipc-shim.ts needs the same shapes and neither file can
+// own what the other also imports. That module also carries the window.praxisSkillInstallAPI
+// augmentation, inside a global-augmentation block so it merges with the Window that
+// lib.dom.d.ts declares. InstallScope comes from './lib/agentic-tools-scope'.
 
 import './browser-ipc-shim';
 import './app-version';
@@ -24,67 +21,13 @@ import { unwrapIpc } from './ipc-adapter';
 import type { PraxisIpcResult } from './ipc-adapter';
 import { resolveBasePathForScope, isEligibleAtScope } from './lib/agentic-tools-scope';
 import type { InstallScope } from './lib/agentic-tools-scope';
-
-type DetectionConfidence = 'confirmed' | 'likely' | 'weak' | 'not-detected';
-
-interface DetectionResult {
-  toolId: string;
-  confidence: DetectionConfidence;
-  resolvedConfigDir: string | null;
-  matchedSignals: string[];
-  needsManualVerification: boolean;
-}
-
-interface ToolDetectionRow {
-  toolId: string;
-  displayName: string;
-  category: 'cli' | 'gui-app';
-  detection: DetectionResult;
-}
-
-interface InstallResult {
-  toolId: string;
-  status: 'installed' | 'updated' | 'up-to-date' | 'skipped-no-format';
-  resolvedPath: string | null;
-}
-
-interface InstallRecord {
-  toolId: string;
-  resolvedPath: string;
-  format: string;
-  scope: InstallScope;
-  installedAt: string;
-  updatedAt: string;
-  contentHash: string;
-}
-
-// Mirrors agentic-tools-skill-presence.ts's SkillPresenceResult union — kept in
-// sync by hand, same mirror-not-import pattern as every other shape here.
-type SkillPresenceResult =
-  | {
-      checkKind: 'per-skill';
-      status: 'fully-installed' | 'missing-incomplete' | 'not-installed';
-      presentSkillIds: string[];
-      missingSkillIds: string[];
-    }
-  | { checkKind: 'shared-file'; exists: boolean }
-  | { checkKind: 'no-format' };
-
-declare global {
-  interface Window {
-    praxisSkillInstallAPI: {
-      detectTools(): Promise<PraxisIpcResult<ToolDetectionRow[]>>;
-      installSelected(
-        targets: { toolId: string; basePath: string; scope: InstallScope }[]
-      ): Promise<PraxisIpcResult<InstallResult[]>>;
-      getInstallStatus(): Promise<PraxisIpcResult<InstallRecord[]>>;
-      removeInstallation(toolId: string, scope: InstallScope): Promise<PraxisIpcResult<void>>;
-      checkInstalledSkills(
-        target: { toolId: string; basePath: string; scope: InstallScope }
-      ): Promise<PraxisIpcResult<SkillPresenceResult>>;
-    };
-  }
-}
+import type {
+  DetectionConfidence,
+  InstallResult,
+  PraxisSkillInstallAPI,
+  SkillPresenceResult,
+  ToolDetectionRow
+} from './lib/agentic-tools-api';
 
 (function () {
   var ABSOLUTE_PATH_MESSAGE = 'Path must be absolute — enter a full path starting with /';
