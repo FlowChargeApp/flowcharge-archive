@@ -1,6 +1,6 @@
 // Detail extraction library: reads ONE workstream's artefact files and returns
 // the modal's detail-only payload. Deliberately separate from extract.ts's board
-// payload — nothing here feeds /api/projects/<id>/data. Knows Praxis markdown
+// payload — nothing here feeds /api/projects/<id>/data. Knows FlowCharge markdown
 // structure (folder layout, which frontmatter type means what) but nothing about
 // HTTP, the project registry or YAML syntax.
 

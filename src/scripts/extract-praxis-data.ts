@@ -29,14 +29,14 @@ function parseArgs(argv: string[]): Args {
 
 function usage() {
   console.log(`
-Praxis Dashboard — standalone data extractor
+FlowCharge — standalone data extractor
 
-Writes a project's Praxis state to a JSON file. The dashboard does not read this
+Writes a project's FlowCharge state to a JSON file. The app does not read this
 file: it extracts each registered project's data live through the server.
 
   npm run refresh -- --root <project-dir> [--out <file.json>]
 
-  --root   Path to the project containing a prxwork/ folder (required)
+  --root   Path to the project containing a flowcharge/ folder (required)
   --out    Where to write the JSON payload (default: dist/public/data.json)
 `);
 }

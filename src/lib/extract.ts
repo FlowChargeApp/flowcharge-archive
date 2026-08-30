@@ -54,7 +54,7 @@ export function stripFrontmatter(text: string): string {
 // keys hold scalars; a fallback here would change what lands in the payload.
 function fmStr(v: string | string[] | undefined): string { return v as string; }
 
-// The optional final segment of a Praxis artefact id: `TYPE-N` became
+// The optional final segment of a FlowCharge artefact id: `TYPE-N` became
 // `TYPE-N-SUFFIX`, where SUFFIX is exactly six lowercase base-36 characters,
 // `[0-9a-z]{6}`. A source fragment rather than a RegExp, because most consumers
 // embed it inside a larger pattern. The group MUST stay OPTIONAL: both id shapes

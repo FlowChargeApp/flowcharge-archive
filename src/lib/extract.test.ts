@@ -1,4 +1,4 @@
-// Unit tests for the id-shape compatibility rules in extract.ts. Praxis ids
+// Unit tests for the id-shape compatibility rules in extract.ts. FlowCharge ids
 // carry an optional six-character suffix (`TYPE-N` and `TYPE-N-SUFFIX` are both
 // live), so every case below is asserted over BOTH shapes. These guard a real
 // defect: before the fix, `artefactIdNumber('IL-9-000123')` returned 123 — a

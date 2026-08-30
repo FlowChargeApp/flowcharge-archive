@@ -133,7 +133,7 @@ export async function fetchLatestRelease(timeoutMs: number = DEFAULT_TIMEOUT_MS)
       // detail beyond the product name.
       headers: {
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'PraxisBoard',
+        'User-Agent': 'FlowCharge',
       },
       signal: AbortSignal.timeout(timeoutMs),
     });

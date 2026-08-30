@@ -24,7 +24,7 @@ import { unwrapIpc } from './ipc-adapter';
   var PLAN_TRUNCATE_THRESHOLD = 16;
   // Workstream id tail: a hyphen, the SEQUENCE NUMBER, then an OPTIONAL
   // six-character base-36 suffix, anchored at end of string. The suffix group
-  // must stay OPTIONAL, because this dashboard's own prxwork/ tree holds both
+  // must stay OPTIONAL, because this app's own prxwork/ tree holds both
   // the bare WS-N and the suffixed WS-N-SUFFIX shape at once. The suffix is
   // non-capturing, so the digits stay at capture position 1. This mirrors
   // artefactIdNumber in src/lib/extract.ts; the shared fragment is not imported

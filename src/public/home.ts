@@ -214,7 +214,7 @@ import type {
       deleteButton.addEventListener('click', function () {
         setTileError('');
         var confirmed = window.confirm(
-          'Remove "' + p.name + '" from the dashboard?\n\n' +
+          'Remove "' + p.name + '" from FlowCharge?\n\n' +
           'This removes the project from the list only. The project\'s own files on disk are not touched.');
         if (!confirmed) return;
 

@@ -1,4 +1,4 @@
-// Provisional, hand-maintained duplicate of the canonical Praxis skill suite.
+// Provisional, hand-maintained duplicate of the canonical FlowCharge Core skill suite.
 // WS-44-h5cpzp ("Vendor the Praxis skill suite into this repo as the
 // installer's real content source", status: ready, not yet implemented as of
 // this session) will eventually vendor the real skill content into this repo.

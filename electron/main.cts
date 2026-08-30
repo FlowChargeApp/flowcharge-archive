@@ -87,7 +87,7 @@ app.whenReady().then(async () => {
     boundPort = await serverModule.serverReady;
   } catch (err) {
     dialog.showErrorBox(
-      'Praxis Dashboard failed to start',
+      'FlowCharge failed to start',
       `The local server could not start: ${err instanceof Error ? err.message : String(err)}`
     );
     app.quit();

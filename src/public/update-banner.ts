@@ -75,7 +75,7 @@ declare global {
         if (!notice) {
           return;
         }
-        text.textContent = 'Praxis Board ' + notice.version + ' is available.';
+        text.textContent = 'FlowCharge ' + notice.version + ' is available.';
         // "View release" can do nothing when main holds no release URL, so the
         // button is removed from the row rather than left as a dead control.
         viewButton.hidden = !notice.hasReleaseUrl;
