@@ -54,6 +54,7 @@ export interface SkillContent {
 
 export interface InstallContent {
   version: string; // static literal, informational only
+  releaseTag?: string; // present only for content sourced from a published release
   skills: SkillContent[]; // sorted by id ascending
 }
 
@@ -320,7 +321,7 @@ export async function getInstallContent(
       await deps.fsWrite.remove(zipPath);
     }
 
-    return { version: 'fetched-from-git', skills };
+    return { version: 'fetched-from-git', releaseTag: latest.tag, skills };
   } catch (err) {
     // One line, carrying the thrown message. This module is loaded by both the
     // HTTP server and the Electron main process, so the single line covers

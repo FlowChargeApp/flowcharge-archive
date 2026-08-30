@@ -68,9 +68,11 @@ async function writeRegistry(registryPath: string, records: InstallRecord[], fsW
 }
 
 // Reads the registry first: on a matching contentHash for this target's
-// (toolId, scope), skips every write (no writeTextFileAtomic call at all)
-// and returns 'up-to-date' with the record's resolvedPath (plan acceptance
-// criterion 4's exact zero-write requirement). Otherwise formats and writes
+// (toolId, scope), skips every content write and returns 'up-to-date' with
+// the record's resolvedPath (plan acceptance criterion 4's exact zero-write
+// requirement). The one write that branch may still make is the registry
+// itself, and only to backfill a version the record does not yet carry —
+// see the branch's own comment. Otherwise formats and writes
 // as before, then upserts and persists the tracking record — always AFTER
 // the content writes succeed, so a failed content write never leaves a
 // tracking record for content that was never actually written to disk.
@@ -90,6 +92,20 @@ export async function installToTarget(
   const existing = findInstallRecord(records, target.tool.id, target.scope);
 
   if (existing !== undefined && existing.contentHash === contentHash) {
+    // Version backfill: the bytes already on disk are correct, but the record
+    // names a different version than the content carries — the case being a
+    // record written before versions were tracked at all, which would
+    // otherwise never gain one and could never be told an update exists.
+    // Absent-vs-absent compares equal, so the ordinary no-op stays a pure
+    // early return. The correction is a REGISTRY write only: no format, no
+    // mkdir and no content write happen on this branch, so the zero-content-
+    // write contract above still holds, and the status stays 'up-to-date'.
+    if (existing.version !== content.releaseTag) {
+      const backfilled: InstallRecord = { ...existing, updatedAt: new Date().toISOString() };
+      if (content.releaseTag === undefined) delete backfilled.version;
+      else backfilled.version = content.releaseTag;
+      await writeRegistry(registryPath, upsertInstallRecord(records, backfilled), deps.fsWrite);
+    }
     return { toolId: target.tool.id, status: 'up-to-date', resolvedPath: existing.resolvedPath };
   }
 
@@ -122,6 +138,11 @@ export async function installToTarget(
     updatedAt: now,
     contentHash,
   };
+  // The version key is added conditionally, never assigned undefined: this
+  // module treats releaseTag as an opaque string it copies and nothing more,
+  // and JSON.stringify would drop an undefined-valued key on the way to disk
+  // while leaving the in-memory record disagreeing with what was persisted.
+  if (content.releaseTag !== undefined) record.version = content.releaseTag;
   const nextRecords = upsertInstallRecord(records, record);
   await writeRegistry(registryPath, nextRecords, deps.fsWrite);
 

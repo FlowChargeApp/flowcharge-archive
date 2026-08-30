@@ -239,6 +239,66 @@ test('installToTarget install/no-op/update lifecycle against Claude Code (accept
   assert.notEqual(record!.updatedAt, recordAfterFirst!.updatedAt, 'updatedAt bumps on a content change');
 });
 
+test('installToTarget records content.releaseTag as the install record version', async () => {
+  const fsWrite = fakeFsWriteAccess();
+  const target: InstallTarget = { tool: claudeCode(), basePath: '/home/fakeuser/.claude', scope: { kind: 'global' } };
+  const tagged: InstallContent = { ...twoSkillContent, releaseTag: 'v1.4.0' };
+
+  const result = await installToTarget(target, tagged, REGISTRY_PATH, { fsWrite });
+  assert.equal(result.status, 'installed');
+
+  const registryRaw = await fsWrite.readTextFile(REGISTRY_PATH);
+  assert.ok(registryRaw);
+  const record = (JSON.parse(registryRaw!) as { toolId: string; version?: string }[]).find(
+    (r) => r.toolId === 'claude-code',
+  );
+  assert.ok(record);
+  assert.equal(record!.version, 'v1.4.0');
+});
+
+test('installToTarget omits the version key entirely for content carrying no releaseTag', async () => {
+  const fsWrite = fakeFsWriteAccess();
+  const target: InstallTarget = { tool: claudeCode(), basePath: '/home/fakeuser/.claude', scope: { kind: 'global' } };
+
+  await installToTarget(target, twoSkillContent, REGISTRY_PATH, { fsWrite });
+
+  // Asserted on the serialized registry text, not on the parsed object: a key
+  // set to undefined would vanish from JSON.stringify's output and pass a
+  // property lookup, so only the text proves the key was never added.
+  const registryRaw = await fsWrite.readTextFile(REGISTRY_PATH);
+  assert.ok(registryRaw);
+  assert.ok(!registryRaw!.includes('"version"'), 'no version key in the serialized registry');
+
+  const record = (JSON.parse(registryRaw!) as { toolId: string }[]).find((r) => r.toolId === 'claude-code');
+  assert.ok(record);
+  assert.ok(!Object.prototype.hasOwnProperty.call(record!, 'version'), 'version key absent, not undefined');
+});
+
+test('installToTarget backfills a changed version on an up-to-date install, writing only the registry', async () => {
+  const fsWrite = fakeFsWriteAccess();
+  const target: InstallTarget = { tool: claudeCode(), basePath: '/home/fakeuser/.claude', scope: { kind: 'global' } };
+
+  const first = await installToTarget(target, { ...twoSkillContent, releaseTag: 'v1.4.0' }, REGISTRY_PATH, { fsWrite });
+  assert.equal(first.status, 'installed');
+
+  // Identical skills, so the content hash matches and no content is rewritten
+  // — only the release tag differs.
+  const contentWritesBefore = contentWriteCalls(fsWrite).length;
+  const second = await installToTarget(target, { ...twoSkillContent, releaseTag: 'v1.5.0' }, REGISTRY_PATH, { fsWrite });
+
+  assert.equal(second.status, 'up-to-date');
+  assert.equal(second.resolvedPath, first.resolvedPath);
+  assert.equal(contentWriteCalls(fsWrite).length, contentWritesBefore, 'no content path written on the backfill');
+
+  const registryRaw = await fsWrite.readTextFile(REGISTRY_PATH);
+  assert.ok(registryRaw);
+  const record = (JSON.parse(registryRaw!) as { toolId: string; version?: string }[]).find(
+    (r) => r.toolId === 'claude-code',
+  );
+  assert.ok(record);
+  assert.equal(record!.version, 'v1.5.0');
+});
+
 test('removeInstallation deletes the tracked file and the record for that (toolId, scope) pair (acceptance criterion 6)', async () => {
   const fsWrite = fakeFsWriteAccess();
   const target: InstallTarget = { tool: claudeCode(), basePath: '/home/fakeuser/.claude', scope: { kind: 'global' } };

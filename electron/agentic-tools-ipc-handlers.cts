@@ -120,6 +120,7 @@ export interface InstallRecord {
   installedAt: string;
   updatedAt: string;
   contentHash: string;
+  version?: string;
 }
 
 interface FsWriteAccess {
@@ -148,6 +149,7 @@ export interface InstallResult {
 
 export interface InstallContent {
   version: string;
+  releaseTag?: string;
   skills: {
     id: string;
     name: string;
