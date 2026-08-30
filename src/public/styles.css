@@ -855,10 +855,16 @@ button { font-family: inherit; }
   border-bottom: 1px solid var(--line);
 }
 .ws-modal-meta .card-tags { margin-bottom: 0; }
-/* Board modal only: an expanded description on a short viewport scrolls here
-   instead of being clipped. Scoped by id, so the integrations modal in
-   index.html, which shares the class, keeps its plain unscrolled layout. */
-#ws-modal-meta {
+#ws-modal-tags { margin-top: 15px; }
+/* Board modal only: the blocked banner, the body and its reveal button scroll
+   inside this wrapper, so the tags row and the dates row that follow it stay
+   visible with no scrolling. Scoped by id, so the integrations modal in
+   index.html, which shares the .ws-modal-meta class, keeps its plain
+   unscrolled layout. */
+#ws-modal-meta-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   max-height: 40vh;
   overflow-y: auto;
 }

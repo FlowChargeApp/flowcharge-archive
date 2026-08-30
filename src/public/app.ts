@@ -980,6 +980,7 @@ import { unwrapIpc } from './ipc-adapter';
     var descMoreEl = byId('ws-modal-description-more');
     var blockedEl = byId('ws-modal-blocked');
     var blockedReasonEl = byId('ws-modal-blocked-reason');
+    var metaScrollEl = byId('ws-modal-meta-scroll');
     tagsEl.innerHTML = '';
     if (!w) {
       sevDot.hidden = true;
@@ -991,6 +992,7 @@ import { unwrapIpc } from './ipc-adapter';
       descEl.classList.add('is-clamped');
       descEl.hidden = true;
       descMoreEl.hidden = true;
+      metaScrollEl.hidden = true;
       datesEl.textContent = '';
       return;
     }
@@ -1029,6 +1031,7 @@ import { unwrapIpc } from './ipc-adapter';
       descMoreEl.hidden = true;
     }
     datesEl.textContent = 'created ' + fmtDate(w.created) + ' · updated ' + fmtDate(w.updated);
+    metaScrollEl.hidden = blockedEl.hidden && descEl.hidden;
   }
 
   // Show the reveal button only when the clamped paragraph really overflows.
