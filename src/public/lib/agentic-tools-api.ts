@@ -46,6 +46,16 @@ export interface InstallRecord {
   installedAt: string;
   updatedAt: string;
   contentHash: string;
+  version?: string;
+}
+
+// Mirrors src/lib/skill-release-fetch.ts's SkillReleaseSummary — kept in sync
+// by hand, same mirror-not-import pattern as every other shape here.
+export interface SkillReleaseSummary {
+  tag: string;
+  name: string;
+  publishedAt: string;
+  assetName: string | null;
 }
 
 // Mirrors agentic-tools-skill-presence.ts's SkillPresenceResult union — kept in
@@ -71,6 +81,7 @@ export interface PraxisSkillInstallAPI {
   detectTools(): Promise<PraxisIpcResult<ToolDetectionRow[]>>;
   installSelected(targets: InstallTargetRequest[]): Promise<PraxisIpcResult<InstallResult[]>>;
   getInstallStatus(): Promise<PraxisIpcResult<InstallRecord[]>>;
+  listSkillReleases(): Promise<PraxisIpcResult<SkillReleaseSummary[]>>;
   removeInstallation(toolId: string, scope: InstallScope): Promise<PraxisIpcResult<null>>;
   checkInstalledSkills(target: InstallTargetRequest): Promise<PraxisIpcResult<SkillPresenceResult>>;
 }

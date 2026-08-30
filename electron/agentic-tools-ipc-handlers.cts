@@ -159,6 +159,15 @@ export interface InstallContent {
   }[];
 }
 
+// Mirrors src/lib/skill-release-fetch.ts's SkillReleaseSummary — kept in sync
+// by hand, same caveat as every other locally-mirrored type here.
+export interface SkillReleaseSummary {
+  tag: string;
+  name: string;
+  publishedAt: string;
+  assetName: string | null;
+}
+
 // Mirrors agentic-tools-skill-presence.ts's SkillPresenceResult union — kept
 // in sync by hand, same caveat as every other locally-mirrored type here.
 type SkillPresenceResult =
@@ -189,6 +198,7 @@ type GetInstallContentFn = (
   toolId: string,
   deps: { fsWrite: FsWriteAccess }
 ) => Promise<InstallContent>;
+type ListSkillReleasesFn = () => Promise<SkillReleaseSummary[]>;
 type ParseInstallRegistryFn = (raw: string) => InstallRecord[];
 type FindInstallRecordFn = (
   records: InstallRecord[],
@@ -252,6 +262,7 @@ const dynamicImport = new Function('specifier', 'return import(specifier)') as (
 // has resolved and assigned these, since ipcMain.handle registration itself
 // happens after that await.
 let getInstallContent!: GetInstallContentFn;
+let listSkillReleases!: ListSkillReleasesFn;
 let installToTarget!: InstallToTargetFn;
 let removeInstallation!: RemoveInstallationFn;
 let parseInstallRegistry!: ParseInstallRegistryFn;
@@ -350,9 +361,11 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
   };
   const skillContentModule = (await dynamicImport('../lib/skill-content-fetch.js')) as {
     getInstallContent: GetInstallContentFn;
+    listSkillReleases: ListSkillReleasesFn;
   };
 
   getInstallContent = skillContentModule.getInstallContent;
+  listSkillReleases = skillContentModule.listSkillReleases;
   installToTarget = installModule.installToTarget;
   removeInstallation = installModule.removeInstallation;
   parseInstallRegistry = trackingModule.parseInstallRegistry;
@@ -434,6 +447,21 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
       return { ok: false, status: 500, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  // Takes no argument at all: the renderer cannot steer this request, and no
+  // URL crosses the bridge in either direction. The host constant lives in
+  // src/lib/skill-content-fetch.ts, which is the only place that composes it.
+  ipcMain.handle(
+    'listSkillReleases',
+    async (): Promise<PraxisIpcResult<SkillReleaseSummary[]>> => {
+      try {
+        const releases = await listSkillReleases();
+        return { ok: true, status: 200, data: releases };
+      } catch (err) {
+        return { ok: false, status: 500, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
 
   ipcMain.handle(
     'removeInstallation',

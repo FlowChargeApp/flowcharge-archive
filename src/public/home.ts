@@ -23,9 +23,11 @@ import { resolveBasePathForScope, isEligibleAtScope } from './lib/agentic-tools-
 import type { InstallScope } from './lib/agentic-tools-scope';
 import type {
   DetectionConfidence,
+  InstallRecord,
   InstallResult,
   PraxisSkillInstallAPI,
   SkillPresenceResult,
+  SkillReleaseSummary,
   ToolDetectionRow
 } from './lib/agentic-tools-api';
 
@@ -438,12 +440,32 @@ import type {
   // but not all canonical skills are present on disk for this tool.
   var INCOMPLETE_INSTALL_LABEL = 'Missing skills';
 
+  // Version-chip labels. A record with no version, or a version the semver rule
+  // below cannot read, shows UNKNOWN_VERSION_LABEL and never an empty chip — that is
+  // the normal state for every record written before this feature existed.
+  var VERSION_LABEL_PREFIX = 'v';
+  var UNKNOWN_VERSION_LABEL = 'Version unknown';
+
+  // Accepts `v?MAJOR.MINOR.PATCH` and ignores whatever follows the patch number,
+  // matching src/lib/update-check.ts's rule exactly. Re-authored here rather than
+  // imported: that module uses the Node-only Buffer global and is excluded from this
+  // page's type-check and bundle (see task list Divergence 2).
+  var SEMVER_RE = /^v?(\d+)\.(\d+)\.(\d+)/;
+
+  function parseSemver(raw: string): { major: number; minor: number; patch: number } | null {
+    if (typeof raw !== 'string') return null;
+    var m = raw.trim().match(SEMVER_RE);
+    if (m === null) return null;
+    return { major: Number(m[1]), minor: Number(m[2]), patch: Number(m[3]) };
+  }
+
   type IntegrationsRowEntry = {
     row: ToolDetectionRow;
     rowEl: HTMLElement;
     checkbox: HTMLInputElement;
     notes: HTMLElement;
     installChip: HTMLElement;
+    versionChip: HTMLElement;
     // True once a live installSelected() result (this dialog session) has written a
     // real InstallResult onto installChip — guards applyIntegrationsRowEligibility's
     // persisted-registry join from clobbering that fresh chip on a later scope toggle.
@@ -466,6 +488,28 @@ import type {
   // gate, and task list Divergence 2.
   var integrationsSkillPresence: Record<string, SkillPresenceResult> = {};
 
+  // The newest published release, or null when none was found. Always the FIRST entry
+  // of the list listSkillReleases() returns: parseReleases already sorted that list
+  // newest-first, so re-sorting here would duplicate a rule that could then drift.
+  var latestRelease: SkillReleaseSummary | null = null;
+
+  // Persisted install records (getInstallStatus), keyed by toolId AND scope, fetched
+  // once at dialog open — fetched-once / cleared-on-close, same lifecycle as
+  // integrationsSkillPresence above. Keying on scope as well as toolId is what lets a
+  // scope toggle re-derive the version chip client-side with no second call, and is
+  // what stops two projects' records from colliding.
+  //
+  // This is a VERSION join only. The 'Already installed' chip deliberately does NOT
+  // read this map — ISS-12-yngl4x replaced that ledger join with the strictly more
+  // accurate filesystem presence check above, and this must not restore it.
+  var integrationsInstallRecords: Record<string, InstallRecord> = {};
+
+  // The map key. A project-scoped record carries its project path, so two projects'
+  // records for the same tool never overwrite one another.
+  function installRecordKey(toolId: string, scope: InstallScope): string {
+    return scope.kind === 'project' ? toolId + ' project ' + scope.projectPath : toolId + ' global';
+  }
+
   function buildIntegrationsRow(row: ToolDetectionRow): IntegrationsRowEntry {
     var rowEl = el('div', 'integrations-row');
 
@@ -484,6 +528,12 @@ import type {
     installChip.hidden = true;
     rowEl.appendChild(installChip);
 
+    // Version chip: applyIntegrationsRowEligibility fills it on the first pass, from
+    // the install record for this row's toolId at the current scope.
+    var versionChip = el('span', 'chip');
+    versionChip.hidden = true;
+    rowEl.appendChild(versionChip);
+
     var notes = el('div', 'integrations-row-notes');
     rowEl.appendChild(notes);
 
@@ -493,6 +543,7 @@ import type {
       checkbox: checkbox,
       notes: notes,
       installChip: installChip,
+      versionChip: versionChip,
       hasLiveResult: false
     };
   }
@@ -503,6 +554,20 @@ import type {
     var eligible = isEligibleAtScope(currentIntegrationsScope, entry.row.detection);
     entry.checkbox.disabled = !eligible;
     entry.notes.innerHTML = '';
+
+    // Version chip, re-derived on every scope toggle from the once-fetched record map.
+    // The chip is always visible and never empty: no record at all, a record with no
+    // version, and a version the semver rule cannot read all read 'Version unknown'.
+    // That is the normal state for every record written before this feature existed.
+    var record = integrationsInstallRecords[installRecordKey(entry.row.toolId, currentIntegrationsScope)];
+    var parsed = record === undefined || record.version === undefined
+      ? null
+      : parseSemver(record.version);
+    entry.versionChip.textContent = parsed === null
+      ? UNKNOWN_VERSION_LABEL
+      : VERSION_LABEL_PREFIX + parsed.major + '.' + parsed.minor + '.' + parsed.patch;
+    entry.versionChip.hidden = false;
+
     if (!eligible) {
       var scopeLabel = currentIntegrationsScope.kind === 'project' ? 'project scope' : 'global scope';
       entry.notes.appendChild(el('span', 'integrations-row-note', 'Not supported at ' + scopeLabel));
@@ -594,6 +659,64 @@ import type {
     box.appendChild(el('p', null, 'Detail: ' + detail));
     panelCli.appendChild(box);
     updateInstallSelectedButtonState();
+  }
+
+  // Fills the dialog header's latest-release line. Called on dialog open only.
+  //
+  // The dialog must stay fully usable when no release is found, so an empty list, a
+  // failed call and an absent surface all render the same short note rather than a
+  // failure box. That note is now also a warning that an install would fail, but the
+  // user-facing message for that is the one the install path itself throws.
+  //
+  // The tag and the name arrive from a remote API, so both are written with
+  // textContent, which never parses markup.
+  function loadLatestRelease(): Promise<void> {
+    var releaseEl = byId('integrations-release');
+    var api = skillInstallAPI();
+    if (api === null) {
+      latestRelease = null;
+      releaseEl.textContent = 'No published release found';
+      return Promise.resolve();
+    }
+    return api.listSkillReleases().then(unwrapIpc).then(function (releases) {
+      // First entry, not a re-sorted one: parseReleases already ordered the list
+      // newest-first, and a second sort here would be a duplicated rule.
+      latestRelease = releases.length > 0 ? releases[0] : null;
+      if (latestRelease === null) {
+        releaseEl.textContent = 'No published release found';
+        return;
+      }
+      releaseEl.textContent = latestRelease.name === ''
+        ? latestRelease.tag
+        : latestRelease.tag + ' — ' + latestRelease.name;
+    })
+      .catch(function () {
+        latestRelease = null;
+        releaseEl.textContent = 'No published release found';
+      });
+  }
+
+  // Fetches the persisted install registry once per dialog open, for the per-row
+  // version chips only. Records are keyed by toolId AND scope here, so a later scope
+  // toggle re-derives every chip from this map with no second call. A failure leaves
+  // the map empty, which shows no version chip at all rather than a wrong one.
+  function loadIntegrationsInstallRecords(): Promise<void> {
+    var api = skillInstallAPI();
+    if (api === null) {
+      integrationsInstallRecords = {};
+      return Promise.resolve();
+    }
+    return api.getInstallStatus().then(unwrapIpc).then(function (records) {
+      var next: Record<string, InstallRecord> = {};
+      records.forEach(function (record) {
+        next[installRecordKey(record.toolId, record.scope)] = record;
+      });
+      integrationsInstallRecords = next;
+      refreshIntegrationsEligibility();
+    })
+      .catch(function () {
+        integrationsInstallRecords = {};
+      });
   }
 
   // Called on dialog open and on #integrations-rescan click — the only two places
@@ -702,6 +825,9 @@ import type {
     setIntegrationsScope('global');
     integrationsRowEntries = [];
     integrationsSkillPresence = {};
+    latestRelease = null;
+    byId('integrations-release').textContent = '';
+    integrationsInstallRecords = {};
     byId('integrations-panel-cli').innerHTML = '';
     byId('integrations-panel-gui-app').innerHTML = '';
     integrationsInstallSelectedButton.disabled = true;
@@ -710,6 +836,8 @@ import type {
   byId('manage-integrations-button').addEventListener('click', function () {
     populateIntegrationsProjectSelect();
     integrationsModal.showModal();
+    loadLatestRelease();
+    loadIntegrationsInstallRecords();
     loadIntegrationsDetection();
   });
 
