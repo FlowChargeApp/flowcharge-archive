@@ -1,16 +1,17 @@
-# Praxis Board
+# FlowCharge
 
 **Private repository.** This is closed-source software for internal use. It is not
 published, licensed for reuse, or intended for external redistribution.
 
-A local, bird's-eye Kanban dashboard for [Praxis](https://github.com) (`prx`) project-management
-workstreams — the `prxwork/` markdown convention used by the `prx-orchestrate` Claude Code skill.
+FlowCharge is a local, bird's-eye Kanban view of [FlowCharge Core](https://github.com)
+project-management workstreams — the `flowcharge/` markdown convention used by the
+`fc-orchestrate` Claude Code skill.
 
-Reads a project's `prxwork/` frontmatter and renders every workstream as a card in a
+Reads a project's `flowcharge/` frontmatter and renders every workstream as a card in a
 five-column board (Backlog · Ready · In Progress · Done · Dropped), sortable by
 artefact ID or name, with panels for open issues by severity and artefacts that have gone
 quiet. It's read-only and non-interactive by design — no drag-and-drop, no writes back to
-the source project. All board movement still happens through the `prx-*` skills; this is
+the source project. All board movement still happens through the `fc-*` skills; this is
 just a way to see the result at a glance, kept here for this project's own ongoing use of
 the board.
 
@@ -22,15 +23,15 @@ npm start       # build, then serve at http://localhost:4173
 ```
 
 Then open the home page and add a project you're working on: paste the absolute path of any
-directory containing a `prxwork/` folder into the form, and it appears as a tile. Click the tile to
+directory containing a `flowcharge/` folder into the form, and it appears as a tile. Click the tile to
 open its board.
 
 `npm install` is required before running this locally: both `npm start` and `npm run refresh`
 compile first, and without `node_modules` they fail on a missing `tsc`.
 
 The board works out of the box with nothing added. Until a registry file exists, the home page
-shows a single pre-registered tile for this repository itself, and its board renders live from the
-dashboard's own `prxwork/`. As soon as a project is added the registry file is written and the
+shows a single pre-registered tile for this repository itself, and its board renders live from
+FlowCharge's own `flowcharge/` tree. As soon as a project is added the registry file is written and the
 list becomes exactly what it contains.
 
 ## How it fits together
@@ -40,7 +41,7 @@ Praxis-Dashboard/
 ├── src/                             hand-written source
 │   ├── server.ts                    zero-dependency static server + /api/ routes (npm start)
 │   ├── lib/
-│   │   ├── extract.ts               pure extraction library — prxwork/ → PraxisData
+│   │   ├── extract.ts               pure extraction library — flowcharge/ → PraxisData
 │   │   ├── git.ts                   current branch reader — .git/HEAD → branch name
 │   │   └── projects.ts              the project registry: read, find, add, rename, remove
 │   ├── scripts/
@@ -67,8 +68,8 @@ Praxis-Dashboard/
 ```
 
 `extract-praxis-data.ts` parses each workstream's frontmatter and its linked plans, issue
-lists, and task lists directly from the markdown — the same source of truth the `prx-*`
-skills and `prx-index.mjs` use. It never writes back to the project it reads.
+lists, and task lists directly from the markdown — the same source of truth the `fc-*`
+skills and `fc-index.mjs` use. It never writes back to the project it reads.
 
 ## Scripts
 
@@ -76,7 +77,7 @@ skills and `prx-index.mjs` use. It never writes back to the project it reads.
 |---|---|
 | `npm run build` | Compiles both TypeScript projects into `dist/` and copies the static assets |
 | `npm start` | Builds, then serves the pages and the `/api/` routes at `http://localhost:4173` (override with `PORT=xxxx npm start`) |
-| `npm run refresh -- --root <dir>` | Builds, then dumps `<dir>/prxwork/` to a JSON file — a standalone snapshot, not the board's feed |
+| `npm run refresh -- --root <dir>` | Builds, then dumps `<dir>/flowcharge/` to a JSON file — a standalone snapshot, not the board's feed |
 
 `npm run refresh` is a convenience for anyone who wants the extracted payload as a file: the board
 never reads it, and there is no need to run it before opening a board. It accepts `--out <file>` to
@@ -113,7 +114,7 @@ write somewhere other than its `dist/public/data.json` default.
 - "Needs attention" (artefacts `in-progress` for 14+ days) is computed in the browser
   against the *viewer's* clock from each artefact's own `updated` date, so it stays
   accurate no matter how long ago the data was last refreshed.
-- Works with any project that follows the Praxis `prxwork/` convention, not just LAD — the
+- Works with any project that follows the FlowCharge `flowcharge/` convention, not just LAD — the
   extractor has no LAD-specific logic.
 
 ## Packaged builds
