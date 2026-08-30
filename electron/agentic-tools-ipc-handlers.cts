@@ -125,6 +125,8 @@ export interface InstallRecord {
 interface FsWriteAccess {
   readTextFile(path: string): Promise<string | null>;
   writeTextFileAtomic(path: string, content: string): Promise<void>;
+  readBinaryFile(path: string): Promise<Buffer | null>;
+  writeBinaryFileAtomic(path: string, content: Buffer): Promise<void>;
   mkdir(path: string): Promise<void>;
   remove(path: string): Promise<void>;
   expandTokens(path: string): Promise<string>;
@@ -181,7 +183,10 @@ type RemoveInstallationFn = (
   deps: { fsWrite: FsWriteAccess }
 ) => Promise<void>;
 
-type GetInstallContentFn = (toolId: string) => Promise<InstallContent>;
+type GetInstallContentFn = (
+  toolId: string,
+  deps: { fsWrite: FsWriteAccess }
+) => Promise<InstallContent>;
 type ParseInstallRegistryFn = (raw: string) => InstallRecord[];
 type FindInstallRecordFn = (
   records: InstallRecord[],
@@ -385,6 +390,17 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
           }
         }
 
+        // Resolved ONCE per request, not once per target: a per-target fetch
+        // could straddle a release publication and record two different
+        // versions for one batch, and this way one install request produces
+        // exactly one temporary zip file whatever the batch size. Not a
+        // cross-request cache — the next request resolves afresh. It stays
+        // inside this try block so a release-missing throw becomes the
+        // { ok: false, status: 500, error } the renderer's alert reads.
+        // getInstallContent ignores its toolId — every tool gets the same
+        // content — which is what makes the hoist behaviour-preserving.
+        const content = await getInstallContent('', { fsWrite });
+
         const results: InstallResult[] = [];
         for (const target of targets) {
           const tool = TOOL_CATALOGUE.find((t) => t.id === target.toolId);
@@ -392,7 +408,6 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
             results.push({ toolId: target.toolId, status: 'skipped-no-format', resolvedPath: null });
             continue;
           }
-          const content = await getInstallContent(target.toolId);
           const result = await installToTarget(
             { tool, basePath: target.basePath, scope: target.scope },
             content,

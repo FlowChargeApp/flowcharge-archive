@@ -554,6 +554,17 @@ function handleIntegrationsInstallsPost(req: http.IncomingMessage, res: http.Ser
         }
       }
 
+      // Resolved ONCE per request, not once per target: a per-target fetch
+      // could straddle a release publication and record two different versions
+      // for one batch, and this way one install request produces exactly one
+      // temporary zip file whatever the batch size. It stays inside this try
+      // block so a release-missing throw becomes the 500 whose body carries
+      // the message the user must see. getInstallContent ignores its toolId —
+      // every tool gets the same content — which is what makes the hoist
+      // behaviour-preserving. Kept in lockstep with the Electron transport's
+      // installSelected handler.
+      const content = await getInstallContent('', { fsWrite: installFsWrite });
+
       const results: InstallResult[] = [];
       for (const target of targets) {
         const tool = TOOL_CATALOGUE.find((t) => t.id === target.toolId);
@@ -561,7 +572,6 @@ function handleIntegrationsInstallsPost(req: http.IncomingMessage, res: http.Ser
           results.push({ toolId: target.toolId, status: 'skipped-no-format', resolvedPath: null });
           continue;
         }
-        const content = await getInstallContent(target.toolId);
         const result = await installToTarget(
           { tool, basePath: target.basePath, scope: target.scope },
           content,

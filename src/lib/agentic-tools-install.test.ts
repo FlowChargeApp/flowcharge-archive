@@ -24,9 +24,14 @@ const REGISTRY_PATH = '/home/fakeuser/.praxis-installs.json';
 // one test see each other's writes (required for the no-op/update/remove
 // lifecycle tests below) — a fresh fake per call would defeat the no-op
 // assertion entirely.
-function fakeFsWriteAccess(): FsWriteAccess & { calls: { fn: string; path: string; content?: string }[] } {
-  const calls: { fn: string; path: string; content?: string }[] = [];
+function fakeFsWriteAccess(): FsWriteAccess & {
+  calls: { fn: string; path: string; content?: string; binary?: Buffer }[];
+} {
+  const calls: { fn: string; path: string; content?: string; binary?: Buffer }[] = [];
   const files = new Map<string, string>();
+  // Binary content lives in its own map rather than the string map above: a
+  // round trip through a string would silently corrupt bytes.
+  const binaryFiles = new Map<string, Buffer>();
   return {
     calls,
     async readTextFile(path) {
@@ -36,6 +41,16 @@ function fakeFsWriteAccess(): FsWriteAccess & { calls: { fn: string; path: strin
     async writeTextFileAtomic(path, content) {
       calls.push({ fn: 'writeTextFileAtomic', path, content });
       files.set(path, content);
+    },
+    // Recorded under fn names distinct from the text pair's, so every
+    // existing writeTextFileAtomic count below keeps meaning what it means.
+    async readBinaryFile(path) {
+      calls.push({ fn: 'readBinaryFile', path });
+      return binaryFiles.has(path) ? binaryFiles.get(path)! : null;
+    },
+    async writeBinaryFileAtomic(path, content) {
+      calls.push({ fn: 'writeBinaryFileAtomic', path, binary: content });
+      binaryFiles.set(path, content);
     },
     async mkdir(path) {
       calls.push({ fn: 'mkdir', path });

@@ -35,6 +35,10 @@ export type { InstallScope };
 export interface FsWriteAccess {
   readTextFile(path: string): Promise<string | null>;
   writeTextFileAtomic(path: string, content: string): Promise<void>;
+  // Binary pair beside the text pair, for the downloaded release zip.
+  // readBinaryFile mirrors readTextFile's null-on-ENOENT contract exactly.
+  readBinaryFile(path: string): Promise<Buffer | null>;
+  writeBinaryFileAtomic(path: string, content: Buffer): Promise<void>;
   mkdir(path: string): Promise<void>;
   remove(path: string): Promise<void>;
   expandTokens(path: string): Promise<string>;
