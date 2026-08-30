@@ -11,12 +11,12 @@
 // this suite and is deliberately excluded, so a future editor is not
 // tempted to add it.
 export const CANONICAL_PRAXIS_SKILL_IDS: string[] = [
-  'prx-orchestrate',
-  'prx-git',
-  'prx-bug-hunt',
-  'prx-issue-list',
-  'prx-dev-principles',
-  'prx-plan-feature',
-  'prx-task-list',
-  'prx-plain-text-kanban',
+  'fc-orchestrate',
+  'fc-git',
+  'fc-bug-hunt',
+  'fc-issue-list',
+  'fc-dev-principles',
+  'fc-plan-feature',
+  'fc-task-list',
+  'fc-plain-text-kanban',
 ];

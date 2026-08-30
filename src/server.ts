@@ -19,7 +19,7 @@ import { parseInstallRegistry, findInstallRecord } from './lib/agentic-tools-ins
 import { createNodeFsAccess, createNodeFsWriteAccess } from './lib/agentic-tools-fs-adapter.js';
 import { TOOL_CATALOGUE } from './lib/agentic-tools-catalogue.js';
 import { CANONICAL_PRAXIS_SKILL_IDS } from './lib/agentic-tools-canonical-skills.js';
-import { getInstallContent } from './lib/skill-content-fetch.js';
+import { getInstallContent, listSkillReleases } from './lib/skill-content-fetch.js';
 import type { DetectionResult } from './lib/agentic-tools-signals.js';
 import type { OS } from './lib/agentic-tools-catalogue.js';
 import type { InstallResult } from './lib/agentic-tools-install.js';
@@ -504,6 +504,21 @@ async function handleIntegrationsInstallsGet(res: http.ServerResponse): Promise<
   }
 }
 
+// GET /api/integrations/releases — mirrors the listSkillReleases IPC channel.
+// Answers the BARE array, never a PraxisIpcResult envelope: the browser shim's
+// fetchIpc rebuilds that envelope from the status and body. listSkillReleases
+// resolves to [] on every unhappy path rather than throwing, so the catch here
+// is defensive rather than expected — but an async handler must still catch its
+// own throws, since handleApi's try/catch returns before this promise settles.
+async function handleIntegrationsReleases(res: http.ServerResponse): Promise<void> {
+  try {
+    const releases = await listSkillReleases();
+    sendJson(res, 200, releases);
+  } catch (err) {
+    sendJson(res, 500, { error: errorMessage(err) });
+  }
+}
+
 // POST /api/integrations/installs — mirrors the installSelected IPC channel
 // (electron/agentic-tools-ipc-handlers.cts:361-408), including its ordering.
 // This route performs REAL file writes into real tool config directories, so
@@ -554,6 +569,17 @@ function handleIntegrationsInstallsPost(req: http.IncomingMessage, res: http.Ser
         }
       }
 
+      // Resolved ONCE per request, not once per target: a per-target fetch
+      // could straddle a release publication and record two different versions
+      // for one batch, and this way one install request produces exactly one
+      // temporary zip file whatever the batch size. It stays inside this try
+      // block so a release-missing throw becomes the 500 whose body carries
+      // the message the user must see. getInstallContent ignores its toolId —
+      // every tool gets the same content — which is what makes the hoist
+      // behaviour-preserving. Kept in lockstep with the Electron transport's
+      // installSelected handler.
+      const content = await getInstallContent('', { fsWrite: installFsWrite });
+
       const results: InstallResult[] = [];
       for (const target of targets) {
         const tool = TOOL_CATALOGUE.find((t) => t.id === target.toolId);
@@ -561,7 +587,6 @@ function handleIntegrationsInstallsPost(req: http.IncomingMessage, res: http.Ser
           results.push({ toolId: target.toolId, status: 'skipped-no-format', resolvedPath: null });
           continue;
         }
-        const content = await getInstallContent(target.toolId);
         const result = await installToTarget(
           { tool, basePath: target.basePath, scope: target.scope },
           content,
@@ -790,6 +815,15 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
         return;
       }
       void handleIntegrationsTools(res);
+      return;
+    }
+
+    if (reqPath === '/api/integrations/releases') {
+      if (method !== 'GET') {
+        sendJson(res, 405, { error: 'Method not allowed' });
+        return;
+      }
+      void handleIntegrationsReleases(res);
       return;
     }
 

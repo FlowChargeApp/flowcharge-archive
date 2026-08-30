@@ -17,6 +17,7 @@ export interface SkillContent {
 
 export interface InstallContent {
   version: string; // caller-supplied content identity, informational only
+  releaseTag?: string; // present only for content sourced from a published release
   skills: SkillContent[];
 }
 

@@ -98,6 +98,9 @@ if (!window.praxisSkillInstallAPI) {
     getInstallStatus: function () {
       return fetchIpc('GET', '/api/integrations/installs');
     },
+    listSkillReleases: function () {
+      return fetchIpc('GET', '/api/integrations/releases');
+    },
     removeInstallation: function (toolId, scope) {
       return fetchIpc('POST', '/api/integrations/installs/remove', { toolId: toolId, scope: scope });
     },

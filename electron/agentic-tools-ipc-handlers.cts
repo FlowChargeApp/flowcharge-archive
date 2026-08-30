@@ -120,11 +120,14 @@ export interface InstallRecord {
   installedAt: string;
   updatedAt: string;
   contentHash: string;
+  version?: string;
 }
 
 interface FsWriteAccess {
   readTextFile(path: string): Promise<string | null>;
   writeTextFileAtomic(path: string, content: string): Promise<void>;
+  readBinaryFile(path: string): Promise<Buffer | null>;
+  writeBinaryFileAtomic(path: string, content: Buffer): Promise<void>;
   mkdir(path: string): Promise<void>;
   remove(path: string): Promise<void>;
   expandTokens(path: string): Promise<string>;
@@ -146,6 +149,7 @@ export interface InstallResult {
 
 export interface InstallContent {
   version: string;
+  releaseTag?: string;
   skills: {
     id: string;
     name: string;
@@ -153,6 +157,15 @@ export interface InstallContent {
     body: string;
     files?: { relativePath: string; content: string }[];
   }[];
+}
+
+// Mirrors src/lib/skill-release-fetch.ts's SkillReleaseSummary — kept in sync
+// by hand, same caveat as every other locally-mirrored type here.
+export interface SkillReleaseSummary {
+  tag: string;
+  name: string;
+  publishedAt: string;
+  assetName: string | null;
 }
 
 // Mirrors agentic-tools-skill-presence.ts's SkillPresenceResult union — kept
@@ -181,7 +194,11 @@ type RemoveInstallationFn = (
   deps: { fsWrite: FsWriteAccess }
 ) => Promise<void>;
 
-type GetInstallContentFn = (toolId: string) => Promise<InstallContent>;
+type GetInstallContentFn = (
+  toolId: string,
+  deps: { fsWrite: FsWriteAccess }
+) => Promise<InstallContent>;
+type ListSkillReleasesFn = () => Promise<SkillReleaseSummary[]>;
 type ParseInstallRegistryFn = (raw: string) => InstallRecord[];
 type FindInstallRecordFn = (
   records: InstallRecord[],
@@ -245,6 +262,7 @@ const dynamicImport = new Function('specifier', 'return import(specifier)') as (
 // has resolved and assigned these, since ipcMain.handle registration itself
 // happens after that await.
 let getInstallContent!: GetInstallContentFn;
+let listSkillReleases!: ListSkillReleasesFn;
 let installToTarget!: InstallToTargetFn;
 let removeInstallation!: RemoveInstallationFn;
 let parseInstallRegistry!: ParseInstallRegistryFn;
@@ -343,9 +361,11 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
   };
   const skillContentModule = (await dynamicImport('../lib/skill-content-fetch.js')) as {
     getInstallContent: GetInstallContentFn;
+    listSkillReleases: ListSkillReleasesFn;
   };
 
   getInstallContent = skillContentModule.getInstallContent;
+  listSkillReleases = skillContentModule.listSkillReleases;
   installToTarget = installModule.installToTarget;
   removeInstallation = installModule.removeInstallation;
   parseInstallRegistry = trackingModule.parseInstallRegistry;
@@ -385,6 +405,17 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
           }
         }
 
+        // Resolved ONCE per request, not once per target: a per-target fetch
+        // could straddle a release publication and record two different
+        // versions for one batch, and this way one install request produces
+        // exactly one temporary zip file whatever the batch size. Not a
+        // cross-request cache — the next request resolves afresh. It stays
+        // inside this try block so a release-missing throw becomes the
+        // { ok: false, status: 500, error } the renderer's alert reads.
+        // getInstallContent ignores its toolId — every tool gets the same
+        // content — which is what makes the hoist behaviour-preserving.
+        const content = await getInstallContent('', { fsWrite });
+
         const results: InstallResult[] = [];
         for (const target of targets) {
           const tool = TOOL_CATALOGUE.find((t) => t.id === target.toolId);
@@ -392,7 +423,6 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
             results.push({ toolId: target.toolId, status: 'skipped-no-format', resolvedPath: null });
             continue;
           }
-          const content = await getInstallContent(target.toolId);
           const result = await installToTarget(
             { tool, basePath: target.basePath, scope: target.scope },
             content,
@@ -417,6 +447,21 @@ export async function registerAgenticToolsIpcHandlers(): Promise<void> {
       return { ok: false, status: 500, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  // Takes no argument at all: the renderer cannot steer this request, and no
+  // URL crosses the bridge in either direction. The host constant lives in
+  // src/lib/skill-content-fetch.ts, which is the only place that composes it.
+  ipcMain.handle(
+    'listSkillReleases',
+    async (): Promise<PraxisIpcResult<SkillReleaseSummary[]>> => {
+      try {
+        const releases = await listSkillReleases();
+        return { ok: true, status: 200, data: releases };
+      } catch (err) {
+        return { ok: false, status: 500, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
 
   ipcMain.handle(
     'removeInstallation',

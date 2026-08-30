@@ -86,6 +86,18 @@ export function createNodeFsWriteAccess(): FsWriteAccess {
       }
     },
 
+    // Binary counterpart to readTextFile: no encoding argument, so
+    // fs.readFile resolves to a Buffer and the bytes survive verbatim.
+    // Same null-on-ENOENT / rethrow-everything-else contract.
+    async readBinaryFile(path: string): Promise<Buffer | null> {
+      try {
+        return await fs.readFile(path);
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        throw err;
+      }
+    },
+
     // Writes to a sibling `${path}.${process.pid}.tmp` file first, then
     // renames it over the target — the same reasoning as src/lib/projects.ts's
     // writeProjects (src/lib/projects.ts:42-47), generalized here from one
@@ -95,6 +107,18 @@ export function createNodeFsWriteAccess(): FsWriteAccess {
     async writeTextFileAtomic(path: string, content: string): Promise<void> {
       const tmpPath = `${path}.${process.pid}.tmp`;
       await fs.writeFile(tmpPath, content, 'utf8');
+      await fs.rename(tmpPath, path);
+    },
+
+    // Binary counterpart to writeTextFileAtomic, with the same tmp-sibling
+    // then rename dance. The atomicity here is symmetry with the text pair,
+    // not a concurrency requirement: the only caller's temporary zip has
+    // exactly one reader, in the same process that just wrote it. The tmp
+    // file stays a sibling in the same directory, which is what avoids EXDEV.
+    // No encoding argument, so the Buffer's bytes are written verbatim.
+    async writeBinaryFileAtomic(path: string, content: Buffer): Promise<void> {
+      const tmpPath = `${path}.${process.pid}.tmp`;
+      await fs.writeFile(tmpPath, content);
       await fs.rename(tmpPath, path);
     },
 

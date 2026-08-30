@@ -53,6 +53,33 @@ test('writeTextFileAtomic can be read back via readTextFile', async () => {
   assert.equal(readBack, 'round trip content');
 });
 
+// Fixture bytes chosen so a UTF-8 round trip would visibly corrupt them:
+// a NUL, a lone 0x80 continuation byte and 0xFF are all unrepresentable, so
+// this only survives if BOTH new methods omitted the encoding argument. The
+// leading 'PK\x03\x04' is a real zip local-file-header signature, which is
+// what the production caller actually moves through this pair.
+const BINARY_FIXTURE = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x80, 0xff, 0xfe, 0x7f, 0x00, 0x01]);
+
+test('writeBinaryFileAtomic / readBinaryFile round trip preserves non-UTF-8 bytes and leaves no stray tmp file', async () => {
+  const fsWrite = createNodeFsWriteAccess();
+  const target = path.join(tmpDir, 'binary-roundtrip.bin');
+  await fsWrite.writeBinaryFileAtomic(target, BINARY_FIXTURE);
+
+  const readBack = await fsWrite.readBinaryFile(target);
+  assert.deepEqual(readBack, BINARY_FIXTURE);
+
+  const entries = await fs.readdir(tmpDir);
+  const stray = entries.filter((e) => e.includes('.tmp'));
+  assert.deepEqual(stray, [], `no stray .tmp file should remain, found: ${stray.join(', ')}`);
+});
+
+test('readBinaryFile returns null on ENOENT rather than throwing', async () => {
+  const fsWrite = createNodeFsWriteAccess();
+  const missing = path.join(tmpDir, 'binary-does-not-exist.bin');
+  const result = await fsWrite.readBinaryFile(missing);
+  assert.equal(result, null);
+});
+
 test('remove on an already-absent path does not throw', async () => {
   const fsWrite = createNodeFsWriteAccess();
   const missing = path.join(tmpDir, 'never-existed');

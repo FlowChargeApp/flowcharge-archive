@@ -19,6 +19,7 @@ export interface InstallRecord {
   installedAt: string;
   updatedAt: string;
   contentHash: string;
+  version?: string; // release tag as published; absent only for pre-feature install records
 }
 
 function scopesEqual(a: InstallScope, b: InstallScope): boolean {
