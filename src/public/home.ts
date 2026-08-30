@@ -325,44 +325,16 @@ import type {
   });
 
   // ---------- Manage integrations dialog ----------
-  // Open/close, tab-switch, scope-toggle, project-picker population, and (from Task
-  // 4.1 on) real detectTools() row rendering. No installSelected() call lives here
-  // yet — that starts at Task 5.1.
+  // Open/close, scope-toggle, project-picker population, and (from Task 4.1 on) real
+  // detectTools() row rendering into the single tool list. No installSelected() call
+  // lives here yet — that starts at Task 5.1.
 
   // byId returns HTMLElement; showModal()/close() need the dialog type — same cast
   // pattern app.ts:353 uses for #ws-modal.
   var integrationsModal = byId('integrations-modal') as HTMLDialogElement;
-  var integrationsTabsEl = byId('integrations-tabs');
+  var integrationsList = byId('integrations-list');
   var integrationsScopeSeg = byId('integrations-scope-seg');
   var integrationsProjectSelect = byId('integrations-project-select') as HTMLSelectElement;
-
-  // Declared once, in tablist order — selectIntegrationsTab and the tablist keydown
-  // handler both drive off this list, matching app.ts:358-362's own TABS pattern,
-  // adapted from three tabs down to these two.
-  var INTEGRATIONS_TABS = [
-    { name: 'cli', btn: integrationsTabsEl.querySelector('[data-tab="cli"]') as HTMLButtonElement,
-      panel: byId('integrations-panel-cli') },
-    { name: 'gui-app', btn: integrationsTabsEl.querySelector('[data-tab="gui-app"]') as HTMLButtonElement,
-      panel: byId('integrations-panel-gui-app') }
-  ];
-  var currentIntegrationsTab = 'cli';
-
-  // aria-selected, the roving tabindex and the panel's hidden attribute always move
-  // together, exactly like app.ts:378-394's own selectTab.
-  function selectIntegrationsTab(name: string, focusTab: boolean) {
-    var idx = 0;
-    for (var i = 0; i < INTEGRATIONS_TABS.length; i++) {
-      if (INTEGRATIONS_TABS[i].name === name) { idx = i; break; }
-    }
-    for (var j = 0; j < INTEGRATIONS_TABS.length; j++) {
-      var on = j === idx;
-      INTEGRATIONS_TABS[j].btn.setAttribute('aria-selected', on ? 'true' : 'false');
-      INTEGRATIONS_TABS[j].btn.tabIndex = on ? 0 : -1;
-      INTEGRATIONS_TABS[j].panel.hidden = !on;
-    }
-    currentIntegrationsTab = INTEGRATIONS_TABS[idx].name;
-    if (focusTab) INTEGRATIONS_TABS[idx].btn.focus();
-  }
 
   // Structurally identical to agentic-tools-scope.ts's InstallScope (Task 3.2), and
   // deliberately left as its own inline literal rather than switched over to the
@@ -685,20 +657,16 @@ import type {
     integrationsInstallSelectedButton.disabled = !hasEligibleChecked;
   }
 
-  // Rebuilds both tabpanels from a fresh detectTools() payload — one row per
-  // TOOL_CATALOGUE entry, placed into its own category's panel, matching the four
-  // rows the handler always returns (electron/agentic-tools-ipc-handlers.cts maps
-  // every catalogue entry, not just the ones a DetectionResult was found for).
+  // Rebuilds the one tool list from a fresh detectTools() payload — one row per
+  // TOOL_CATALOGUE entry, in payload order, matching the four rows the handler always
+  // returns (electron/agentic-tools-ipc-handlers.cts maps every catalogue entry, not
+  // just the ones a DetectionResult was found for).
   function renderIntegrationsRows(rows: ToolDetectionRow[]) {
-    var panelCli = byId('integrations-panel-cli');
-    var panelGuiApp = byId('integrations-panel-gui-app');
-    panelCli.innerHTML = '';
-    panelGuiApp.innerHTML = '';
+    integrationsList.innerHTML = '';
 
     integrationsRowEntries = rows.map(buildIntegrationsRow);
     integrationsRowEntries.forEach(function (entry) {
-      var panel = entry.row.category === 'gui-app' ? panelGuiApp : panelCli;
-      panel.appendChild(entry.rowEl);
+      integrationsList.appendChild(entry.rowEl);
       applyIntegrationsRowEligibility(entry);
     });
     // Every freshly-built row starts unchecked, but a stale disabled state from a
@@ -713,14 +681,11 @@ import type {
   function renderIntegrationsFailure(heading: string, detail: string) {
     integrationsRowEntries = [];
     integrationsSkillPresence = {};
-    var panelCli = byId('integrations-panel-cli');
-    var panelGuiApp = byId('integrations-panel-gui-app');
-    panelCli.innerHTML = '';
-    panelGuiApp.innerHTML = '';
+    integrationsList.innerHTML = '';
     var box = el('div', 'tiles-empty');
     box.appendChild(el('h3', null, heading));
     box.appendChild(el('p', null, 'Detail: ' + detail));
-    panelCli.appendChild(box);
+    integrationsList.appendChild(box);
     updateInstallSelectedButtonState();
   }
 
@@ -798,7 +763,9 @@ import type {
   // so an already-installed target shows its status immediately without requiring
   // installSelected() to run first (ISS-11-sbxv53), and independent of this app's own
   // install-tracking ledger (ISS-12-yngl4x). Rows render as soon as detectTools()
-  // resolves; the presence checks fill in their chips once all resolve. A scope toggle
+  // resolves; each presence check is isolated behind its own .catch, so a failed probe
+  // leaves that one tool without a presence entry while every other row keeps its own
+  // result and stays on screen. A scope toggle
   // re-derives eligibility and chip visibility from the last-fetched rows/presence map
   // instead (refreshIntegrationsEligibility) — never a new IPC call.
   function loadIntegrationsDetection() {
@@ -823,7 +790,14 @@ import type {
           .then(unwrapIpc)
           .then(function (result) {
             integrationsSkillPresence[row.toolId] = result;
-          });
+          })
+          // ISS-26-abmbhc: one probe's failure must not reject the aggregate below
+          // and route into the outer .catch, which would discard every correct row
+          // that already rendered. A failed probe records no presence entry, so that
+          // one tool falls back to the same unknown-presence state a tool with no
+          // basePath already has: its install chip stays hidden. Every other row,
+          // and Install selected, are untouched.
+          .catch(function () { /* unknown presence for this tool only */ });
       });
       return Promise.all(checks).then(refreshIntegrationsEligibility);
     })
@@ -902,10 +876,10 @@ import type {
   // Resets every piece of state this task owns, so nothing persists across a
   // close+reopen cycle (acceptance criterion 6). Task 5.1 extends this same
   // function for its own state: install-status chips and the checked selection are
-  // torn down along with each row (integrationsRowEntries/panel innerHTML, below), and
-  // the install-selected button is put back into its default disabled state.
+  // torn down along with each row (integrationsRowEntries and the list's innerHTML,
+  // below), and the install-selected button is put back into its default disabled
+  // state.
   function resetIntegrationsModalState() {
-    selectIntegrationsTab('cli', false);
     setIntegrationsScope('global');
     integrationsRowEntries = [];
     integrationsSkillPresence = {};
@@ -915,8 +889,7 @@ import type {
     latestRelease = null;
     byId('integrations-release').textContent = '';
     integrationsInstallRecords = {};
-    byId('integrations-panel-cli').innerHTML = '';
-    byId('integrations-panel-gui-app').innerHTML = '';
+    integrationsList.innerHTML = '';
     integrationsInstallSelectedButton.disabled = true;
   }
 
@@ -926,31 +899,6 @@ import type {
     loadLatestRelease();
     loadIntegrationsInstallRecords();
     loadIntegrationsDetection();
-  });
-
-  integrationsTabsEl.addEventListener('click', function (e) {
-    var btn = (e.target as HTMLElement).closest('button');
-    if (!btn || !btn.dataset.tab) return;
-    selectIntegrationsTab(btn.dataset.tab, true);
-  });
-  integrationsTabsEl.addEventListener('keydown', function (e) {
-    var idx = 0;
-    for (var i = 0; i < INTEGRATIONS_TABS.length; i++) {
-      if (INTEGRATIONS_TABS[i].name === currentIntegrationsTab) { idx = i; break; }
-    }
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      // + (INTEGRATIONS_TABS.length - 1) is a left step that stays non-negative, so
-      // one modulo wraps in both directions — same arithmetic as app.ts:895-900.
-      var step = e.key === 'ArrowRight' ? 1 : INTEGRATIONS_TABS.length - 1;
-      selectIntegrationsTab(INTEGRATIONS_TABS[(idx + step) % INTEGRATIONS_TABS.length].name, true);
-    } else if (e.key === 'Home') {
-      e.preventDefault();
-      selectIntegrationsTab(INTEGRATIONS_TABS[0].name, true);
-    } else if (e.key === 'End') {
-      e.preventDefault();
-      selectIntegrationsTab(INTEGRATIONS_TABS[INTEGRATIONS_TABS.length - 1].name, true);
-    }
   });
 
   byId('integrations-modal-close').addEventListener('click', function () { integrationsModal.close(); });

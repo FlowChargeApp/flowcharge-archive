@@ -67,13 +67,8 @@
       </div>
       <select id="integrations-project-select" hidden></select>
     </div>
-    <div class="ws-modal-tabs" id="integrations-tabs" role="tablist">
-      <button type="button" role="tab" data-tab="cli" aria-selected="true" tabindex="0">Command-line tools</button>
-      <button type="button" role="tab" data-tab="gui-app" aria-selected="false" tabindex="-1">Desktop apps</button>
-    </div>
     <div class="ws-modal-body">
-      <div role="tabpanel" id="integrations-panel-cli"></div>
-      <div role="tabpanel" id="integrations-panel-gui-app" hidden></div>
+      <div id="integrations-list"></div>
       <div class="integrations-actions">
         <button type="button" id="integrations-rescan">Re-scan</button>
         <button type="button" id="integrations-install-selected">Install selected</button>

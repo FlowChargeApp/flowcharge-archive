@@ -932,7 +932,7 @@ button { font-family: inherit; }
 /* ---------- Manage integrations dialog ---------- */
 /* Reuses #ws-modal, .ws-modal-* , .seg and .chip entirely for chrome, toggle, and
    status pills (see plan's CSS reuse section) — the only new rules are this
-   dialog's own per-row layout inside each tabpanel. */
+   dialog's own per-row layout inside the single tool list. */
 #integrations-modal {
   padding: 0;
   width: min(880px, calc(100vw - 48px));
