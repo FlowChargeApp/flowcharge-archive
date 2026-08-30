@@ -446,6 +446,11 @@ import type {
   var VERSION_LABEL_PREFIX = 'v';
   var UNKNOWN_VERSION_LABEL = 'Version unknown';
 
+  // Shown only when the newest published release is STRICTLY newer than the
+  // version recorded for that row. An equal tag shows the version chip and no
+  // update chip, and an unreadable or absent version shows neither.
+  var UPDATE_AVAILABLE_LABEL = 'Update available';
+
   // Accepts `v?MAJOR.MINOR.PATCH` and ignores whatever follows the patch number,
   // matching src/lib/update-check.ts's rule exactly. Re-authored here rather than
   // imported: that module uses the Node-only Buffer global and is excluded from this
@@ -459,6 +464,20 @@ import type {
     return { major: Number(m[1]), minor: Number(m[2]), patch: Number(m[3]) };
   }
 
+  // True only when candidate is strictly greater than running, comparing major,
+  // then minor, then patch. An unreadable version on either side returns false: a
+  // version we cannot read must never prompt an update. Same semantics as
+  // src/lib/update-check.ts's isNewer, re-authored here for the same reason
+  // parseSemver above is (see task list Divergence 2).
+  function isNewer(candidate: string, running: string): boolean {
+    var a = parseSemver(candidate);
+    var b = parseSemver(running);
+    if (a === null || b === null) return false;
+    if (a.major !== b.major) return a.major > b.major;
+    if (a.minor !== b.minor) return a.minor > b.minor;
+    return a.patch > b.patch;
+  }
+
   type IntegrationsRowEntry = {
     row: ToolDetectionRow;
     rowEl: HTMLElement;
@@ -466,6 +485,8 @@ import type {
     notes: HTMLElement;
     installChip: HTMLElement;
     versionChip: HTMLElement;
+    updateChip: HTMLElement;
+    updateButton: HTMLButtonElement;
     // True once a live installSelected() result (this dialog session) has written a
     // real InstallResult onto installChip — guards applyIntegrationsRowEligibility's
     // persisted-registry join from clobbering that fresh chip on a later scope toggle.
@@ -534,18 +555,45 @@ import type {
     versionChip.hidden = true;
     rowEl.appendChild(versionChip);
 
+    // Update chip: reuses the same .chip class as every other pill in this row.
+    // applyIntegrationsRowEligibility decides its visibility from the recorded
+    // version and the newest release tag.
+    var updateChip = el('span', 'chip', UPDATE_AVAILABLE_LABEL);
+    updateChip.hidden = true;
+    rowEl.appendChild(updateChip);
+
+    // Update button: shown by exactly the same condition as the update chip above,
+    // so the prompt and the action it offers can never disagree. Its aria-label
+    // names the tool, matching the per-row pattern the checkbox already uses,
+    // because 'Update' alone is ambiguous once four rows carry the same button.
+    var updateButton = el('button', 'integrations-row-update', 'Update') as HTMLButtonElement;
+    updateButton.type = 'button';
+    updateButton.setAttribute('aria-label', 'Update ' + row.displayName);
+    updateButton.hidden = true;
+    rowEl.appendChild(updateButton);
+
     var notes = el('div', 'integrations-row-notes');
     rowEl.appendChild(notes);
 
-    return {
+    var entry: IntegrationsRowEntry = {
       row: row,
       rowEl: rowEl,
       checkbox: checkbox,
       notes: notes,
       installChip: installChip,
       versionChip: versionChip,
+      updateChip: updateChip,
+      updateButton: updateButton,
       hasLiveResult: false
     };
+
+    // One row, the same install path the Install selected button uses — so the
+    // result lands on this row's own install chip and the failure alert is shared.
+    updateButton.addEventListener('click', function () {
+      installIntegrationsSelected([entry]);
+    });
+
+    return entry;
   }
 
   // Visible text only, never a hover-only title — both the ineligibility label and
@@ -559,14 +607,29 @@ import type {
     // The chip is always visible and never empty: no record at all, a record with no
     // version, and a version the semver rule cannot read all read 'Version unknown'.
     // That is the normal state for every record written before this feature existed.
-    var record = integrationsInstallRecords[installRecordKey(entry.row.toolId, currentIntegrationsScope)];
-    var parsed = record === undefined || record.version === undefined
-      ? null
-      : parseSemver(record.version);
+    var recordKey = installRecordKey(entry.row.toolId, currentIntegrationsScope);
+    var record = integrationsInstallRecords[recordKey];
+    var recordedVersion = record === undefined ? undefined : record.version;
+    var parsed = recordedVersion === undefined ? null : parseSemver(recordedVersion);
     entry.versionChip.textContent = parsed === null
       ? UNKNOWN_VERSION_LABEL
       : VERSION_LABEL_PREFIX + parsed.major + '.' + parsed.minor + '.' + parsed.patch;
     entry.versionChip.hidden = false;
+
+    // Update chip. Strict comparison only: an equal tag shows no chip, and an
+    // absent record, an absent version, or a version either side cannot read
+    // shows no chip either — isNewer returns false for every unreadable input,
+    // so an unparseable tag can never prompt an update.
+    var updateAvailable = recordedVersion !== undefined
+      && latestRelease !== null
+      && isNewer(latestRelease.tag, recordedVersion);
+    entry.updateChip.hidden = !updateAvailable;
+    // The button rides on the chip's condition, and expresses ineligibility the
+    // way the checkbox does — disabled, not hidden. A row with no resolvable base
+    // path at this scope has no installable target, so clicking it would only
+    // produce a refused install from the transport.
+    entry.updateButton.hidden = !updateAvailable;
+    entry.updateButton.disabled = !eligible;
 
     if (!eligible) {
       var scopeLabel = currentIntegrationsScope.kind === 'project' ? 'project scope' : 'global scope';
@@ -693,6 +756,14 @@ import type {
       .catch(function () {
         latestRelease = null;
         releaseEl.textContent = 'No published release found';
+      })
+      // latestRelease is the update chip's second input, and this call races the
+      // record and detection fetches that also render rows. Whichever of the three
+      // finishes last has to re-derive the rows, or an update chip is silently
+      // dropped whenever this one resolves after them. Runs on the empty-list and
+      // failure paths too, so a release that went away also clears the prompt.
+      .then(function () {
+        refreshIntegrationsEligibility();
       });
   }
 
@@ -761,8 +832,10 @@ import type {
       });
   }
 
-  // Collects every checked, eligible row and calls installSelected() with them, then
-  // renders each returned InstallResult.status onto that row's own install-status chip.
+  // Installs exactly the entries it is handed and renders each returned
+  // InstallResult.status onto that row's own install-status chip. The caller owns
+  // the selection: the Install selected button passes every checked, eligible row,
+  // and a per-row Update button passes that one row, so both share one install path.
   //
   // GOTCHA (carried forward from this task's spec, not softened): once WS-42's engine is
   // real, clicking this performs REAL FILE WRITES on whatever machine runs the app — into
@@ -771,7 +844,7 @@ import type {
   // WS-42's placeholder/fixture getInstallContent, since real skill content is WS-44's job.
   // This is a genuine, user-visible filesystem side effect, not a simulated one — verify
   // only against a disposable/throwaway target, never a real, important tool config.
-  function installIntegrationsSelected() {
+  function installIntegrationsSelected(entries: IntegrationsRowEntry[]) {
     // Guarded before the button is disabled, so an absent surface cannot leave
     // Install selected permanently disabled with nothing to re-enable it.
     var api = skillInstallAPI();
@@ -783,12 +856,9 @@ import type {
       return;
     }
 
-    var eligibleEntries = integrationsRowEntries.filter(function (entry) {
-      return entry.checkbox.checked && !entry.checkbox.disabled;
-    });
-    if (!eligibleEntries.length) return;
+    if (!entries.length) return;
 
-    var targets = eligibleEntries.map(function (entry) {
+    var targets = entries.map(function (entry) {
       // Non-null: every entry here passed isEligibleAtScope (checkbox not disabled),
       // which is defined as resolveBasePathForScope(...) !== null.
       var basePath = resolveBasePathForScope(currentIntegrationsScope, entry.row.detection)!;
@@ -800,11 +870,25 @@ import type {
       .then(unwrapIpc)
       .then(function (results) {
         results.forEach(function (result) {
-          var entry = eligibleEntries.filter(function (e) { return e.row.toolId === result.toolId; })[0];
+          var entry = entries.filter(function (e) { return e.row.toolId === result.toolId; })[0];
           if (!entry) return;
           entry.installChip.textContent = INSTALL_STATUS_LABEL[result.status];
           entry.installChip.hidden = false;
           entry.hasLiveResult = true;
+          // A successful install always installs the newest release, so that
+          // release's tag is this row's version from here on. Only the SUCCESS
+          // branch reaches this point — a rejected install leaves the map
+          // untouched — and 'skipped-no-format' installed nothing, so it must not
+          // move the version either. Re-deriving the row refreshes its version
+          // chip and drops the update chip and button; hasLiveResult above already
+          // guards the install chip from being overwritten.
+          if (result.status !== 'skipped-no-format' && latestRelease !== null) {
+            var installed = integrationsInstallRecords[
+              installRecordKey(entry.row.toolId, currentIntegrationsScope)
+            ];
+            if (installed !== undefined) installed.version = latestRelease.tag;
+            applyIntegrationsRowEligibility(entry);
+          }
         });
       })
       .catch(function (err) {
@@ -825,6 +909,9 @@ import type {
     setIntegrationsScope('global');
     integrationsRowEntries = [];
     integrationsSkillPresence = {};
+    // The update chip is derived state: latestRelease and integrationsInstallRecords
+    // are its only two inputs, and both are cleared here, so a reopened dialog can
+    // never show a stale 'Update available' before its fresh fetches land.
     latestRelease = null;
     byId('integrations-release').textContent = '';
     integrationsInstallRecords = {};
@@ -878,7 +965,11 @@ import type {
   });
 
   integrationsInstallSelectedButton.addEventListener('click', function () {
-    installIntegrationsSelected();
+    // The selection filter lives here, with the button that owns it — the install
+    // function itself takes whatever row list its caller decides on.
+    installIntegrationsSelected(integrationsRowEntries.filter(function (entry) {
+      return entry.checkbox.checked && !entry.checkbox.disabled;
+    }));
   });
 
   integrationsScopeSeg.addEventListener('click', function (e) {

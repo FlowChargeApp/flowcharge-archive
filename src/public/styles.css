@@ -965,6 +965,21 @@ button { font-family: inherit; }
 .integrations-row:last-child { border-bottom: none; }
 .integrations-row-name { flex: 1; min-width: 0; font-size: 12.5px; color: var(--ink); }
 .integrations-row-note { font-size: 11px; color: var(--ink-faint); }
+/* The per-row Update button. Same small bordered shape as the dialog's own
+   controls, drawn only in this file's existing tokens. No display is set here,
+   so the hidden attribute still removes it when no update is offered. */
+.integrations-row-update {
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper-raised);
+  color: var(--ink);
+  padding: 3px 10px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.integrations-row-update:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.integrations-row-update:disabled { color: var(--ink-faint); cursor: default; }
+.integrations-row-update:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .integrations-actions {
   display: flex;
   justify-content: flex-end;
