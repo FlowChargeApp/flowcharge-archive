@@ -1,7 +1,7 @@
 {
   "name": "praxis-dashboard",
   "version": "1.0.0",
-  "description": "Local Kanban dashboard for Praxis (prx) project-management workstreams — a bird's-eye view of any project's prxwork/ state.",
+  "description": "Local Kanban view of FlowCharge project-management workstreams — a bird's-eye view of any project's flowcharge/ state.",
   "type": "module",
   "private": true,
   "main": "dist/electron/main.cjs",
@@ -33,7 +33,7 @@
   },
   "build": {
     "appId": "com.praxisboard.app",
-    "productName": "Praxis Board",
+    "productName": "FlowCharge",
     "directories": {
       "output": "release"
     },

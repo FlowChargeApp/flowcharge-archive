@@ -130,7 +130,7 @@ machine only, in keeping with the private, closed-source status stated at the to
   it. Clear the attribute on the copied bundle before the first launch:
 
   ```bash
-  xattr -dr com.apple.quarantine "Praxis Board.app"
+  xattr -dr com.apple.quarantine "FlowCharge.app"
   ```
 
 - Linux `deb` and `AppImage` have no signature gate, so a copied Linux build needs nothing.
