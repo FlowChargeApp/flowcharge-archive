@@ -1,4 +1,4 @@
-// Fetches the Praxis skill suite live from the self-hosted Gitea instance's
+// Fetches the FlowCharge Core skill suite live from the self-hosted Gitea instance's
 // tarball-archive route and returns it as InstallContent. This module knows
 // how to download+extract a git-archive tarball and SKILL.md's frontmatter
 // grammar; it knows nothing about install targets, tool-specific formats, or
@@ -185,13 +185,13 @@ async function readCappedBody(res: Response, maxBytes: number): Promise<Buffer> 
   if (declaredHeader !== null) {
     const declared = Number(declaredHeader);
     if (Number.isFinite(declared) && declared > maxBytes) {
-      throw new Error(`Praxis skill archive exceeds ${maxBytes} bytes (Content-Length ${declared})`);
+      throw new Error(`FlowCharge Core skill archive exceeds ${maxBytes} bytes (Content-Length ${declared})`);
     }
   }
 
   const body = res.body;
   if (!body) {
-    throw new Error('Failed to fetch Praxis skill archive: response carried no body');
+    throw new Error('Failed to fetch FlowCharge Core skill archive: response carried no body');
   }
 
   const reader = body.getReader();
@@ -205,7 +205,7 @@ async function readCappedBody(res: Response, maxBytes: number): Promise<Buffer> 
       total += value.byteLength;
       if (total > maxBytes) {
         await reader.cancel();
-        throw new Error(`Praxis skill archive exceeds ${maxBytes} bytes`);
+        throw new Error(`FlowCharge Core skill archive exceeds ${maxBytes} bytes`);
       }
       chunks.push(Buffer.from(value));
     }
@@ -223,7 +223,7 @@ async function readCappedBody(res: Response, maxBytes: number): Promise<Buffer> 
 export async function getInstallContent(_toolId: string): Promise<InstallContent> {
   const res = await fetch(buildArchiveUrl(PRAXIS_REPO_BASE_URL, PRAXIS_REPO_REF));
   if (!res.ok) {
-    throw new Error(`Failed to fetch Praxis skill archive: ${res.status} ${res.statusText}`);
+    throw new Error(`Failed to fetch FlowCharge Core skill archive: ${res.status} ${res.statusText}`);
   }
 
   const gz = await readCappedBody(res, MAX_ARCHIVE_BYTES);

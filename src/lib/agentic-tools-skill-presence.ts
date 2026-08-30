@@ -1,4 +1,4 @@
-// Real filesystem presence detection for the canonical Praxis skill suite,
+// Real filesystem presence detection for the canonical FlowCharge Core skill suite,
 // independent of this app's own install-tracking ledger
 // (agentic-tools-install-tracking.ts / .praxis-installs.json). Read-only:
 // only ever calls FsAccess.pathExists, never anything from FsWriteAccess
