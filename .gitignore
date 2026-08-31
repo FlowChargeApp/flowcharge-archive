@@ -4,3 +4,12 @@ node_modules/
 dist/
 .praxis-projects.json
 .praxis-update.json
+# Praxis-managed — do not hand-edit (see prx-index.mjs)
+prxwork/prxindex.md
+prxwork/prxkanban.md
+prxwork/ids/
+release/
+# FlowCharge-managed — do not hand-edit (see fc-index.mjs)
+flowcharge/index.md
+flowcharge/kanban.md
+flowcharge/ids/
