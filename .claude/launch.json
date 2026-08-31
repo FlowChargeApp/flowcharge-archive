@@ -4,7 +4,9 @@
     {
       "name": "praxis-dashboard",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["start"],
+      "runtimeArgs": [
+        "start"
+      ],
       "port": 4173
     }
   ]
