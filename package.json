@@ -23,7 +23,8 @@
     "electron:dev": "npm run build && electron .",
     "package:mac": "npm run build:release && electron-builder --mac --x64 --arm64",
     "package:linux": "npm run build:release && electron-builder --linux deb AppImage",
-    "package:win": "npm run build:release && electron-builder --win --x64 --arm64"
+    "package:win": "npm run build:release && electron-builder --win --x64 --arm64",
+    "package:cli": "npm run build:release && node tools/package-cli.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
