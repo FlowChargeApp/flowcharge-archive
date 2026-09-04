@@ -153,7 +153,10 @@ write somewhere other than its `dist/public/data.json` default.
 - Works with any project that follows the FlowCharge `flowcharge/` convention, not just LAD — the
   extractor has no LAD-specific logic.
 
-## Packaged builds
+## Building the Electron app
+
+Electron is the secondary build path, not the version 1 release form — see
+[How FlowCharge ships](#how-flowcharge-ships) for the artefact users actually download.
 
 The desktop builds produced by `npm run package:mac`, `npm run package:linux` and
 `npm run package:win` are unsigned and unnotarized. They are intended for the author's own
@@ -176,8 +179,10 @@ Distribution to other people is a different matter. These are prerequisites of t
 distribution, not later improvements — none of them is in place today:
 
 - An Apple Developer Program membership and a Developer ID Application certificate.
-- The `hardenedRuntime`, `entitlements` and `notarize` keys added to the `mac` block of the
-  `build` section in `package.json`.
+- Apple notarization credentials available to the build. The configuration is already in
+  place — `package.json` sets `hardenedRuntime: true` and `notarize: true` in the `mac`
+  block of the `build` section — so what is missing here is the credentials, not the
+  configuration.
 - A Windows OV code-signing certificate, or Azure Trusted Signing, wired through
   `win.signtoolOptions`.
 - All of those credentials moved into CI secrets, which also needs a macOS runner this repo
