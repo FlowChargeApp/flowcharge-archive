@@ -1,6 +1,6 @@
 {
   "name": "praxis-dashboard",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Local Kanban view of FlowCharge project-management workstreams — a bird's-eye view of any project's flowcharge/ state.",
   "type": "module",
   "private": true,
