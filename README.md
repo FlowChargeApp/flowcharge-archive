@@ -3,17 +3,29 @@
 **Private repository.** This is closed-source software for internal use. It is not
 published, licensed for reuse, or intended for external redistribution.
 
-FlowCharge is a local, bird's-eye Kanban view of [FlowCharge Core](https://github.com)
-project-management workstreams — the `flowcharge/` markdown convention used by the
-`fc-orchestrate` Claude Code skill.
+FlowCharge is the application and the primary product here — a desktop and local-server
+app for running FlowCharge Core project management, not a viewer bolted onto someone
+else's tool.
 
-Reads a project's `flowcharge/` frontmatter and renders every workstream as a card in a
-five-column board (Backlog · Ready · In Progress · Done · Dropped), sortable by
-artefact ID or name, with panels for open issues by severity and artefacts that have gone
-quiet. It's read-only and non-interactive by design — no drag-and-drop, no writes back to
-the source project. All board movement still happens through the `fc-*` skills; this is
-just a way to see the result at a glance, kept here for this project's own ongoing use of
-the board.
+It reads a project's `flowcharge/` folder and renders every workstream as a card in a
+five-column board (Backlog · Ready · In Progress · Done · Dropped), sortable by artefact
+ID or name, with panels for open issues by severity and artefacts that have gone quiet.
+It also installs the FlowCharge Core skill files into your agentic coding tools, tracks
+which version each tool has, and updates them in one click from the `Manage integrations`
+screen.
+
+The board itself is read-only and non-interactive by design — no drag-and-drop, no writes
+back to the source project — and all board movement still happens through the `fc-*`
+skills. That read-only boundary covers the board only: installing and syncing Core writes
+into your coding tools' own configuration directories.
+
+## FlowCharge Core
+
+FlowCharge installs and orchestrates FlowCharge Core, the companion open-source skill and
+JavaScript suite: <https://github.com/FlowChargeApp/flowcharge-core>. Core is free,
+complete, and fully usable on its own — its own repository documents what it does and how
+to use it. This application is separate: it stays private and closed-source, as the banner
+above says.
 
 ## Quick start
 
