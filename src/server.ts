@@ -64,12 +64,22 @@ const WORKSTREAM_ID = new RegExp(String.raw`^WS-\d+${ID_SUFFIX}$`);
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 
-// The app's own version, read from package.json ONCE at module load rather than
-// per request. `__dirname` is `dist/` in the compiled output, so package.json
-// sits one level up. Any failure — unreadable file, invalid JSON, a missing or
-// non-string `version` field — logs once and leaves this null, and the route
-// below answers 500 instead of throwing.
+// The app's own version, from one of two sources. PRAXIS_APP_VERSION wins when
+// it is set to a non-empty string: a Bun standalone executable carries no
+// package.json on its read-only embedded filesystem, so dist/cli-entry.js
+// injects the version there at build time. With that variable unset or empty —
+// `npm start`, `npm test`, `npm run electron:dev` — this falls back to reading
+// package.json ONCE at module load rather than per request, exactly as before.
+// `__dirname` is `dist/` in the compiled output, so package.json sits one level
+// up. Any failure — unreadable file, invalid JSON, a missing or non-string
+// `version` field — logs once and leaves this null, and the route below answers
+// 500 instead of throwing.
+//
+// An explicit emptiness test, never `??=`: an environment variable set to the
+// empty string is '', not undefined, and '' must fall through to package.json.
 const APP_VERSION: string | null = (() => {
+  const injected = process.env.PRAXIS_APP_VERSION;
+  if (typeof injected === 'string' && injected !== '') return injected;
   try {
     const raw = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8');
     const parsed = JSON.parse(raw) as { version?: string };
@@ -80,12 +90,25 @@ const APP_VERSION: string | null = (() => {
   }
 })();
 
-// The install registry both transports share. `__dirname` is `dist/` in the
-// compiled output, so this resolves to the same file
-// electron/agentic-tools-ipc-handlers.cts:234-235 resolves to. PRAXIS_DATA_DIR
-// is deliberately NOT consulted here: both transports must resolve one registry
-// file, and the Electron handler does not consult it either.
-const INSTALL_REGISTRY_PATH = path.join(__dirname, '..', '.praxis-installs.json');
+// The install registry this HTTP transport uses. PRAXIS_DATA_DIR wins when it is
+// set and non-empty, mirroring src/lib/projects.ts:22 and
+// src/lib/update-prefs.ts:20 exactly, so the codebase carries one data-directory
+// seam rather than two. A Bun standalone executable resolves `__dirname` inside
+// the read-only /$bunfs, where nothing can be written, and dist/cli-entry.js
+// sets PRAXIS_DATA_DIR before this module evaluates.
+//
+// This does not split the registry in Electron. src/public/browser-ipc-shim.ts:90
+// installs the HTTP-backed window.praxisSkillInstallAPI only when the property is
+// absent, and electron/preload.cts injects it inside an Electron window, so these
+// integrations HTTP routes are unreachable there — the renderer reaches the
+// install engine over IPC instead.
+//
+// With PRAXIS_DATA_DIR unset this is byte-for-byte the previous path: `__dirname`
+// is `dist/` in the compiled output, so the file sits one level up.
+const INSTALL_REGISTRY_PATH = path.join(
+  process.env.PRAXIS_DATA_DIR || path.join(__dirname, '..'),
+  '.praxis-installs.json',
+);
 
 // The one write adapter the integrations routes hand to the install engine,
 // built once at module scope rather than per request.
