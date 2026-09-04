@@ -1,0 +1,39 @@
+# Continuous integration for this repository.
+#
+# Gitea Actions reads GitHub Actions syntax, so this one file serves both
+# platforms. The checkout action is the only action here, because a
+# self-hosted runner's access to an action registry is not guaranteed; every
+# other step is a plain command.
+#
+# There is no actions/setup-node step. The runner is expected to supply Node
+# 20.14 or newer, which is this repository's declared floor, and the
+# `node --version` step below puts the version it actually has into the log.
+#
+# There is deliberately no release job and no tag trigger. WS-91-mecfuo owns
+# this repository's release process, and it adds its own CI-gated release job
+# on top of this file.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # A runner image without Node fails here, with a clear message rather
+      # than an obscure one inside the suite.
+      - name: Print the Node version
+        run: node --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run the test suite
+        run: npm test
