@@ -10,8 +10,12 @@
 # `node --version` step below puts the version it actually has into the log.
 #
 # There is deliberately no release job and no tag trigger. WS-91-mecfuo owns
-# this repository's release process, and it adds its own CI-gated release job
-# on top of this file.
+# this repository's release process, and it is two local commands under
+# .github/scripts/ rather than a CI job here. The release tag lives in the
+# separate flowcharge-public repository, so a tag trigger in this file would
+# never fire, and publishing from here into that repository would need a
+# cross-repository token held as a secret here — a real credential surface
+# bought for no gain over one local command.
 
 name: CI
 

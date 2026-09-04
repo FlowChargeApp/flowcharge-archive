@@ -19,7 +19,7 @@
     "prerefresh": "npm run build",
     "refresh": "node dist/scripts/extract-praxis-data.js",
     "pretest": "npm run build",
-    "test": "node --test --test-force-exit \"dist/**/*.test.js\"",
+    "test": "node --test --test-force-exit \"dist/**/*.test.js\" \".github/scripts/**/*.test.mjs\"",
     "electron:dev": "npm run build && electron .",
     "package:mac": "npm run build:release && electron-builder --mac --x64 --arm64",
     "package:linux": "npm run build:release && electron-builder --linux deb AppImage",
