@@ -19,6 +19,30 @@ back to the source project — and all board movement still happens through the 
 skills. That read-only boundary covers the board only: installing and syncing Core writes
 into your coding tools' own configuration directories.
 
+## How FlowCharge ships
+
+Version 1 ships as a Bun-compiled native binary for macOS, Linux and Windows. Running the
+binary starts a local server, and you open the board in a browser.
+
+`npm run package:cli` produces the four artefacts. It runs `tools/package-cli.mjs`, which
+writes into `release/cli`: `flowcharge-<version>-darwin-arm64`,
+`flowcharge-<version>-darwin-x64`, `flowcharge-<version>-linux-x64` and
+`flowcharge-<version>-win-x64.exe`. Bun appends the `.exe` itself for the Windows target.
+
+There are two routes to the binary. The first is the Releases page of the public
+flowcharge-public repository. The second is the Homebrew tap:
+
+```bash
+brew install <owner>/flowcharge/flowcharge
+```
+
+The `<owner>` placeholder stands for the GitHub account, which is not decided yet.
+
+Electron stays a supported build path — `npm run electron:dev` for development, and
+`npm run package:mac`, `npm run package:linux` and `npm run package:win` for desktop
+builds — but it is not the version 1 release form. See
+[Building the Electron app](#building-the-electron-app) for that path.
+
 ## FlowCharge Core
 
 FlowCharge installs and orchestrates FlowCharge Core, the companion open-source skill and
