@@ -7,7 +7,7 @@
   "main": "dist/electron/main.cjs",
   "author": "Anthony Koukoullis <akoukoullis@gmail.com>",
   "engines": {
-    "node": ">=18"
+    "node": ">=20.14"
   },
   "scripts": {
     "build:base": "tsc -p tsconfig.json && tsc -p src/public/tsconfig.json && tsc -p electron/tsconfig.json && node tools/copy-assets.mjs",
@@ -18,6 +18,8 @@
     "start:lan": "HOST=0.0.0.0 npm start",
     "prerefresh": "npm run build",
     "refresh": "node dist/scripts/extract-praxis-data.js",
+    "pretest": "npm run build",
+    "test": "node --test --test-force-exit \"dist/**/*.test.js\"",
     "electron:dev": "npm run build && electron .",
     "package:mac": "npm run build:release && electron-builder --mac --x64 --arm64",
     "package:linux": "npm run build:release && electron-builder --linux deb AppImage",
