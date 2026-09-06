@@ -22,14 +22,24 @@ const distPublic = path.join(distRoot, 'public');
 const cliEntryPath = path.join(distRoot, 'cli-entry.js');
 const releaseCli = path.join(repoRoot, 'release', 'cli');
 
-// The four targets, each row a Bun target string and the <platform>-<arch>
-// label used in the output filename.
+// Every target this script can build, each row a Bun target string and the
+// <platform>-<arch> label used in the output filename. win-x64 stays a valid,
+// explicitly selectable target — `--target=win-x64` builds it — but it is not
+// part of the default selection. See DEFAULT_LABELS below.
 const TARGETS = [
   { bunTarget: 'bun-darwin-arm64', label: 'darwin-arm64' },
   { bunTarget: 'bun-darwin-x64', label: 'darwin-x64' },
   { bunTarget: 'bun-linux-x64', label: 'linux-x64' },
   { bunTarget: 'bun-windows-x64', label: 'win-x64' },
 ];
+
+// The three labels a run with no --target flag builds, and the artefact set the
+// release commands under .github/scripts/ expect. Windows is deliberately
+// absent: shipping a Windows binary needs a submission to an installer or
+// package-manager channel — Chocolatey or Scoop — first, so it is deferred to a
+// later release rather than dropped. Adding 'win-x64' back here is the whole
+// change when that day comes.
+const DEFAULT_LABELS = ['darwin-arm64', 'darwin-x64', 'linux-x64'];
 
 // A repeatable CLI flag rather than an environment variable, for the reason
 // tools/bundle-public.mjs:19-21 records: package:win runs on Windows, where
@@ -48,11 +58,12 @@ for (const label of requestedLabels) {
   }
 }
 
-// With no --target flag, every row is built.
+// With no --target flag, the default rows are built. An explicit --target still
+// reaches every row in TARGETS, win-x64 included.
 const selected =
   requestedLabels.length > 0
     ? TARGETS.filter((row) => requestedLabels.includes(row.label))
-    : TARGETS;
+    : TARGETS.filter((row) => DEFAULT_LABELS.includes(row.label));
 console.log(`selected ${selected.length} target(s): ${selected.map((row) => row.label).join(', ')}`);
 
 const { version } = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));

@@ -86,15 +86,16 @@ function resolveTool(name) {
   return null;
 }
 
-// The four artefact names the build really produces for a version. They are not
-// uniform: Bun appends .exe to the Windows binary and to no other, so a fixture
-// of four identically shaped names would not represent the real set.
+// The three artefact names the default build really produces for a version.
+// There is no win-x64.exe among them: a Windows binary is deferred until it can
+// be submitted to an installer or package-manager channel, so
+// tools/package-cli.mjs leaves that target out of its default selection and no
+// release carries it.
 function artefactNamesFor(version) {
   return [
     `flowcharge-${version}-darwin-arm64`,
     `flowcharge-${version}-darwin-x64`,
     `flowcharge-${version}-linux-x64`,
-    `flowcharge-${version}-win-x64.exe`,
   ];
 }
 
@@ -328,38 +329,54 @@ test('rung 5 refuses an empty changelog section with its own distinct message', 
   }
 });
 
-test('rung 6 refuses fewer than four artefacts', () => {
-  const fixture = makeFixture({ artefacts: artefactNamesFor('0.1.0').slice(0, 3) });
+test('rung 6 refuses fewer than three artefacts', () => {
+  const fixture = makeFixture({ artefacts: artefactNamesFor('0.1.0').slice(0, 2) });
   try {
     assertRefusal(fixture, runPublish(fixture, [`--public-repo=${fixture.publicRepo}`]), {
-      message: /expected 4 flowcharge-0\.1\.0-\* artefacts .*found 3/s,
+      message: /expected 3 flowcharge-0\.1\.0-\* artefacts .*found 2/s,
     });
   } finally {
     cleanup(fixture);
   }
 });
 
-test('rung 6 refuses more than four artefacts', () => {
+test('rung 6 refuses more than three artefacts', () => {
   const fixture = makeFixture({
     artefacts: [...artefactNamesFor('0.1.0'), 'flowcharge-0.1.0-linux-arm64'],
   });
   try {
     assertRefusal(fixture, runPublish(fixture, [`--public-repo=${fixture.publicRepo}`]), {
-      message: /expected 4 flowcharge-0\.1\.0-\* artefacts .*found 5/s,
+      message: /expected 3 flowcharge-0\.1\.0-\* artefacts .*found 4/s,
     });
   } finally {
     cleanup(fixture);
   }
 });
 
-test('rung 6 refuses four artefacts when one is zero-length', () => {
-  const names = artefactNamesFor('0.1.0');
+// A stray win-x64.exe is the specific "more than three" a deferred Windows
+// target invites: the maintainer runs --target=win-x64 by hand and leaves the
+// binary behind. Rung 6 must refuse it rather than publish a fourth asset.
+test('rung 6 refuses a leftover Windows artefact alongside the three', () => {
   const fixture = makeFixture({
-    artefacts: [names[0], names[1], names[2], [names[3], '']],
+    artefacts: [...artefactNamesFor('0.1.0'), 'flowcharge-0.1.0-win-x64.exe'],
   });
   try {
     assertRefusal(fixture, runPublish(fixture, [`--public-repo=${fixture.publicRepo}`]), {
-      message: /these artefacts are empty: flowcharge-0\.1\.0-win-x64\.exe/,
+      message: /expected 3 flowcharge-0\.1\.0-\* artefacts .*found 4/s,
+    });
+  } finally {
+    cleanup(fixture);
+  }
+});
+
+test('rung 6 refuses three artefacts when one is zero-length', () => {
+  const names = artefactNamesFor('0.1.0');
+  const fixture = makeFixture({
+    artefacts: [names[0], names[1], [names[2], '']],
+  });
+  try {
+    assertRefusal(fixture, runPublish(fixture, [`--public-repo=${fixture.publicRepo}`]), {
+      message: /these artefacts are empty: flowcharge-0\.1\.0-linux-x64/,
     });
   } finally {
     cleanup(fixture);
@@ -431,10 +448,16 @@ test('--dry-run prints the whole gh release create vector and calls nothing', ()
       ...assets,
     ]);
 
-    // The four assets carry the real, non-uniform names, the Windows one with
-    // its .exe suffix, and they are last and in a fixed order.
-    assert.deepEqual(parseVector(res.stdout).slice(-4), assets);
-    assert.equal(path.basename(assets[3]), `flowcharge-${version}-win-x64.exe`);
+    // The three assets carry the real names, and they are last and in a fixed
+    // order. No Windows binary appears: that target is deferred, so the sorted
+    // set ends at linux-x64.
+    assert.deepEqual(parseVector(res.stdout).slice(-3), assets);
+    assert.equal(path.basename(assets[2]), `flowcharge-${version}-linux-x64`);
+    assert.deepEqual(
+      assets.filter((asset) => /-win-x64/.test(path.basename(asset))),
+      [],
+      'a deferred Windows binary must never reach the gh vector',
+    );
 
     // Reproducible: a second run of the same fixture prints the same vector.
     const again = runPublish(fixture, [`--public-repo=${fixture.publicRepo}`, '--dry-run']);

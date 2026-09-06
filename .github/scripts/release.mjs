@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The local release command. It refuses a bad state across both repositories,
-// triggers the Bun binary build, confirms the four artefacts landed, and
+// triggers the Bun binary build, confirms the three artefacts landed, and
 // creates the annotated tag vX.Y.Z in the separate flowcharge-public
 // repository. It never pushes: pushing is outward-facing and stays a
 // deliberate human act.
@@ -61,16 +61,21 @@ Before it builds anything it refuses, in this order, when:
   10. gh is not usable on PATH — needed by the publish step, checked here so
       the tag is never cut with no way to publish it.
 
-It then runs \`npm run package:cli\`, confirms exactly four non-empty
+It then runs \`npm run package:cli\`, confirms exactly three non-empty
 release/cli/flowcharge-<version>-* artefacts, and creates the annotated tag
 vX.Y.Z in the public repository. The tag is the last write, so a failure
 anywhere earlier leaves no tag behind.
+
+Three, not four: the release ships macOS and Linux only. A Windows binary is
+deferred until it can be submitted to an installer or package-manager channel
+such as Chocolatey or Scoop. tools/package-cli.mjs still builds one on demand
+with --target=win-x64, but that artefact is not part of a release.
 
 It never pushes. It prints the two push commands and the publish command to
 run next.
 
 Exit codes:
-  0  The four binaries exist and the public repository carries the annotated
+  0  The three binaries exist and the public repository carries the annotated
      tag vX.Y.Z. Nothing has been pushed.
   1  A refusal, or a build failure. No tag was created.
 `;
@@ -89,9 +94,16 @@ const SELF_ROOT = path.resolve(SELF_DIR, '..', '..');
 const RELEASE_BRANCH = 'main';
 
 // The artefact contract, and the whole of what this file knows about the build
-// output: four files, each named with the version-qualified prefix below. The
+// output: three files, each named with the version-qualified prefix below. The
 // platform labels and the Bun target strings are not knowledge this file holds.
-const ARTEFACT_COUNT = 4;
+//
+// Three because the release ships macOS and Linux only. Windows is deferred,
+// not abandoned: it needs a submission to an installer or package-manager
+// channel — Chocolatey or Scoop — before a binary is worth publishing.
+// tools/package-cli.mjs keeps win-x64 as an explicitly selectable target, and
+// its default selection is the three counted here. Restoring Windows to that
+// default is what would make this 4 again.
+const ARTEFACT_COUNT = 3;
 const RELEASE_CLI_DIR = path.join(SELF_ROOT, 'release', 'cli');
 
 function fail(message) {

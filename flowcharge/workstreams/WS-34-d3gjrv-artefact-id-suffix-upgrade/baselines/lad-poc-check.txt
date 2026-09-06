@@ -1,0 +1,27 @@
+WARN flowcharge/tags.md missing — tag validation skipped
+WARN ids.md: header text is out of date — rewritten
+WARN ids.md: WS counter is 6 but no WS-6 artefact or marker exists
+WARN ids.md: PLN counter is 5 but no PLN-5 artefact or marker exists
+WARN ids.md: IL counter is 2 but no IL-2 artefact or marker exists
+WARN ids.md: TL counter is 7 but no TL-7 artefact or marker exists
+WARN ids.md: ISS counter is 7 but no ISS-7 artefact or marker exists
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 1.1: issues unknown id ISS-1
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 1.2: issues unknown id ISS-1
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 1.3: issues unknown id ISS-1
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 1.4: issues unknown id ISS-1
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 1.5: issues unknown id ISS-1
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 2.1: issues unknown id ISS-2
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 2.2: issues unknown id ISS-2
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 2.3: issues unknown id ISS-2
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 2.4: issues unknown id ISS-2
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 2.5: issues unknown id ISS-2
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 3.1: issues unknown id ISS-3
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 3.2: issues unknown id ISS-3
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 3.3: issues unknown id ISS-3
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 4.1: issues unknown id ISS-5
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 4.2: issues unknown id ISS-5
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 5.1: issues unknown id ISS-4
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 5.2: issues unknown id ISS-4
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 5.3: issues unknown id ISS-4
+WARN TL-5 (flowcharge/workstreams/WS-4-architecture-tool-fidelity/tasklist.md) task 6: issues unknown id ISS-7
+WARN flowcharge/workstreams/WS-1-mcp-oracle-proof-of-concept/.lease: held by session 5b849b85-51d3-4f58-9f52-f2f3bd54cb3b for 8572 minutes — stale

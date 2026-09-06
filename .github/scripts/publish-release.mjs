@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The publish command. It attaches the four Bun binaries that `release.mjs`
+// The publish command. It attaches the three Bun binaries that `release.mjs`
 // built to a GitHub Release for the tag `release.mjs` created, with the notes
 // taken from the public repository's own CHANGELOG.md section.
 //
@@ -64,8 +64,9 @@ Before it calls gh it refuses, in this order, when:
   4. the tag vX.Y.Z is missing locally, or has not been pushed to origin;
   5. the public CHANGELOG.md names no section for this version, or that
      section holds no text;
-  6. there are not exactly four non-empty release/cli/flowcharge-<version>-*
-     artefacts in this repository;
+  6. there are not exactly three non-empty release/cli/flowcharge-<version>-*
+     artefacts in this repository — macOS arm64, macOS x64 and Linux x64,
+     the release's platforms while a Windows binary stays deferred;
   7. gh is not usable on PATH — not checked under --dry-run, which never calls
      it.
 
@@ -84,10 +85,19 @@ const SELF_DIR = path.dirname(decodeURIComponent(new URL(import.meta.url).pathna
 const SELF_ROOT = path.resolve(SELF_DIR, '..', '..');
 
 // The artefact contract, and the whole of what this file knows about the build
-// output: four files, each named with the version-qualified prefix below. The
-// Windows binary carries a .exe suffix Bun appends, so the four names are not
-// uniform — the prefix is matched, never an exact name list.
-const ARTEFACT_COUNT = 4;
+// output: three files, each named with the version-qualified prefix below.
+//
+// Three because the release ships macOS and Linux only. Windows is deferred,
+// not abandoned: it needs a submission to an installer or package-manager
+// channel — Chocolatey or Scoop — before a binary is worth publishing, so
+// tools/package-cli.mjs leaves win-x64 out of its default selection while
+// keeping it explicitly selectable.
+//
+// The prefix is matched, never an exact name list. That is what kept the four
+// names uniform-agnostic when Windows was in the set — Bun appends a .exe
+// suffix to that binary and to no other — and it is why restoring Windows later
+// needs this count changed and nothing else here.
+const ARTEFACT_COUNT = 3;
 const RELEASE_CLI_DIR = path.join(SELF_ROOT, 'release', 'cli');
 
 function fail(message) {

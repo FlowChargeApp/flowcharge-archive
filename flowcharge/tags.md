@@ -1,0 +1,60 @@
+# Praxis Tag Pool
+
+Canonical workstream tags, one per line, lowercase, letters/digits/hyphens only.
+A tag is defined once it is listed here. See `prx-orchestrate/CONVENTIONS.md`.
+
+- agentic-tools
+- architecture
+- board
+- board-card
+- bug
+- bun
+- cli
+- closed-source
+- compatibility
+- counts
+- cross-platform
+- dependencies
+- desktop
+- detail-modal
+- documentation
+- electron
+- extraction
+- feature
+- filesystem
+- frontend
+- git
+- hardening
+- home-page
+- icons
+- ids
+- issue
+- launch
+- licensing
+- maintenance
+- markdown
+- multi-project
+- ordering
+- packaging
+- parser
+- permissions
+- plan
+- project-tile
+- flowcharge
+- refactor
+- security
+- server
+- sort
+- structure
+- styling
+- tasks
+- tauri
+- testing
+- tooling
+- typescript
+- typography
+- ui
+- ux
+- versioning
+- group1
+- group2

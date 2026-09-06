@@ -1,0 +1,17 @@
+WARN PLN-2 (flowcharge/workstreams/WS-4-search-worker-cold-start/plan.md): in-progress but not updated for 20 days
+WARN PLN-1 (flowcharge/workstreams/WS-1-pagination-reports-api/plan.md): updated 2026-08-12 but file modified 2026-08-14 — bump updated on every edit
+WARN TL-1 (flowcharge/workstreams/WS-1-pagination-reports-api/tasklist.md): updated 2026-08-12 but file modified 2026-08-14 — bump updated on every edit
+WARN WS-1 (flowcharge/workstreams/WS-1-pagination-reports-api/workstream.md): updated 2026-08-12 but file modified 2026-08-14 — bump updated on every edit
+WARN WS-2 (flowcharge/workstreams/WS-2-dark-mode-settings-page/workstream.md): updated 2026-08-11 but file modified 2026-08-14 — bump updated on every edit
+WARN WS-3 (flowcharge/workstreams/WS-3-replace-legacy-csv-importer/workstream.md): updated 2026-08-04 but file modified 2026-08-14 — bump updated on every edit
+WARN PLN-2 (flowcharge/workstreams/WS-4-search-worker-cold-start/plan.md): updated 2026-07-28 but file modified 2026-08-14 — bump updated on every edit
+WARN WS-6 (flowcharge/workstreams/WS-6-rate-limit-public-api/workstream.md): updated 2026-07-24 but file modified 2026-08-14 — bump updated on every edit
+WARN WS-7 (flowcharge/workstreams/WS-7-audit-log-export/workstream.md): updated 2026-08-05 but file modified 2026-08-14 — bump updated on every edit
+WARN WS-8 (flowcharge/workstreams/WS-8-mailer-template-engine/workstream.md): updated 2026-07-31 but file modified 2026-08-14 — bump updated on every edit
+WARN flowcharge/tags.md missing — tag validation skipped
+WARN ids.md: header text is out of date — rewritten
+WARN ids.md: WS counter is 8 but no WS-8 artefact or marker exists
+WARN ids.md: PLN counter is 2 but no PLN-2 artefact or marker exists
+WARN ids.md: IL counter is 1 but no IL-1 artefact or marker exists
+WARN ids.md: TL counter is 1 but no TL-1 artefact or marker exists
+WARN ids.md: ISS counter is 3 but no ISS-3 artefact or marker exists

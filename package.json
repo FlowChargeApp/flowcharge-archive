@@ -105,8 +105,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "TODO-REPLACE-OWNER",
-      "repo": "TODO-REPLACE-REPO",
+      "owner": "FlowChargeApp",
+      "repo": "flowcharge",
       "releaseType": "draft",
       "publishAutoUpdate": true
     }

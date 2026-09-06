@@ -1,0 +1,5 @@
+WARN flowcharge/tags.md missing — tag validation skipped
+WARN ids.md: header text is out of date — rewritten
+WARN ids.md: WS counter is 36 but no WS-36 artefact or marker exists
+WARN ids.md: PLN counter is 23 but no PLN-23 artefact or marker exists
+WARN ids.md: TL counter is 26 but no TL-26 artefact or marker exists

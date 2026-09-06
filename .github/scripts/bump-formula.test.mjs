@@ -42,7 +42,10 @@ const ORIGIN_NAME = 'flowcharge-public';
 const ORIGIN_SLUG = `${ORIGIN_OWNER}/${ORIGIN_NAME}`;
 
 // The three Homebrew-relevant platform labels, in the order the formula emits
-// them. The Windows binary the build also produces is not one of them.
+// them. These are also the whole of what the default build now produces, since
+// a Windows binary is deferred — but bump-formula.mjs names these three
+// outright and reads no total, so the two counts agreeing is a coincidence the
+// tests below do not rely on.
 const PLATFORM_LABELS = ['darwin-arm64', 'darwin-x64', 'linux-x64'];
 
 // A git call inside a fixture. Fixture setup must never fail silently, so a

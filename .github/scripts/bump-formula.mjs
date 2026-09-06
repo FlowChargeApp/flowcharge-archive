@@ -22,10 +22,14 @@
 // lives in release-format.mjs alone; it does not know the gh CLI, which is
 // publish-release.mjs's contract; it does not know the Bun build or any Bun
 // target string, which stay solely in tools/package-cli.mjs; and it knows
-// neither the tag shape nor the four-artefact count, which belong to
-// release.mjs and publish-release.mjs, not to this command. Three of the four
-// built artefacts matter here, because Homebrew does not run natively on
-// Windows.
+// neither the tag shape nor the release's artefact count, which belong to
+// release.mjs and publish-release.mjs, not to this command. This file names the
+// three platforms it serves outright and reads no total, so the count those two
+// files enforce can change without touching anything here. It happens to be
+// three as well now that the default build ships macOS and Linux only, with
+// Windows deferred — but that is a coincidence, not a coupling. Even were a
+// Windows binary built, it would not appear below, because Homebrew does not
+// run natively there.
 //
 // It holds no repository slug. The slug is read from the public repository's
 // origin remote, so moving the repository from a personal account to an

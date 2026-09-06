@@ -1,0 +1,35 @@
+WARN WS-10 (flowcharge/workstreams/WS-10-board-sort-by-date/workstream.md): first body line is 371 characters — the board shows only 200
+WARN WS-11 (flowcharge/workstreams/WS-11-sort-button-severity-cue/workstream.md): first body line is 689 characters — the board shows only 200
+WARN WS-13 (flowcharge/workstreams/WS-13-detail-modal-tags-dates-severity/workstream.md): first body line is 571 characters — the board shows only 200
+WARN WS-14 (flowcharge/workstreams/WS-14-severity-sort-direction-semantics/workstream.md): first body line is 550 characters — the board shows only 200
+WARN WS-15 (flowcharge/workstreams/WS-15-task-count-vs-tasks-tab-mismatch/workstream.md): first body line is 305 characters — the board shows only 200
+WARN WS-16 (flowcharge/workstreams/WS-16-tasklist-fence-scanner-data-loss/workstream.md): first body line is 388 characters — the board shows only 200
+WARN WS-17 (flowcharge/workstreams/WS-17-card-total-counts-non-task-lines/workstream.md): first body line is 380 characters — the board shows only 200
+WARN WS-18 (flowcharge/workstreams/WS-18-server-bind-beyond-loopback/workstream.md): first body line is 240 characters — the board shows only 200
+WARN WS-2 (flowcharge/workstreams/WS-2-src-dist-build-layout/workstream.md): updated 2026-08-04 but file modified 2026-08-06 — bump updated on every edit
+WARN WS-22 (flowcharge/workstreams/WS-22-project-tile-icon-buttons/workstream.md): first body line is 222 characters — the board shows only 200
+WARN WS-24 (flowcharge/workstreams/WS-24-heading-font-fraunces/workstream.md): first body line is 280 characters — the board shows only 200
+WARN WS-25 (flowcharge/workstreams/WS-25-card-dependency-highlighting/workstream.md): first body line is 424 characters — the board shows only 200
+WARN WS-26 (flowcharge/workstreams/WS-26-plan-markdown-table-rendering/workstream.md): first body line is 338 characters — the board shows only 200
+WARN WS-27 (flowcharge/workstreams/WS-27-detail-modal-live-refresh/workstream.md): first body line is 439 characters — the board shows only 200
+WARN WS-28 (flowcharge/workstreams/WS-28-lean-framework-migration/workstream.md): first body line is 381 characters — the board shows only 200
+WARN WS-29 (flowcharge/workstreams/WS-29-project-tile-folder-modified-date/workstream.md): first body line is 314 characters — the board shows only 200
+WARN WS-30 (flowcharge/workstreams/WS-30-workstream-folder-ws-prefix-across-projects/workstream.md): first body line is 403 characters — the board shows only 200
+WARN WS-34-d3gjrv (flowcharge/workstreams/WS-34-d3gjrv-artefact-id-suffix-upgrade/workstream.md): first body line is 630 characters — the board shows only 200
+WARN WS-35-970q8q (flowcharge/workstreams/WS-35-970q8q-new-id-format-compatibility-bugs/workstream.md): first body line is 344 characters — the board shows only 200
+WARN IL-1 (flowcharge/workstreams/WS-4-inline-css-extraction/issuelist.md): updated 2026-08-04 but file modified 2026-08-07 — bump updated on every edit
+WARN WS-4 (flowcharge/workstreams/WS-4-inline-css-extraction/workstream.md): updated 2026-08-04 but file modified 2026-08-06 — bump updated on every edit
+WARN WS-5 (flowcharge/workstreams/WS-5-card-detail-modal-issues-tasks/workstream.md): first body line is 404 characters — the board shows only 200
+WARN WS-8 (flowcharge/workstreams/WS-8-board-sort-by-severity/workstream.md): first body line is 355 characters — the board shows only 200
+WARN WS-9 (flowcharge/workstreams/WS-9-board-severity-cue/workstream.md): first body line is 574 characters — the board shows only 200
+WARN flowcharge/tags.md missing — tag validation skipped
+WARN TL-14 (flowcharge/workstreams/WS-14-severity-sort-direction-semantics/tasklist.md) task 1: issues unknown id ISS-2
+WARN TL-15 (flowcharge/workstreams/WS-16-tasklist-fence-scanner-data-loss/tasklist.md) task 1: issues unknown id ISS-3
+WARN TL-15 (flowcharge/workstreams/WS-16-tasklist-fence-scanner-data-loss/tasklist.md) task 2: issues unknown id ISS-4
+WARN TL-17 (flowcharge/workstreams/WS-17-card-total-counts-non-task-lines/tasklist.md) task 1.1: issues unknown id ISS-5
+WARN TL-17 (flowcharge/workstreams/WS-17-card-total-counts-non-task-lines/tasklist.md) task 1.2: issues unknown id ISS-5
+WARN TL-19 (flowcharge/workstreams/WS-20-detail-modal-artefact-order-by-id/tasklist.md) task 1: issues unknown id ISS-6
+WARN TL-2 (flowcharge/workstreams/WS-4-inline-css-extraction/tasklist-status-colour-fix.md) task 1: issues unknown id ISS-1
+WARN flowcharge/workstreams/WS-26-plan-markdown-table-rendering/.lease: held by session f544f590-4d98-4d82-8674-971af12cf0b5 for 7158 minutes — stale
+WARN flowcharge/workstreams/WS-29-project-tile-folder-modified-date/.lease: held by session f544f590-4d98-4d82-8674-971af12cf0b5 for 2758 minutes — stale
+WARN flowcharge/workstreams/WS-34-d3gjrv-artefact-id-suffix-upgrade/.lease: held by session f544f590-4d98-4d82-8674-971af12cf0b5 for 696 minutes — stale
