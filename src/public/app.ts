@@ -1246,9 +1246,7 @@ import { unwrapIpc } from './ipc-adapter';
     refreshFilterTags();
 
     byId('gen-date').textContent = raw.generated || '—';
-    byId('board-title').textContent = raw.source
-      ? raw.source.split('/').pop()!
-      : 'Board';
+    byId('board-title').textContent = raw.name || 'Board';
     if (raw.branch) {
       byId('branch-name').textContent = raw.branch;
       byId('branch-line').hidden = false;

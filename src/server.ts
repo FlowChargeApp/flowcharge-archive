@@ -762,7 +762,7 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
         return;
       }
       warnLegacyLayout(entry.path);
-      const payload: BoardPayload = { ...extractPraxisData(entry.path), branch: readBranch(entry.path) };
+      const payload: BoardPayload = { ...extractPraxisData(entry.path), branch: readBranch(entry.path), name: entry.name };
       sendJson(res, 200, payload);
     } catch (err) {
       console.error(`GET /api/projects/${id}/data failed:`, err);

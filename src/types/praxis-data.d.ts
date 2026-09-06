@@ -46,9 +46,11 @@ interface PraxisData {
 
 // What the board route sends: the extractor's payload plus the fields the server
 // adds at the transport layer. PraxisData itself stays exactly what
-// extractPraxisData() returns and what `npm run refresh` dumps.
+// extractPraxisData() returns and what `npm run refresh` dumps. `name` is the
+// project registry's display name, which the extractor knows nothing about.
 interface BoardPayload extends PraxisData {
   branch: string | null;
+  name: string;
 }
 
 interface ProjectEntry {
