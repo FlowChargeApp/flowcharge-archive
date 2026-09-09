@@ -338,13 +338,13 @@ coverage for both modules, then user-facing documentation across two repositorie
           fix: "The stub rejects with signal.reason on the signal's abort event, which is the TimeoutError DOMException the real fetch raises. The case runs in about 22 ms with an explicit timeoutMs of 20 and resolves without throwing, proving the catch is unfiltered."
     ```
 
-- [ ] 3. User-facing documentation
+- [x] 3. User-facing documentation
 
   ```yaml
   description: "Document the behaviour the first two stages settled: a telemetry section in this repository's README.md, the same section byte-identical in the sibling public repository, and one row in DEVELOPMENT.md's environment-variable table."
   ```
 
-  - [ ] 3.1 Add the telemetry section to this repository's `README.md`
+  - [x] 3.1 Add the telemetry section to this repository's `README.md`
     ```yaml
     description: "New README section stating what is sent, what is never sent, where it goes and how to turn it off."
     author: Anthony Koukoullis
@@ -374,11 +374,11 @@ coverage for both modules, then user-facing documentation across two repositorie
       - "Does it state that a failed request never delays or changes the app?"
       - "Was the rest of README.md left untouched?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.2 Copy the same section into `../flowcharge-public/README.md`
+  - [x] 3.2 Copy the same section into `../flowcharge-public/README.md`
     ```yaml
     description: "Cross-repository edit: put the identical telemetry section into the sibling public repository's README so the two files stay byte-identical."
     author: Anthony Koukoullis
@@ -403,11 +403,11 @@ coverage for both modules, then user-facing documentation across two repositorie
       - "Was the section copied rather than retyped?"
       - "Was nothing committed or pushed in the sibling repository?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.3 Add the `FLOWCHARGE_NO_TELEMETRY` row to `DEVELOPMENT.md`
+  - [x] 3.3 Add the `FLOWCHARGE_NO_TELEMETRY` row to `DEVELOPMENT.md`
     ```yaml
     description: "One new row in the environment-variable table, so that table stays the complete list of variables."
     author: Anthony Koukoullis
@@ -440,6 +440,6 @@ coverage for both modules, then user-facing documentation across two repositorie
       - "Does it say only the packaged binary sends the event?"
       - "Was no other line in DEVELOPMENT.md changed?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```

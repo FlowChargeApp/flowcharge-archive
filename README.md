@@ -86,6 +86,30 @@ open-source skill suite that does the work FlowCharge shows. Each runs on its ow
 Core needs no application, and FlowCharge reads any `flowcharge/` folder, whoever
 wrote it.
 
+## Telemetry
+
+FlowCharge sends one anonymous event each time the app starts.
+The event carries a random install ID, the app version, the OS name and the OS
+release, plus a session ID for that run and a timestamp.
+
+Nothing else is sent. There is no project path, no file name, no `flowcharge/`
+content and no board data in the event. There is no name, no email address and no
+account of any kind.
+
+The event goes to Aptabase, an analytics service. Aptabase derives an approximate
+country from the request IP address at its own end.
+
+To turn telemetry off, set `FLOWCHARGE_NO_TELEMETRY` to any value other than an
+empty string or `0`. An empty string and `0` both leave telemetry on.
+
+```sh
+export FLOWCHARGE_NO_TELEMETRY=1
+flowcharge
+```
+
+A failed or blocked request never delays the app and never changes what it does.
+The app prints nothing about telemetry, whether the event is sent or not.
+
 ---
 
 FlowCharge is free to use, and its source is not published.
