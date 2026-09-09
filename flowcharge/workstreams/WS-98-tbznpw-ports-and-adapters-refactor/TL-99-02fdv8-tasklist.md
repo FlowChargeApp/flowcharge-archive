@@ -1104,13 +1104,13 @@ string was run at `279fb26` while authoring, and records the value it actually r
           fix: "Reworded both comments to say 'the extractor module' rather than naming the specifier. The rule is still stated where it matters; the grep now prints nothing. No import changed."
     ```
 
-- [ ] 6. Stage 6 — integrations routes
+- [x] 6. Stage 6 — integrations routes
 
   ```yaml
   description: "Move the five /api/integrations/* routes, the loopback gate and the permitted-root derivation into src/http/routes-integrations.ts, driven by injected ports. Separated from Stage 5 because the boundary suite reaches only the edge of this branch and because it is the hand-mirror of the Electron handler."
   ```
 
-  - [ ] 6.1 Add `src/http/routes-integrations.ts`
+  - [x] 6.1 Add `src/http/routes-integrations.ts`
 
     ```yaml
     description: "Move the five integrations routes, the loopback peer gate, permittedRootFor, detectionsForPermittedRoots, mapNodePlatformToOs, the two shape guards and INSTALL_TARGET_SHAPE into one module driven by IntegrationsDeps."
@@ -1140,11 +1140,14 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Does skill-presence still perform no permitted-root check on basePath?"
       - "Is electron/agentic-tools-ipc-handlers.cts untouched?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Do all five integrations routes and both mutating-route boundary checks live in this module?"
+          reason: "IntegrationsDeps was declared in src/http/create-server.ts by Stage 5, and this task's imports list gives routes-integrations.ts no import of it. Moving the route bodies without the interface would have left the new module unable to name its own dependency object."
+          fix: "Moved the IntegrationsDeps declaration into src/http/routes-integrations.ts with the route bodies, and had create-server.ts import it as a type and re-export it, so HttpServerConfig's field type and the public export name are both unchanged. Re-checked: all five checklist items pass."
     ```
 
-  - [ ] 6.2 Wire `routes-integrations.ts` into `create-server.ts` and the composition root
+  - [x] 6.2 Wire `routes-integrations.ts` into `create-server.ts` and the composition root
 
     ```yaml
     description: "Have create-server.ts dispatch the /api/integrations/ branch into the new module, and have src/server.ts build the IntegrationsDeps it needs."
@@ -1171,11 +1174,14 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Does an unmatched /api/integrations/ path still answer the outer 404?"
       - "Is installFsWrite still built once at module scope?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Does src/server.ts mention no integrations route path?"
+          reason: "No edit to src/server.ts was needed. Stage 5 already left the composition root building the IntegrationsDeps object from the Stage 2 registry, INSTALL_REGISTRY_PATH, installFsWrite and createNodeFsAccess, and passing it in HttpServerConfig. `grep -c 'api/integrations' src/server.ts` already returned 0 before this task."
+          fix: "None applied. The task's server.ts half was already satisfied, so only src/http/create-server.ts changed. All four checklist items were re-checked against the live files and pass."
     ```
 
-  - [ ] 6.3 Stage 6 gate
+  - [x] 6.3 Stage 6 gate
 
     ```yaml
     description: "Prove the integrations move landed with no observable change. Assumption A6's manual Electron pass is waived — see CLAUDE.md."
@@ -1201,8 +1207,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Was no assertion in any WS-97-7fvoc0 file edited?"
       - "Is electron/agentic-tools-ipc-handlers.cts still untouched?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Does the case-name diff against the 279fb26 run come back empty?"
+          reason: "The verify step's `grep -E '^..(✔|✖)'` extraction matched no line on this host, for the same reason recorded against tasks 1.1 and 1.11: node's spec reporter prints the marker at column 0."
+          fix: "Used the corrected extraction from task 1.1 — drop the trailing `✖ failing tests:` block, match the marker at column 0, strip the marker and the duration — on both sides, with the same `s#dist/[^ ]*/##g` normalisation. The diff is empty across 281 names. Re-checked: all four checklist items pass."
     ```
 
 - [ ] 7. Stage 7 — CLI bootstrap port
