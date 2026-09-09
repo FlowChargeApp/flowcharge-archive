@@ -12,5 +12,5 @@
     "noEmitOnError": true,
     "skipLibCheck": true
   },
-  "include": ["src/server.ts", "src/server.test.ts", "src/server-env-seams.test.ts", "src/server-harness.ts", "src/server-projects.test.ts", "src/server-board.test.ts", "src/server-guards.test.ts", "src/lib/**/*.ts", "src/scripts/**/*.ts", "src/types/**/*.d.ts"]
+  "include": ["src/server.ts", "src/server.test.ts", "src/server-env-seams.test.ts", "src/server-harness.ts", "src/server-projects.test.ts", "src/server-board.test.ts", "src/server-guards.test.ts", "src/cli-binary.test.ts", "src/lib/**/*.ts", "src/scripts/**/*.ts", "src/types/**/*.d.ts"]
 }

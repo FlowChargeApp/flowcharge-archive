@@ -5,7 +5,7 @@ workstream: WS-97-7fvoc0
 slug: boundary-regression-test-suite
 title: "Missing boundary regression test suite"
 description: "The app has no test suite. Before refactoring into a ports-and-adapters architecture, write boundary-level regression tests (HTTP routes, CLI behavior, flowcharge/ extraction) first, so the refactor has a safety net whose tests survive it, since boundary-level tests do not need rewriting when internals change."
-status: in-progress
+status: done
 tags: [testing, server, cli, extraction, feature]
 created: 2026-09-08
 updated: 2026-09-09

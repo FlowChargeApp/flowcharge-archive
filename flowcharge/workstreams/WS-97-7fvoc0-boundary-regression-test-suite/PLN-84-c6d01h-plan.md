@@ -4,7 +4,7 @@ type: plan
 workstream: WS-97-7fvoc0
 slug: boundary-regression-test-suite
 title: "Boundary regression tests for the HTTP routes, the packaged CLI and the board payload"
-status: ready
+status: done
 created: 2026-09-09
 updated: 2026-09-09
 depends_on: []

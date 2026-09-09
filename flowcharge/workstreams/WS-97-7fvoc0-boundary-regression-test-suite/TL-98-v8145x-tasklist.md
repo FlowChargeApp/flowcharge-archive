@@ -4,7 +4,7 @@ type: tasklist
 workstream: WS-97-7fvoc0
 slug: boundary-regression-test-suite
 title: "Boundary regression test suite for the HTTP routes, the packaged CLI and the board payload"
-status: ready
+status: done
 created: 2026-09-09
 updated: 2026-09-09
 author: Anthony Koukoullis
@@ -420,13 +420,13 @@ Four parent tasks, one per plan stage, in the plan's order.
       failures: []
     ```
 
-- [ ] 4. The packaged CLI binary as a black box (plan stage 4)
+- [x] 4. The packaged CLI binary as a black box (plan stage 4)
 
   ```yaml
   description: "Deliver src/cli-binary.test.ts. This stage holds last position because it depends on no earlier stage and is the only stage that cannot run in CI."
   ```
 
-  - [ ] 4.1 Re-measure the three figures the plan marks as estimates
+  - [x] 4.1 Re-measure the three figures the plan marks as estimates
     ```yaml
     description: "Before writing any CLI test, re-measure the Bun compile time, the binary size and the count of existing test files, because the plan requires stage 4 to confirm them rather than inherit them. This task changes no file by design, so its verify commands intentionally cannot tell a done task from an undone one — the task's real evidence is the measurement it writes into its self_eval."
     author: Anthony Koukoullis
@@ -453,11 +453,14 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Is the measured test-file count recorded?"
       - "Was no tracked file changed by this task?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "implement: `Write the three measured numbers into this task's self_eval as a note, and state whether each confirms or contradicts the plan's estimate.`"
+          reason: "Measured on this machine — darwin-arm64, bun 1.3.14 — during this task's run. 1. Compile time: `time node tools/package-cli.mjs --target=darwin-arm64` took 0.293s wall clock, of which bun reported 5ms bundle and 249ms compile. That CONTRADICTS the plan's about-0.15-second estimate; it is roughly double. It is still far under a second, so it does not change the conclusion that a Bun compile may sit inside npm test. 2. Binary size: release/cli/flowcharge-0.1.0-darwin-arm64 is 64238690 bytes, which CONFIRMS the plan's about-64-MB estimate. 3. Test-file count: `find dist -name '*.test.js' | wc -l` returned 23 and `find .github/scripts -name '*.test.mjs' | wc -l` returned 4, so 27 files. That CONTRADICTS the plan's estimate of 23. The dist figure is 3 higher than Divergence 2's base_commit measurement of 20 because tasks 1, 2 and 3 of this list each added a compiled test file."
+          fix: "No fix is needed and no file was changed. The measurement gate is satisfied: all three figures were measured here rather than inherited from the plan, and the two contradictions are recorded above."
     ```
 
-  - [ ] 4.2 Create `src/cli-binary.test.ts` with the host mapping, the skip gate and the build step
+  - [x] 4.2 Create `src/cli-binary.test.ts` with the host mapping, the skip gate and the build step
     ```yaml
     description: "Add the black-box CLI test file's scaffolding: the host-to-label map, the Bun probe and skip, the one build per run, and the spawn-and-wait-for-readiness helper."
     author: Anthony Koukoullis
@@ -488,11 +491,17 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Is HOME pointed at a temporary directory for every child?"
       - "Is every spawned child killed in an after() hook, and does a missing readiness line time out rather than hang?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "pattern: `New file src/cli-binary.test.ts. Delivers the scaffolding acceptance criterion 7 of PLN-84-c6d01h is asserted through.`"
+          reason: "tsconfig.json's `include` is an explicit file list, not a glob over src/. A new file that is not named there is outside the program, so tsc emits nothing for it and the verify step on dist/cli-binary.test.js fails with `Could not find` after the file is written. Tasks 1.1, 2.2 and 3.1 hit the same thing and recorded the same divergence."
+          fix: "Added `src/cli-binary.test.ts` to the `include` array on line 15 of tsconfig.json, beside the four entries tasks 1.1, 2.2 and 3.1 added. One list entry, strictly required for the in-scope file to compile at all. Nothing else in tsconfig.json changed, and this is the last new file the list adds."
+        - item: "imports: `node:test, node:assert/strict, node:fs, node:os, node:path, node:net, node:child_process.`"
+          reason: "That list names no HTTP client, yet task 4.3 requires GET /api/version, GET /api/projects, POST /api/projects and GET / to be driven against the child process."
+          fix: "The file drives those requests with the global fetch, which needs no import, so the import list stays exactly the seven modules the task names. fetch is enough here because no case in this file needs a raw request path or a Host header, which are the two reasons src/server-harness.ts uses node:http instead. For the same reason the repository root is derived from `new URL('.', import.meta.url)` rather than from node:url's fileURLToPath; every host the label map does not skip on is POSIX, where the two agree."
     ```
 
-  - [ ] 4.3 Assert the packaged binary's four documented environment behaviours
+  - [x] 4.3 Assert the packaged binary's four documented environment behaviours
     ```yaml
     description: "Add the black-box cases: /api/version, /api/projects and / answered by the binary, with PRAXIS_APP_VERSION, PRAXIS_DATA_DIR, HOST and PORT behaving as DEVELOPMENT.md documents."
     author: Anthony Koukoullis
@@ -522,11 +531,14 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Does GET / prove the embedded asset filesystem serves HTML?"
       - "Does the file assert only externally observable behaviour, importing nothing from src/lib/?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "implement: `PRAXIS_DATA_DIR: ... register a project through POST /api/projects and assert .praxis-projects.json appears inside that directory and nowhere else.`"
+          reason: "Naming the registry file literally would have made task 4.4's verify step — `grep -l 'praxis-projects.json' ... src/cli-binary.test.ts`, which must list no file — fail, and would have broken acceptance criterion 2 of PLN-84-c6d01h, which forbids a new test file from naming the repository's own registry. The two instructions conflict as written."
+          fix: "The case asserts the same fact without naming any registry filename. It reads PRAXIS_DATA_DIR back with fs.readdirSync, asserts exactly one file was written there, and asserts that file's text holds the registered project path. For the `nowhere else` half it asserts that the child's own HOME never gained a .flowcharge directory, which is the stronger statement: with PRAXIS_DATA_DIR set, dist/cli-entry.js never takes the home-directory branch at all. Criterion 2 and the substance of the bullet are both satisfied."
     ```
 
-  - [ ] 4.4 Verify the whole-suite acceptance criteria
+  - [x] 4.4 Verify the whole-suite acceptance criteria
     ```yaml
     description: "With all four test files in place, check the three criteria that bind the suite as a whole: the run passes with Bun and skips the CLI cases without it, no new test file touches the real registries or the real home directory, and no shipped source file changed."
     author: Anthony Koukoullis
@@ -555,8 +567,14 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Is the change set under src/ exactly the six expected paths, with nothing changed under tools/ and no shipped source file touched?"
       - "Is .github/workflows/ci.yml unchanged?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "implement: `Criterion 8: confirm the change set under src/ is exactly the six expected paths ... and that no shipped source file changed.`"
+          reason: "One file outside src/ and outside tools/ did change across this list: tsconfig.json, whose `include` is an explicit file list rather than a glob over src/, so each of the four new files had to be named there to compile at all. Tasks 1.1, 2.2, 3.1 and 4.2 each recorded that same single-entry edit."
+          fix: "No fix is needed and criterion 8 as verified is met. `git status --porcelain src/ tools/` lists only src/cli-binary.test.ts — the five earlier paths are already committed — plus the two src/public/img/*.pxd scratch directories that were untracked before this run, and nothing under tools/. No shipped source file changed and .github/workflows/ci.yml is unchanged. The tsconfig.json edit is four list entries in total, and it is repeated here so it stays visible at the parent-task level."
+        - item: "verify: `npm test 2>&1 | tail -20 ... Afterwards the test count must be higher, the fail count must still be 1, and that same case must be the only failure.`"
+          reason: "Result of the run, recorded for the exit gate. With bun on PATH npm test reports 281 tests, 280 pass, 1 fail, against 232/231/1 at base_commit. The one failure is the same pre-existing live-network case, dist/lib/skill-content-fetch.test.js:72. With bun off PATH it reports 281 tests, 272 pass, 1 fail, 8 skipped — the same single pre-existing failure, and the seven CLI cases skipped with a stated reason."
+          fix: "No fix is needed. This is Divergence 1 behaving exactly as the list predicts: the four new files contribute zero failures."
     ```
 
 ## Divergences
