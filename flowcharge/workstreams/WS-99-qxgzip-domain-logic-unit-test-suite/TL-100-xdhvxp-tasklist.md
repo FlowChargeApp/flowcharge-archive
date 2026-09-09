@@ -625,13 +625,13 @@ one test file and are not extracted into a shared helper module.
       failures: []
     ```
 
-- [ ] 5. Stage 5 — throw propagation and full-suite check
+- [x] 5. Stage 5 — throw propagation and full-suite check
 
   ```yaml
   description: "Assert the readBoard and readDetail throws propagate out of the core rather than becoming result variants, then run the full suite end to end and confirm no other file changed."
   ```
 
-  - [ ] 5.1 Add the readBoard throw-propagation case
+  - [x] 5.1 Add the readBoard throw-propagation case
     ```yaml
     description: "Assert a readBoard throw propagates out of getBoard rather than being converted into a result variant."
     author: Anthony Koukoullis
@@ -654,11 +654,11 @@ one test file and are not extracted into a shared helper module.
       - "Does the comment avoid naming any status code or error-body string?"
       - "Does the file still report 0 failures?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 5.2 Add the readDetail throw-propagation case
+  - [x] 5.2 Add the readDetail throw-propagation case
     ```yaml
     description: "Assert a readDetail throw propagates out of getDetail rather than becoming the unknown-workstream variant."
     author: Anthony Koukoullis
@@ -681,11 +681,11 @@ one test file and are not extracted into a shared helper module.
       - "Does the case prove the unknown-workstream variant was not returned?"
       - "Is the throwing readDetail override actually in place?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 5.3 Run the full suite and confirm the import and single-file constraints
+  - [x] 5.3 Run the full suite and confirm the import and single-file constraints
     ```yaml
     description: "Run npm test end to end, then prove acceptance criteria 1, 3 and 8 — the suite passes, its imports are limited to the allowed set, and no other file was added or changed."
     author: Anthony Koukoullis
@@ -715,7 +715,7 @@ one test file and are not extracted into a shared helper module.
       - "Does git status list src/test/unit/board-api.test.ts as the only added or changed file under src/?"
       - "Were src/test/boundary/, src/http/, src/lib/, src/core/ and src/ports/ left completely untouched?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

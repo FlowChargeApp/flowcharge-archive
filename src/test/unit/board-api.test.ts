@@ -663,3 +663,56 @@ test('renameProject passes an undefined registry answer through', () => {
   assert.equal(result, undefined);
   assert.equal(store.calls.length, 0);
 });
+
+// A sentinel for the two throw-propagation cases below. The call under test
+// must leave the variable untouched, which proves it produced no result at all.
+const NOT_RETURNED = Symbol('no result was returned');
+
+test('getBoard lets a readBoard throw propagate out of the core', () => {
+  const { api } = makeApi({
+    registry: { find: () => ENTRY },
+    store: {
+      readBoard: () => {
+        throw new Error('readBoard fixture failure');
+      },
+    },
+  });
+
+  let result: unknown = NOT_RETURNED;
+  // Match on the message. A bare assert.throws would also pass on a TypeError
+  // raised by a mis-built fake, which would prove nothing about the core.
+  assert.throws(
+    () => {
+      result = api.getBoard(ENTRY.id);
+    },
+    { message: 'readBoard fixture failure' },
+  );
+  // The throw must escape the core rather than become a result variant. The
+  // caller wraps this call and answers its own failure, so a core that
+  // swallowed the throw would report success carrying a half-built payload.
+  assert.equal(result, NOT_RETURNED);
+});
+
+test('getDetail lets a readDetail throw propagate out of the core', () => {
+  const { api } = makeApi({
+    registry: { find: () => ENTRY },
+    store: {
+      readDetail: () => {
+        throw new Error('readDetail fixture failure');
+      },
+    },
+  });
+
+  let result: unknown = NOT_RETURNED;
+  assert.throws(
+    () => {
+      result = api.getDetail(ENTRY.id, DETAIL.id);
+    },
+    { message: 'readDetail fixture failure' },
+  );
+  // A throw and a null return are two different failures, and the core must
+  // keep them apart. Without the throwing override the default readDetail
+  // answers null and this call would yield the unknown-workstream variant.
+  assert.equal(result, NOT_RETURNED);
+  assert.notDeepEqual(result, { kind: 'unknown-workstream' });
+});
