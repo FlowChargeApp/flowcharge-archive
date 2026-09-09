@@ -5,8 +5,8 @@ workstream: WS-99-qxgzip
 slug: domain-logic-unit-test-suite
 title: "Unit test the domain logic isolated by the ports-and-adapters refactor"
 description: "Once the ports-and-adapters refactor exposes the domain core behind ports, that core becomes cheap to unit-test in isolation, with no server and no filesystem. That payoff is the reason the refactor comes first. This suite is deliberately separate from and later than the boundary-level regression suite of WS-97-7fvoc0, and it cannot be meaningfully authored or executed until WS-98-tbznpw lands."
-status: ready
-tags: [testing]
+status: done
+tags: [testing, feature]
 created: 2026-09-09
 updated: 2026-09-09
 author: Anthony Koukoullis
