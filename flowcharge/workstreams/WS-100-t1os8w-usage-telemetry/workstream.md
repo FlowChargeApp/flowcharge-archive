@@ -4,7 +4,7 @@ type: workstream
 workstream: WS-100-t1os8w
 slug: usage-telemetry
 title: "Add usage telemetry to the app"
-status: in-progress
+status: done
 tags: [telemetry, feature]
 created: 2026-09-09
 updated: 2026-09-09

@@ -4,7 +4,7 @@ type: tasklist
 workstream: WS-100-t1os8w
 slug: usage-telemetry
 title: "Anonymous app-start telemetry via Aptabase"
-status: ready
+status: done
 created: 2026-09-09
 updated: 2026-09-09
 author: Anthony Koukoullis
