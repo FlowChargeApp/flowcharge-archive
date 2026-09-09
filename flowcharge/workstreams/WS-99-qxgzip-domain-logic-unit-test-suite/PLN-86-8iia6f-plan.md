@@ -4,7 +4,7 @@ type: plan
 workstream: WS-99-qxgzip
 slug: domain-logic-unit-test-suite
 title: "Unit test suite for src/core/board-api.ts over fake ports"
-status: ready
+status: done
 created: 2026-09-09
 updated: 2026-09-09
 depends_on: []
