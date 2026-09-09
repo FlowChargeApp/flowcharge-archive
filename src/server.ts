@@ -4,12 +4,15 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { extractPraxisData, ID_SUFFIX } from './lib/extract.js';
-import { hasWorkstreamTree, resolveTreeLayout } from './lib/tree-layout.js';
+// ID_SUFFIX only: a constant, not a parser. Every markdown read goes through the
+// WorkstreamStore port below. When the WORKSTREAM_ID pattern moves into src/http/
+// in Stage 5, this constant has to travel with it or be passed in, because
+// src/http/ may not import extract.js.
+import { ID_SUFFIX } from './lib/extract.js';
 import { createJsonFileProjectRegistry } from './lib/projects.js';
 import type { ProjectRegistry } from './ports/project-registry.js';
-import { readBranch } from './lib/git.js';
-import { extractWorkstreamDetail } from './lib/detail.js';
+import { createMarkdownWorkstreamStore } from './lib/workstream-store.js';
+import type { WorkstreamStore } from './ports/workstream-store.js';
 // The agentic-tools engine, imported statically. This file's ESM output and
 // src/lib's are the same compilation, so the dynamic-import wiring
 // electron/agentic-tools-ipc-handlers.cts needs does not apply here.
@@ -123,6 +126,10 @@ const registry: ProjectRegistry = createJsonFileProjectRegistry({
   packaged: Boolean(process.env.PRAXIS_DATA_DIR),
 });
 
+// The one WorkstreamStore this transport uses, constructed once at module scope.
+// It is the only door from here to the markdown tree.
+const store: WorkstreamStore = createMarkdownWorkstreamStore();
+
 // The one write adapter the integrations routes hand to the install engine,
 // built once at module scope rather than per request.
 const installFsWrite = createNodeFsWriteAccess();
@@ -137,7 +144,7 @@ function isLoopbackHost(candidate: string): boolean {
 // line exists to show whether the fallback is still load-bearing, and a
 // suppressed repeat would hide exactly that.
 function warnLegacyLayout(target: string): void {
-  const layout = resolveTreeLayout(target);
+  const layout = store.resolveLayout(target);
   if (layout !== null && layout.legacy) {
     console.warn(
       `LEGACY LAYOUT: ${layout.dir} uses prxwork/ — rename it to flowcharge/; ` +
@@ -358,7 +365,7 @@ function handleAddProject(req: http.IncomingMessage, res: http.ServerResponse): 
         sendJson(res, 400, { error: 'Path must be absolute — enter a full path starting with /' });
         return;
       }
-      if (!hasWorkstreamTree(input)) {
+      if (!store.hasTree(input)) {
         sendJson(res, 400, { error: `No flowcharge/ folder found under ${input} — a project is a directory containing flowcharge/ (a legacy prxwork/ folder is still accepted)` });
         return;
       }
@@ -770,12 +777,12 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;
       }
-      if (!hasWorkstreamTree(entry.path)) {
+      if (!store.hasTree(entry.path)) {
         sendJson(res, 410, { error: `${entry.path} no longer contains a flowcharge/ or prxwork/ folder` });
         return;
       }
       warnLegacyLayout(entry.path);
-      const payload: BoardPayload = { ...extractPraxisData(entry.path), branch: readBranch(entry.path), name: entry.name };
+      const payload: BoardPayload = { ...store.readBoard(entry.path), branch: store.readBranch(entry.path), name: entry.name };
       sendJson(res, 200, payload);
     } catch (err) {
       console.error(`GET /api/projects/${id}/data failed:`, err);
@@ -805,12 +812,12 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;
       }
-      if (!hasWorkstreamTree(entry.path)) {
+      if (!store.hasTree(entry.path)) {
         sendJson(res, 410, { error: `${entry.path} no longer contains a flowcharge/ or prxwork/ folder` });
         return;
       }
       warnLegacyLayout(entry.path);
-      const detail = extractWorkstreamDetail(entry.path, wsId);
+      const detail = store.readDetail(entry.path, wsId);
       if (!detail) {
         sendJson(res, 404, { error: `Unknown workstream ${wsId}` });
         return;

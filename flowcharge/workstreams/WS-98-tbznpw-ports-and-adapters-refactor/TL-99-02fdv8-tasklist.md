@@ -523,13 +523,13 @@ string was run at `279fb26` while authoring, and records the value it actually r
           fix: "Removed the checklist item and the manual-pass implement step. Kept the static named-export check as sufficient evidence for the untyped dynamic-import contract, since that contract is still exercised by the (unmaintained, unshipped) Electron scaffolding today."
     ```
 
-- [ ] 3. Stage 3 — `WorkstreamStore` port and adapter
+- [x] 3. Stage 3 — `WorkstreamStore` port and adapter
 
   ```yaml
   description: "Declare the WorkstreamStore port, move LayoutGeneration and TreeLayout into it, add src/lib/workstream-store.ts over the four existing libraries, and have the board and detail handlers read the markdown tree only through it."
   ```
 
-  - [ ] 3.1 Add `src/ports/workstream-store.ts`
+  - [x] 3.1 Add `src/ports/workstream-store.ts`
 
     ```yaml
     description: "Declare LayoutGeneration, TreeLayout and the WorkstreamStore interface, types only."
@@ -554,11 +554,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Does the file import nothing?"
       - "Are PraxisData and PraxisWorkstreamDetail referenced unqualified?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.2 Have `src/lib/tree-layout.ts` import its two types back from the port
+  - [x] 3.2 Have `src/lib/tree-layout.ts` import its two types back from the port
 
     ```yaml
     description: "Remove the local LayoutGeneration and TreeLayout declarations from src/lib/tree-layout.ts and import them from the port instead, re-exporting them so existing importers keep resolving."
@@ -583,11 +583,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Is resolveTreeLayout's behaviour byte-for-byte unchanged, flowcharge/ still winning over prxwork/?"
       - "Does tree-layout.test.js still pass with no assertion edited?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.3 Add the `src/lib/workstream-store.ts` adapter
+  - [x] 3.3 Add the `src/lib/workstream-store.ts` adapter
 
     ```yaml
     description: "Add createMarkdownWorkstreamStore(), implementing WorkstreamStore by delegating to the existing extract.ts, detail.ts, tree-layout.ts and git.ts functions, with no parsing of its own."
@@ -613,11 +613,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Does it know nothing of the registry, HTTP or the CLI?"
       - "Does it print no LEGACY LAYOUT line?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.4 Read the board and detail routes through the store in `src/server.ts`
+  - [x] 3.4 Read the board and detail routes through the store in `src/server.ts`
 
     ```yaml
     description: "Route every markdown-tree read in src/server.ts through one WorkstreamStore instance, and drop the four direct src/lib parser imports."
@@ -643,11 +643,14 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Is the LEGACY LAYOUT warning text byte-for-byte what it was at 279fb26?"
       - "Did any status code or payload field change? It must not have."
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Do detail.js, tree-layout.js and git.js no longer appear in src/server.ts's imports?"
+          reason: "This item passes — all three imports are gone. Recorded here per the task's own implement step, which asks that the surviving extract.js import be written into self_eval rather than left for Stage 5 to discover. ID_SUFFIX is genuinely needed for the WORKSTREAM_ID pattern at src/server.ts:64, and extract.js is its only home."
+          fix: "Kept `import { ID_SUFFIX } from './lib/extract.js';` in src/server.ts and dropped extractPraxisData from that line, so the import carries a constant and no parser. Added a header comment above it stating that Stage 5 must move ID_SUFFIX with the WORKSTREAM_ID pattern, or pass it in, because src/http/ may not import extract.js. Stage 5 now has the design point in writing."
     ```
 
-  - [ ] 3.5 Stage 3 gate
+  - [x] 3.5 Stage 3 gate
 
     ```yaml
     description: "Prove the store port landed with no observable change, and that no HTTP code reaches the markdown parsers directly."
@@ -674,8 +677,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Is src/scripts/extract-praxis-data.ts untouched?"
       - "Was no assertion in any WS-97-7fvoc0 file edited?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Does the case-name diff against the 279fb26 run come back empty?"
+          reason: "The diff step's `grep -E '^..(✔|✖)'` extraction matches no line on this host, for the reason already recorded against tasks 1.1 and 1.11: node's spec reporter prints the marker at column 0."
+          fix: "Used the corrected extraction recorded in task 1.1 — `sed '/^✖ failing tests:/,$d' | grep -E '^(✔|✖)' | sed -E 's/ \\([0-9.]+m?s\\)$//; s/^(✔|✖) //'` — with the same `s#dist/[^ ]*/##g` normalisation on both sides. The diff is empty across 281 names. Re-checked: all five checklist items pass."
     ```
 
 - [ ] 4. Stage 4 — core application service
