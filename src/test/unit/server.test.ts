@@ -2,7 +2,7 @@
 // socket. Follows agentic-tools-detect.test.ts's node:test + node:assert/strict
 // pattern.
 //
-// Run with `node --test --test-force-exit dist/server.test.js` after
+// Run with `node --test --test-force-exit dist/test/unit/server.test.js` after
 // `npm run build`. The --test-force-exit is required: importing the server binds
 // a listening socket as a module side effect and nothing exports a close
 // handle, so the runner would otherwise never exit.
@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { TOOL_CATALOGUE } from './lib/agentic-tools-catalogue.js';
+import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
 
 // Set BEFORE the server module is imported: it reads both at evaluation time,
 // so assigning them afterwards would be too late. PORT 0 asks the OS for an
@@ -22,7 +22,7 @@ import { TOOL_CATALOGUE } from './lib/agentic-tools-catalogue.js';
 process.env.PORT = '0';
 process.env.HOST = '127.0.0.1';
 
-const { serverReady } = await import('./server.js');
+const { serverReady } = await import('../../server.js');
 const port = await serverReady;
 const base = `http://127.0.0.1:${port}`;
 

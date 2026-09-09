@@ -4,7 +4,7 @@
 // The temp directory is created before all tests and removed after, even
 // when an assertion throws.
 //
-// Run with `node --test dist/lib/agentic-tools-fs-adapter.test.js` after
+// Run with `node --test dist/test/unit/agentic-tools-fs-adapter.test.js` after
 // `npm run build`.
 
 import { test, before, after } from 'node:test';
@@ -13,7 +13,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { createNodeFsAccess, createNodeFsWriteAccess } from './agentic-tools-fs-adapter.js';
+import { createNodeFsAccess, createNodeFsWriteAccess } from '../../lib/agentic-tools-fs-adapter.js';
 
 let tmpDir: string;
 

@@ -5,8 +5,8 @@ workstream: WS-98-tbznpw
 slug: ports-and-adapters-refactor
 title: "Refactor the codebase into a ports-and-adapters architecture"
 description: "The app reaches its dependencies directly rather than through interfaces. The natural ports are the flowcharge/ markdown store, the project registry (.praxis-projects.json), the HTTP layer (src/server.ts) and the CLI entry point (tools/package-cli.mjs / dist/cli-entry.js). Do it early, before the app grows further, because untangling it gets more expensive the longer it waits. It must not start until WS-97-7fvoc0 lands, because that workstream writes the boundary-level regression tests that give this refactor its safety net."
-status: ready
-tags: [architecture, refactor]
+status: in-progress
+tags: [architecture, refactor, feature]
 created: 2026-09-09
 updated: 2026-09-09
 author: Anthony Koukoullis

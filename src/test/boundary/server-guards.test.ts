@@ -17,7 +17,7 @@
 // security decision that the message text carries, so no exact text is pinned
 // here.
 //
-// Run with `node --test --test-force-exit dist/server-guards.test.js` after
+// Run with `node --test --test-force-exit dist/test/boundary/server-guards.test.js` after
 // `npm run build`. The --test-force-exit is required for the same reason
 // src/server.test.ts needs it: importing the server binds a listening socket as
 // a module side effect and nothing exports a close handle. `npm test` already

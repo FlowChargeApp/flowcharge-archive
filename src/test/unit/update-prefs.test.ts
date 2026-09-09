@@ -6,7 +6,7 @@
 // pointed at a temporary directory, which also keeps every write away from the
 // real repo root.
 //
-// Run with `node --test dist/lib/update-prefs.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/update-prefs.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,7 +17,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const prefsJsPath = path.join(__dirname, 'update-prefs.js');
+const prefsJsPath = path.join(__dirname, '../../lib/update-prefs.js');
 
 // Drives the compiled module from a child process: imports it with
 // PRAXIS_DATA_DIR already set in the environment (so the module's top-level
@@ -119,7 +119,7 @@ test('write then read round trips every field', () => {
 
 test('PRAXIS_DATA_DIR redirects the write into the temp directory, not the repo root', () => {
   withTempDir((dataDir) => {
-    const repoRoot = path.join(__dirname, '..', '..');
+    const repoRoot = path.join(__dirname, '..', '..', '..');
     runInChildProcess(
       dataDir,
       'mod.writeUpdatePrefs({ enabled: false, lastCheckedAt: null, dismissedVersion: null }); return null;'

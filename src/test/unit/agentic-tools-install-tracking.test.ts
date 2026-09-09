@@ -2,7 +2,7 @@
 // per plan Phase 3 task 1's verify line. Follows extract.test.ts's node:test
 // + node:assert/strict pattern.
 //
-// Run with `node --test dist/lib/agentic-tools-install-tracking.test.js`
+// Run with `node --test dist/test/unit/agentic-tools-install-tracking.test.js`
 // after `npm run build`.
 
 import { test } from 'node:test';
@@ -14,8 +14,8 @@ import {
   upsertInstallRecord,
   findInstallRecord,
   removeInstallRecord,
-} from './agentic-tools-install-tracking.js';
-import type { InstallRecord } from './agentic-tools-install-tracking.js';
+} from '../../lib/agentic-tools-install-tracking.js';
+import type { InstallRecord } from '../../lib/agentic-tools-install-tracking.js';
 
 function record(overrides: Partial<InstallRecord> = {}): InstallRecord {
   return {

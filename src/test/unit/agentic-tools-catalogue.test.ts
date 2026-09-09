@@ -2,15 +2,15 @@
 // data-shape test over TOOL_CATALOGUE itself. Follows extract.test.ts's
 // node:test + node:assert/strict + in-memory-fake pattern.
 //
-// Run with `node --test dist/lib/agentic-tools-catalogue.test.js` after
+// Run with `node --test dist/test/unit/agentic-tools-catalogue.test.js` after
 // `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { FsAccess } from './agentic-tools-signals.js';
-import { detectAllTools } from './agentic-tools-detect.js';
-import { TOOL_CATALOGUE } from './agentic-tools-catalogue.js';
+import type { FsAccess } from '../../lib/agentic-tools-signals.js';
+import { detectAllTools } from '../../lib/agentic-tools-detect.js';
+import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
 
 // A minimal fake that reports nothing as present — detectAllTools() just needs
 // to run cleanly end to end across every catalogue entry; the confidence value

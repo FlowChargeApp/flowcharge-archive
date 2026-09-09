@@ -2,16 +2,16 @@
 // formatForTarget. Follows extract.test.ts's node:test + node:assert/strict
 // pattern.
 //
-// Run with `node --test dist/lib/agentic-tools-format.test.js` after
+// Run with `node --test dist/test/unit/agentic-tools-format.test.js` after
 // `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { IntegrationFormat } from './agentic-tools-catalogue.js';
-import { TOOL_CATALOGUE } from './agentic-tools-catalogue.js';
-import type { InstallContent } from './agentic-tools-content.js';
-import { selectPrimaryFormat, formatForTarget } from './agentic-tools-format.js';
+import type { IntegrationFormat } from '../../lib/agentic-tools-catalogue.js';
+import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
+import type { InstallContent } from '../../lib/agentic-tools-content.js';
+import { selectPrimaryFormat, formatForTarget } from '../../lib/agentic-tools-format.js';
 
 function catalogueTool(id: string) {
   const tool = TOOL_CATALOGUE.find((t) => t.id === id);

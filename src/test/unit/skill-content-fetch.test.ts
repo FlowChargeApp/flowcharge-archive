@@ -16,7 +16,7 @@
 // plan and the task list still finds tier (b) and tier (c) where those name
 // them. Tier (a)'s branch-tarball coverage went with the path it tested.
 //
-// Run with `node --test dist/lib/skill-content-fetch.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/skill-content-fetch.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,8 +25,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { deflateRawSync } from 'node:zlib';
 
-import { getInstallContent, parseSkillFrontmatter, PRAXIS_REPO_BASE_URL } from './skill-content-fetch.js';
-import { createNodeFsWriteAccess } from './agentic-tools-fs-adapter.js';
+import { getInstallContent, parseSkillFrontmatter, PRAXIS_REPO_BASE_URL } from '../../lib/skill-content-fetch.js';
+import { createNodeFsWriteAccess } from '../../lib/agentic-tools-fs-adapter.js';
 
 // --- Tier (b): offline frontmatter parsing ---------------------------------
 

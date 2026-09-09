@@ -6,7 +6,7 @@
 // `prxwork-pre-migration-<date>/` sit beside live trees on real machines, and a
 // prefix or glob match would render a board from months-old data with no error.
 //
-// Run with `node --test dist/lib/tree-layout.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/tree-layout.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { isWorkstreamMarker, resolveTreeLayout } from './tree-layout.js';
+import { isWorkstreamMarker, resolveTreeLayout } from '../../lib/tree-layout.js';
 
 // Builds a throwaway root holding exactly the named entries, and removes it in a
 // finally block so a failing assertion leaves no tree behind.

@@ -4,16 +4,16 @@
 // resolves pathExists by membership in a per-test Set of 'existing' paths —
 // no real filesystem access.
 //
-// Run with `node --test dist/lib/agentic-tools-skill-presence.test.js` after
+// Run with `node --test dist/test/unit/agentic-tools-skill-presence.test.js` after
 // `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { IntegrationFormat } from './agentic-tools-catalogue.js';
-import { TOOL_CATALOGUE } from './agentic-tools-catalogue.js';
-import type { FsAccess } from './agentic-tools-signals.js';
-import { checkSkillPresence } from './agentic-tools-skill-presence.js';
+import type { IntegrationFormat } from '../../lib/agentic-tools-catalogue.js';
+import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
+import type { FsAccess } from '../../lib/agentic-tools-signals.js';
+import { checkSkillPresence } from '../../lib/agentic-tools-skill-presence.js';
 
 function catalogueTool(id: string) {
   const tool = TOOL_CATALOGUE.find((t) => t.id === id);

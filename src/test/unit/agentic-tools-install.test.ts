@@ -5,17 +5,17 @@
 // Cursor's real WS-41 catalogue entries. Follows extract.test.ts's node:test
 // + node:assert/strict pattern.
 //
-// Run with `node --test dist/lib/agentic-tools-install.test.js` after
+// Run with `node --test dist/test/unit/agentic-tools-install.test.js` after
 // `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { TOOL_CATALOGUE } from './agentic-tools-catalogue.js';
-import type { ToolDefinition } from './agentic-tools-catalogue.js';
-import type { GetInstallContent, InstallContent } from './agentic-tools-content.js';
-import type { FsWriteAccess, InstallTarget } from './agentic-tools-install.js';
-import { installAllGlobal, installToTarget, removeInstallation } from './agentic-tools-install.js';
+import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
+import type { ToolDefinition } from '../../lib/agentic-tools-catalogue.js';
+import type { GetInstallContent, InstallContent } from '../../lib/agentic-tools-content.js';
+import type { FsWriteAccess, InstallTarget } from '../../lib/agentic-tools-install.js';
+import { installAllGlobal, installToTarget, removeInstallation } from '../../lib/agentic-tools-install.js';
 
 const REGISTRY_PATH = '/home/fakeuser/.praxis-installs.json';
 

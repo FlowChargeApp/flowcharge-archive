@@ -1,0 +1,281 @@
+--dry-run prints the formula text on stdout and writes no file
+--dry-run prints the whole gh release create vector and calls nothing
+--dry-run with --repo overrides the origin-derived slug
+--help exits 0 with usage on stdout when package.json is unreadable
+--help exits 0 with usage on stdout when the fixture holds no git repository
+--help prints the usage text and exits 0 with no package.json and no repositories present
+--repo overrides the origin-derived slug in the homepage and all three urls
+DELETE /api/projects/:id removes the entry and a second delete answers 404
+GET .../workstreams/:wsId/detail answers 200 with archived true for an archived workstream
+GET .../workstreams/:wsId/detail answers 400 before it looks the project up
+GET .../workstreams/:wsId/detail answers 400 with the exact text for a malformed workstream id
+GET .../workstreams/:wsId/detail answers 404 for an unknown project id
+GET .../workstreams/:wsId/detail answers 404 for an unknown workstream id
+GET .../workstreams/:wsId/detail answers 410 once the registered tree is gone
+GET .../workstreams/:wsId/detail returns the plan body, the issue items and the task tree
+GET / answers 200 with HTML and the CSP header
+GET / is served from the binary embedded read-only asset filesystem
+GET /api/integrations/installs answers a bare array
+GET /api/integrations/tools answers one row per catalogue tool
+GET /api/projects answers an empty list in a fresh data directory
+GET /api/projects/:id answers 405
+GET /api/projects/:id/data answers 404 for an unknown project id
+GET /api/projects/:id/data answers 410 once the registered tree is gone
+GET /api/projects/:id/data renders the same board payload for a legacy prxwork tree
+GET /api/projects/:id/data renders the whole board payload for a flowcharge tree
+GET /board.html answers 200 with HTML and the CSP header
+GET /styles.css answers 200 with its documented MIME type and the CSP header
+ISSUE_ITEM captures an unchecked mark over both id shapes
+ISSUE_ITEM matches a suffixed item and captures the WHOLE id
+ISSUE_ITEM matches an unsuffixed item and captures mark, whole id and title
+PATCH /api/projects/:id refuses a body that is not valid JSON with 400
+PATCH /api/projects/:id refuses a body with no name with 400
+PATCH /api/projects/:id refuses a name holding a control character with 400
+PATCH /api/projects/:id refuses an over-long name with 400
+PATCH /api/projects/:id refuses an unknown id with 404
+PATCH /api/projects/:id renames the entry and the list reflects it
+POST .../workstreams/:wsId/detail answers 405
+POST /api/integrations/installs refuses a basePath outside the permitted root
+POST /api/integrations/installs refuses a malformed body with 400
+POST /api/integrations/installs/remove answers null for an untracked toolId
+POST /api/integrations/releases is refused with 405
+POST /api/integrations/skill-presence answers a presence result for a real tool
+POST /api/integrations/skill-presence refuses a malformed body with 400
+POST /api/integrations/skill-presence refuses an unknown toolId with 404
+POST /api/projects refuses a body that is not valid JSON with 400
+POST /api/projects refuses a body with no path with 400
+POST /api/projects refuses a relative path with 400
+POST /api/projects refuses a ~ path with 400
+POST /api/projects refuses an absolute path with no workstream tree with 400
+POST /api/projects registers a project once and repeats it without duplicating
+POST /api/projects/:id/data answers 405
+POST with a charset parameter on application/json passes the Content-Type guard
+POST with a non-JSON Content-Type is refused with 403
+PRAXIS_APP_VERSION set is what /api/version answers
+PRAXIS_APP_VERSION set wins over the version injected at build time
+PRAXIS_APP_VERSION unset falls back to the injected build-time version
+PRAXIS_APP_VERSION unset or empty falls back to package.json
+PRAXIS_DATA_DIR override redirects the registry file
+PRAXIS_DATA_DIR redirects the write into the temp directory, not the repo root
+PRAXIS_DATA_DIR set is where the install registry is read from
+PRAXIS_DATA_DIR set puts the registry inside that directory and nowhere else
+PRAXIS_DATA_DIR unset creates ~/.flowcharge under the overridden HOME
+PRAXIS_DATA_DIR unset still resolves the registry at the repository root
+PUT /api/projects answers 405
+a Host header that is neither an IP literal, localhost nor allowed is refused with 403
+a bare-named artefact file parses identically to the prx-prefixed one
+a body line that starts --- survives intact
+a body of more than three lines comes back whole, not joined by spaces
+a flowcharge/ tree holding the legacy marker still resolves its detail
+a flowcharge/ tree holding the legacy marker still yields a workstream
+a flowcharge/ tree resolves as the current generation
+a good run adds no commit to the tap repository
+a good run writes the formula with each digest under its own platform block
+a matched integrations path with the wrong method answers 405
+a multi-paragraph body keeps its blank lines and its newlines
+a non-object payload yields the defaults
+a path escaping the public root is refused with a plain-text 403
+a plain FILE named flowcharge resolves to null, not a layout
+a prxwork/ tree holding the current marker still resolves its detail
+a prxwork/ tree holding the current marker still yields a workstream
+a prxwork/ tree resolves as the legacy generation
+a request body over the size cap is refused with 413
+a root holding BOTH folders resolves the current generation
+a root holding neither folder resolves to null
+a root holding neither folder returns null rather than throwing
+a root that does not exist returns null rather than throwing
+a stale backup sibling never resolves
+a workstream resolves its detail (flowcharge)
+a workstream resolves its detail (prxwork)
+a workstream with frontmatter and no body yields an empty string
+an Origin built from the same host and port passes the Origin guard
+an Origin that does not match the Host header is refused with 403
+an absent Origin passes the Origin guard
+an absent file yields the defaults and is not created on read
+an unknown static path answers 404
+an unknown workstream id returns null (flowcharge)
+an unknown workstream id returns null (prxwork)
+an unmatched /api/integrations/ path answers 404
+an unparseable file yields the defaults without throwing
+artefactIdNumber falls back to 0, never NaN, when no number parses
+artefactIdNumber reads the sequence number, not the suffix
+buildAssetDownloadUrl derives the asset route from the supplied base URL
+checkSkillPresence resolves the real OpenCode catalogue entry via skill-directory, not by throwing
+checkSkillPresence returns no-format for a tool whose only format is mcp-json
+checkSkillPresence returns per-skill/fully-installed when every canonical skill path exists
+checkSkillPresence returns per-skill/missing-incomplete with correct present/missing ids when only some exist
+checkSkillPresence returns per-skill/not-installed when no canonical skill path exists
+checkSkillPresence returns shared-file/exists:false for a single-rule-file format whose shared path is missing
+checkSkillPresence returns shared-file/exists:true for a single-rule-file format whose shared path exists
+cli returns confirmed when the binary is found on PATH, even without a config dir
+cli returns likely when only the config dir exists
+cli returns not-detected when neither the binary nor the config dir is present
+createNodeFsAccess: expandTokens resolves ~ against os.homedir() and %VAR% against process.env
+createNodeFsAccess: isDirectory returns true for a real directory and false for a file or missing path
+createNodeFsAccess: pathExists returns true for a real file and false for a missing path
+createNodeFsAccess: resolveBinaryOnPath finds an executable fixture on PATH and rejects a non-executable one
+detectAllTools returns exactly one DetectionResult per catalogue entry, matched by toolId
+detectTool caps Cursor at weak on Linux when only the config dir exists
+detectTool returns confirmed for Claude Code when the claude binary is on PATH
+detectTool returns confirmed for Cursor when its macOS app bundle is found
+detectTool returns likely for Claude Code when only the config dir exists
+detectTool returns not-detected for Claude Code when neither signal is present
+detectTool sets needsManualVerification false for Windsurf on macos, where the same fact is verified
+detectTool sets needsManualVerification true for Windsurf on windows, where the config dir is a placeholder-unverified fact
+dir is an absolute path ending in the resolved basename
+every TOOL_CATALOGUE entry has a category and macOS/Linux path data
+every cli-category entry has at least one pathBinaryNames signal source
+every gui-app-category entry has at least one install-path signal source
+expandTokens resolves a %VAR% token against process.env
+expandTokens resolves a leading ~ against os.homedir()
+fetchLatestRelease resolves to null while the repository is unconfigured
+findInstallRecord finds by (toolId, scope), matching project scope by projectPath
+formatForTarget produces one SKILL.md FileWrite per skill plus files[] entries, for skill-directory
+formatForTarget throws for a not-yet-implemented kind
+formatForTarget throws when called directly with Cursor's real mcp-json entry
+formatForTarget throws when called directly with Windsurf's real mcp-json entry
+formatForTarget throws when called with format.kind === mcp-json
+getInstallContent installs the newest live release and returns the known 8 fc-* skills with fc-orchestrate's known nested files
+hashInstallContent changes when a skill body changes
+hashInstallContent is stable under per-skill key reordering
+hashInstallContent is stable under skills array reordering
+installAllGlobal runs across the real four-tool TOOL_CATALOGUE with no write ever reaching mcp-json
+installToTarget backfills a changed version on an up-to-date install, writing only the registry
+installToTarget install/no-op/update lifecycle against Claude Code (acceptance criteria 4, 5)
+installToTarget omits the version key entirely for content carrying no releaseTag
+installToTarget records content.releaseTag as the install record version
+installToTarget returns skipped-no-format rather than throwing when no non-mcp-json format exists
+installToTarget writes exactly the expected files at the expected resolved paths for Claude Code
+installToTarget writes exactly the expected rule-directory files for Cursor at global scope
+isNewer is false for a lower version
+isNewer is false for an equal version
+isNewer is false when either side fails to parse
+isNewer is true only for a strictly greater version tuple
+isNewer tolerates a leading v on either side
+isReleaseRepoConfigured is false while the placeholders stand
+isWorkstreamMarker accepts both markers and rejects every other name
+ladder order: rung 1 is reported before rung 2
+ladder order: rung 3 is reported before rung 4
+ladder order: rung 7 is reported before rung 8
+latestReleaseUrl is built from the two constants and ends at the latest release
+mkdir on an already-existing directory does not throw
+needsManualVerification reflects only the queried OS fact, not another OS entry
+no marker file reaches the artefact rows (flowcharge)
+no marker file reaches the artefact rows (prxwork)
+no marker file reaches the modal's collections (flowcharge)
+no marker file reaches the modal's collections (prxwork)
+one bad field falls back on its own and the other two survive
+packaged first run starts empty, not with a self-entry
+parseInstallRegistry returns [] on malformed input rather than throwing
+parseInstallRegistry(serializeInstallRegistry(records)) round-trips to an equivalent InstallRecord[]
+parseReleases breaks a publishedAt tie with tag descending
+parseReleases drops a draft release
+parseReleases drops a prerelease
+parseReleases drops an entry with no non-empty tag_name
+parseReleases picks the first .zip asset and defaults absent name and published_at to empty strings
+parseReleases reports assetName null when the assets array is missing or empty
+parseReleases reports assetName null when the newest release carries no .zip asset
+parseReleases returns [] for an unreadable shape rather than throwing
+parseReleases sorts newest-first by publishedAt
+parseSemver ignores any suffix after the patch number
+parseSemver reads a bare version and a v-prefixed one alike
+parseSemver returns null on anything that is not MAJOR.MINOR.PATCH
+parseSkillFrontmatter joins a folded '>-' multi-line description into a single non-empty string
+parseSkillFrontmatter parses a same-line description scalar
+parseZip decodes a deflated entry
+parseZip decodes a stored entry
+parseZip skips a directory entry rather than throwing
+parseZip skips an unsupported compression method rather than throwing
+parseZip throws a naming error on a truncated buffer
+parseZip throws a naming error when the entry-count ceiling is crossed
+parseZip throws a naming error when the uncompressed-byte ceiling is crossed
+readBinaryFile returns null on ENOENT rather than throwing
+readTextFile returns null on ENOENT rather than throwing
+release path: a newest release with no .zip asset rejects naming that tag, writes nothing, and makes no second request
+release path: an empty release list rejects with the named message, writes nothing, and makes no second request
+release path: getInstallContent installs the newest release zip's skills, mapping entry names verbatim from the skills root
+release path: parseZip decodes the buffer readBinaryFile returned, not the HTTP response buffer
+release path: the temporary zip is removed on a decode failure too
+release-format isBareVersion accepts a bare three-part version
+release-format isBareVersion rejects a leading v, a two-part version, a pre-release and the empty string
+release-format newestVersion ignores a version quoted mid-line in prose
+release-format newestVersion reads past an Unreleased heading to the release heading below it
+release-format newestVersion returns null for text holding no release heading
+release-format newestVersion tolerates the date tail flowcharge-public writes
+release-format sectionBody distinguishes the null case from the empty-string case
+release-format sectionBody reads the last section to the end of the text
+release-format sectionBody returns null for a version no heading names
+release-format sectionBody returns the body of a release section that is not the newest one
+release-format sectionBody returns the empty string for a heading whose section holds no text
+release-format sectionBody stops at the next ## line whichever heading it is
+release-format sectionBody trims blank lines at both ends but keeps the ones inside
+releasesApiUrl derives the API route from the supplied base URL
+remove deletes a real file
+remove on an already-absent path does not throw
+removeInstallRecord removes only the record matching (toolId, scope)
+removeInstallation against a nonexistent (toolId, scope) pair does not throw
+removeInstallation deletes the tracked file and the record for that (toolId, scope) pair (acceptance criterion 6)
+rung 1 refuses a missing package.json version
+rung 1 refuses a missing package.json version
+rung 1 refuses a missing package.json version
+rung 1 refuses a pre-release package.json version
+rung 1 refuses a pre-release package.json version
+rung 1 refuses a pre-release package.json version
+rung 1 refuses a two-part package.json version
+rung 1 refuses a two-part package.json version
+rung 1 refuses a two-part package.json version
+rung 1 refuses a v-prefixed package.json version
+rung 1 refuses a v-prefixed package.json version
+rung 1 refuses a v-prefixed package.json version
+rung 10 refuses when gh is not usable on PATH
+rung 2 refuses a public path that holds no git repository
+rung 2 refuses a public repository path that does not exist
+rung 2 refuses a source repository that is not on main
+rung 2 refuses a tap path that holds no git repository
+rung 2 refuses a tap repository path that does not exist
+rung 3 refuses a dirty source working tree
+rung 3 refuses a tap repository with a modified tracked file
+rung 3 refuses when no slug can be resolved, naming git remote add origin
+rung 4 is skipped entirely when --repo is supplied
+rung 4 refuses a public path that holds no git repository
+rung 4 refuses a public path that holds no git repository
+rung 4 refuses a public repository path that does not exist
+rung 4 refuses a public repository path that does not exist
+rung 4 refuses when the tag does not exist locally
+rung 4 refuses when the tag exists locally but not on origin, naming the push command
+rung 5 refuses a public repository that is not on main
+rung 5 refuses an empty changelog section with its own distinct message
+rung 5 refuses when no changelog section names the version
+rung 5 refuses when no slug resolves, naming git remote add origin
+rung 6 refuses a dirty public working tree
+rung 6 refuses a leftover Windows artefact alongside the three
+rung 6 refuses fewer than three artefacts
+rung 6 refuses more than three artefacts
+rung 6 refuses three artefacts when one is zero-length
+rung 6 refuses when one artefact is missing
+rung 6 refuses when one artefact is present but zero bytes
+rung 7 refuses a CHANGELOG.md holding no release heading
+rung 7 refuses a CHANGELOG.md whose newest heading names another version
+rung 7 refuses a public repository with no CHANGELOG.md
+rung 7 refuses when gh is not usable on PATH
+rung 8 refuses when the tag already exists in the public repository
+rung 9 refuses when bun is not usable on PATH
+selectPrimaryFormat resolves the real Cursor catalogue entry to its rules format, never mcp-json
+selectPrimaryFormat resolves the real OpenCode catalogue entry to its skill-directory format, never structured-config-file
+selectPrimaryFormat resolves the real Windsurf catalogue entry to its rules format, never mcp-json
+selectPrimaryFormat returns null when only mcp-json is available
+selectPrimaryFormat returns the first non-mcp-json entry
+the binary answers on the HOST and PORT the parent set, and says so
+the built asset URL never carries the host the API reports for the asset
+the extraction path collects issues of both id shapes (flowcharge)
+the extraction path collects issues of both id shapes (prxwork)
+the issue counter counts items of both id shapes (flowcharge)
+the issue counter counts items of both id shapes (prxwork)
+the packaging command builds a non-empty binary for this host
+the whole generated formula text equals the contract, with no version stanza and no unsupported url
+upsertInstallRecord called twice for the same (toolId, scope) leaves exactly one record for that pair
+upsertInstallRecord keeps records with different scopes for the same toolId distinct
+write then read round trips every field
+writeBinaryFileAtomic / readBinaryFile round trip preserves non-UTF-8 bytes and leaves no stray tmp file
+writeTextFileAtomic can be read back via readTextFile
+writeTextFileAtomic writes exact content and leaves no stray tmp file

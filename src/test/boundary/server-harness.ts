@@ -4,7 +4,7 @@
 //
 // The filename carries no `.test.` segment ON PURPOSE, so a test file may import
 // it without registering that file's cases a second time in the importing file's
-// process. src/lib/fixture-project.ts states the same rule in its own header,
+// process. src/test/fixture-project.ts states the same rule in its own header,
 // and is the precedent this file follows.
 //
 // This module's whole knowledge of the application is three environment variable
@@ -67,7 +67,7 @@ export async function startTestServer(): Promise<TestServer> {
   process.env.PORT = '0';
   process.env.HOST = '127.0.0.1';
 
-  const { serverReady } = await import('./server.js');
+  const { serverReady } = await import('../../server.js');
   const port = await serverReady;
 
   return { base: `http://127.0.0.1:${port}`, dataDir };

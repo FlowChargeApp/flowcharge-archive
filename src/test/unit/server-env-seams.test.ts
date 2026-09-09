@@ -10,7 +10,7 @@
 // ./server.js in-process at module scope, so its environment is already fixed
 // and a second set of values cannot be observed there.
 //
-// Run with `node --test dist/server-env-seams.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/server-env-seams.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,8 +21,8 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const serverJsPath = path.join(__dirname, 'server.js');
-const packageJsonPath = path.join(__dirname, '..', 'package.json');
+const serverJsPath = path.join(__dirname, '../../server.js');
+const packageJsonPath = path.join(__dirname, '../../../package.json');
 
 // The version the package.json fallback must produce, read here rather than
 // hardcoded so a future version bump does not break these tests.

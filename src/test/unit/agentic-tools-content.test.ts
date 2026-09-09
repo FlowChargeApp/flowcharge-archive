@@ -1,14 +1,14 @@
 // Unit tests for agentic-tools-content.ts's hashInstallContent. Follows
 // extract.test.ts's node:test + node:assert/strict pattern.
 //
-// Run with `node --test dist/lib/agentic-tools-content.test.js` after
+// Run with `node --test dist/test/unit/agentic-tools-content.test.js` after
 // `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { hashInstallContent } from './agentic-tools-content.js';
-import type { InstallContent } from './agentic-tools-content.js';
+import { hashInstallContent } from '../../lib/agentic-tools-content.js';
+import type { InstallContent } from '../../lib/agentic-tools-content.js';
 
 const twoSkills: InstallContent = {
   version: '1',

@@ -4,13 +4,13 @@
 // writes and zlib.deflateRawSync, so no binary fixture file is committed.
 // Follows skill-content-fetch.test.ts's node:test + node:assert/strict pattern.
 //
-// Run with `node --test dist/lib/zip-read.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/zip-read.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
 
-import { parseZip } from './zip-read.js';
+import { parseZip } from '../../lib/zip-read.js';
 
 const METHOD_STORED = 0;
 const METHOD_DEFLATED = 8;

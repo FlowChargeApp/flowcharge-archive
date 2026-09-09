@@ -4,13 +4,13 @@
 // in this file touches the network. fetchReleases is exercised through the
 // stubbed-fetch tier in skill-content-fetch.test.ts instead.
 //
-// Run with `node --test dist/lib/skill-release-fetch.test.js` after
+// Run with `node --test dist/test/unit/skill-release-fetch.test.js` after
 // `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseReleases, releasesApiUrl, buildAssetDownloadUrl } from './skill-release-fetch.js';
+import { parseReleases, releasesApiUrl, buildAssetDownloadUrl } from '../../lib/skill-release-fetch.js';
 
 const BASE_URL = 'http://100.87.185.97:8110/akoukoullis/Praxis';
 

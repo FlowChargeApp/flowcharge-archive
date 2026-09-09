@@ -12,7 +12,7 @@
 // present for a refusal, never its wording. No refusal in this file encodes a
 // security decision, so no exact text is pinned here.
 //
-// Run with `node --test --test-force-exit dist/server-projects.test.js` after
+// Run with `node --test --test-force-exit dist/test/boundary/server-projects.test.js` after
 // `npm run build`. The --test-force-exit is required for the same reason
 // src/server.test.ts needs it: importing the server binds a listening socket as
 // a module side effect and nothing exports a close handle. `npm test` already

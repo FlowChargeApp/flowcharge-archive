@@ -19,7 +19,7 @@
 // supplies Node only, so the cases skip there and the CI job stays green with no
 // workflow change.
 //
-// Run with `node --test --test-force-exit dist/cli-binary.test.js` after
+// Run with `node --test --test-force-exit dist/test/boundary/cli-binary.test.js` after
 // `npm run build`. The build is required: tools/package-cli.mjs refuses early
 // when dist/public/ holds no files, and `npm test` covers that through pretest.
 
@@ -33,12 +33,13 @@ import { spawn, spawnSync } from 'node:child_process';
 
 // The repository root, derived from this module's own location rather than from
 // process.cwd(), so the file behaves the same however `node --test` was invoked.
-// The compiled file is dist/cli-binary.test.js, so the root is one level up.
+// The compiled file is dist/test/boundary/cli-binary.test.js, so the root is
+// three levels up.
 // `new URL('.', import.meta.url).pathname` is used instead of node:url's
 // fileURLToPath to keep this file's imports to the set the task names; every
 // host this suite does not skip on is POSIX, where the two agree.
 const HERE = decodeURIComponent(new URL('.', import.meta.url).pathname);
-const REPO_ROOT = path.resolve(HERE, '..');
+const REPO_ROOT = path.resolve(HERE, '..', '..', '..');
 
 // Read, never hardcoded: tools/package-cli.mjs names the artefact after this
 // same field, and the unset-PRAXIS_APP_VERSION case asserts the binary reports

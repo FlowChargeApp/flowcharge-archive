@@ -1,14 +1,14 @@
 // Unit tests for the cli category signal function. Follows extract.test.ts's
 // node:test + node:assert/strict + in-memory-fake pattern.
 //
-// Run with `node --test dist/lib/agentic-tools-signals.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/agentic-tools-signals.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { FsAccess } from './agentic-tools-signals.js';
-import { cli } from './agentic-tools-signals.js';
-import type { ToolDefinition } from './agentic-tools-catalogue.js';
+import type { FsAccess } from '../../lib/agentic-tools-signals.js';
+import { cli } from '../../lib/agentic-tools-signals.js';
+import type { ToolDefinition } from '../../lib/agentic-tools-catalogue.js';
 
 const FAKE_TOOL: ToolDefinition = {
   id: 'fake-cli-tool',

@@ -2,14 +2,14 @@
 // Follows extract.test.ts's node:test + node:assert/strict + in-memory-fake
 // pattern.
 //
-// Run with `node --test dist/lib/agentic-tools-detect.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/agentic-tools-detect.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { FsAccess } from './agentic-tools-signals.js';
-import { detectTool } from './agentic-tools-detect.js';
-import { TOOL_CATALOGUE } from './agentic-tools-catalogue.js';
+import type { FsAccess } from '../../lib/agentic-tools-signals.js';
+import { detectTool } from '../../lib/agentic-tools-detect.js';
+import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
 
 const claudeCode = TOOL_CATALOGUE.find((t) => t.id === 'claude-code');
 if (!claudeCode) throw new Error('expected a claude-code entry in TOOL_CATALOGUE');

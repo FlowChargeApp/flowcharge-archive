@@ -4,7 +4,7 @@
 // branches by importing the module twice. Each set-branch case below spawns the
 // compiled module in a fresh child process with a controlled environment instead.
 //
-// Run with `node --test dist/lib/projects.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/projects.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,7 +15,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const projectsJsPath = path.join(__dirname, 'projects.js');
+const projectsJsPath = path.join(__dirname, '../../lib/projects.js');
 
 // Drives the compiled module from a child process: imports it with
 // PRAXIS_DATA_DIR already set in the environment (so the module's top-level

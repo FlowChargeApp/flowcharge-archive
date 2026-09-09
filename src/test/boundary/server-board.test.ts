@@ -14,7 +14,7 @@
 // malformed-workstream-id refusal, whose exact text is pinned because it
 // encodes a security decision — see that case for the reasoning.
 //
-// Run with `node --test --test-force-exit dist/server-board.test.js` after
+// Run with `node --test --test-force-exit dist/test/boundary/server-board.test.js` after
 // `npm run build`. The --test-force-exit is required for the same reason
 // src/server-projects.test.ts needs it: importing the server binds a listening
 // socket as a module side effect and nothing exports a close handle.
@@ -24,7 +24,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 import { startTestServer, requestJson } from './server-harness.js';
-import { withBoardFixtureProject } from './lib/fixture-project.js';
+import { withBoardFixtureProject } from '../fixture-project.js';
 
 // Once per file: the harness fixes this process's environment before it imports
 // the server, and ESM module caching means that environment cannot be changed

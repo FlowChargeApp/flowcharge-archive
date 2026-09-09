@@ -5,7 +5,7 @@
 // constants does not exist yet — a live test becomes worth writing only once the
 // real owner and repository name are filled in.
 //
-// Run with `node --test dist/lib/update-check.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/update-check.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,7 +18,7 @@ import {
   isReleaseRepoConfigured,
   latestReleaseUrl,
   parseSemver,
-} from './update-check.js';
+} from '../../lib/update-check.js';
 
 test('isNewer is true only for a strictly greater version tuple', () => {
   assert.equal(isNewer('1.0.1', '1.0.0'), true);

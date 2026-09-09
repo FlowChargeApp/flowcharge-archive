@@ -5,12 +5,12 @@
 //
 // The fixture builder is SHARED with the extract.ts suite rather than copied — a
 // copied fixture drifts, and then the two suites disagree about what a tree
-// looks like. It is imported from ./fixture-project.js, not from
+// looks like. It is imported from ../fixture-project.js, not from
 // ./extract.test.js: importing one test file from another registers the imported
 // file's tests a second time, and a combined `node --test` run then reports
 // every extract case twice.
 //
-// Run with `node --test dist/lib/detail.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/detail.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,8 +18,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { extractWorkstreamDetail } from './detail.js';
-import { FIXTURE_GENERATIONS, withFixtureProject } from './fixture-project.js';
+import { extractWorkstreamDetail } from '../../lib/detail.js';
+import { FIXTURE_GENERATIONS, withFixtureProject } from '../fixture-project.js';
 
 // The fixture's workstream folder name. `slug` on the payload comes from the
 // readdirSync DIRECTORY name, never from frontmatter — locateWorkstream sets it

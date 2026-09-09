@@ -5,7 +5,7 @@
 // wrong but entirely plausible sort key — and every suffixed issue item was
 // silently dropped from the board and the severity panel.
 //
-// Run with `node --test dist/lib/extract.test.js` after `npm run build`.
+// Run with `node --test dist/test/unit/extract.test.js` after `npm run build`.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,8 +13,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { ISSUE_ITEM, artefactIdNumber, extractPraxisData } from './extract.js';
-import { FIXTURE_GENERATIONS, withFixtureProject } from './fixture-project.js';
+import { ISSUE_ITEM, artefactIdNumber, extractPraxisData } from '../../lib/extract.js';
+import { FIXTURE_GENERATIONS, withFixtureProject } from '../fixture-project.js';
 
 // Re-exported so the shared builder is reachable under this module's name too.
 // The builder itself lives in fixture-project.ts, NOT here: importing one test
