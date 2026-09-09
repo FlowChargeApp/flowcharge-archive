@@ -6,7 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractPraxisData, ID_SUFFIX } from './lib/extract.js';
 import { hasWorkstreamTree, resolveTreeLayout } from './lib/tree-layout.js';
-import { readProjects, findProject, addProject, removeProject, renameProject } from './lib/projects.js';
+import { createJsonFileProjectRegistry } from './lib/projects.js';
+import type { ProjectRegistry } from './ports/project-registry.js';
 import { readBranch } from './lib/git.js';
 import { extractWorkstreamDetail } from './lib/detail.js';
 // The agentic-tools engine, imported statically. This file's ESM output and
@@ -109,6 +110,18 @@ const INSTALL_REGISTRY_PATH = path.join(
   process.env.PRAXIS_DATA_DIR || path.join(__dirname, '..'),
   '.praxis-installs.json',
 );
+
+// The one ProjectRegistry this transport uses, constructed once at module scope.
+// Its config repeats the values src/lib/projects.ts derives for its own default
+// instance: `__dirname` is `dist/` here and `dist/lib/` there, so one level up
+// and two levels up name the same repo root, and PRAXIS_DATA_DIR is read with the
+// same fallback and the same "set means packaged" rule.
+const PROJECT_REGISTRY_ROOT = path.join(__dirname, '..');
+const registry: ProjectRegistry = createJsonFileProjectRegistry({
+  dataDir: process.env.PRAXIS_DATA_DIR || PROJECT_REGISTRY_ROOT,
+  repoRoot: PROJECT_REGISTRY_ROOT,
+  packaged: Boolean(process.env.PRAXIS_DATA_DIR),
+});
 
 // The one write adapter the integrations routes hand to the install engine,
 // built once at module scope rather than per request.
@@ -247,10 +260,10 @@ function permittedRootFor(
   if (scope.kind === 'project') {
     if (typeof scope.projectPath !== 'string' || scope.projectPath === '') return null;
     const resolved = path.resolve(scope.projectPath);
-    // readProjects() is re-read per call on purpose, exactly as the Electron
+    // registry.list() is re-read per call on purpose, exactly as the Electron
     // handler re-reads it: a project registered during this session must not be
     // wrongly refused.
-    const registered = readProjects().some(
+    const registered = registry.list().some(
       (entry) => typeof entry.path === 'string' && path.resolve(entry.path) === resolved,
     );
     return registered ? resolved : null;
@@ -351,7 +364,7 @@ function handleAddProject(req: http.IncomingMessage, res: http.ServerResponse): 
       }
       warnLegacyLayout(input);
 
-      const { entry, created } = addProject(input);
+      const { entry, created } = registry.add(input);
       sendJson(res, created ? 201 : 200, { project: entry });
     } catch (err) {
       console.error('POST /api/projects failed:', err);
@@ -395,7 +408,7 @@ function handleRenameProject(req: http.IncomingMessage, res: http.ServerResponse
         return;
       }
 
-      const entry = renameProject(id, name);
+      const entry = registry.rename(id, name);
       if (!entry) {
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;
@@ -698,7 +711,7 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
   if (reqPath === '/api/projects') {
     if (method === 'GET') {
       try {
-        const list: ProjectList = { projects: readProjects() };
+        const list: ProjectList = { projects: registry.list() };
         sendJson(res, 200, list);
       } catch (err) {
         console.error('GET /api/projects failed:', err);
@@ -724,7 +737,7 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
       // never becomes a filesystem path, so it needs no shape check — the same
       // reasoning the .../data route already relies on.
       try {
-        const entry = removeProject(id);
+        const entry = registry.remove(id);
         if (!entry) {
           sendJson(res, 404, { error: `Unknown project ${id}` });
           return;
@@ -752,7 +765,7 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
     }
     const id = dataMatch[1];
     try {
-      const entry = findProject(id);
+      const entry = registry.find(id);
       if (!entry) {
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;
@@ -787,7 +800,7 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
       return;
     }
     try {
-      const entry = findProject(id);
+      const entry = registry.find(id);
       if (!entry) {
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;

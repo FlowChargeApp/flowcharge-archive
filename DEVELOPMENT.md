@@ -135,10 +135,10 @@ Every script below is defined in `package.json`.
 | `npm run package:win` | `build:release`, then `electron-builder --win --x64 --arm64`. |
 | `npm run package:cli` | `build:release`, then `node tools/package-cli.mjs` — the four Bun binaries in `release/cli/`. |
 
-`package:cli` is the version 1 build path. `package:mac`, `package:linux` and `package:win`
-build the Electron desktop apps, which stay a supported but secondary path. Those desktop
-builds are unsigned and unnotarized; see the Electron section of `README.md` before copying
-one to another machine.
+`package:cli` is the only real release path — see `CLAUDE.md`. `package:mac`, `package:linux`
+and `package:win` build Electron desktop apps from leftover scaffolding; there is no plan to
+ship them, and they are not maintained. Windows and macOS notarization requirements make an
+Electron build not worth pursuing for an app with no users yet.
 
 ### What `package:cli` produces
 
