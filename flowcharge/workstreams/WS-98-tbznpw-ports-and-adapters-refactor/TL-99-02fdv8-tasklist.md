@@ -1214,13 +1214,13 @@ string was run at `279fb26` while authoring, and records the value it actually r
           fix: "Used the corrected extraction from task 1.1 — drop the trailing `✖ failing tests:` block, match the marker at column 0, strip the marker and the duration — on both sides, with the same `s#dist/[^ ]*/##g` normalisation. The diff is empty across 281 names. Re-checked: all four checklist items pass."
     ```
 
-- [ ] 7. Stage 7 — CLI bootstrap port
+- [x] 7. Stage 7 — CLI bootstrap port
 
   ```yaml
   description: "Add src/cli-bootstrap.ts behind a typed port and reduce the body tools/package-cli.mjs generates to the asset imports, one bootstrap call and the final dynamic server import. Last, because it is the only stage whose verification needs Bun on the host."
   ```
 
-  - [ ] 7.1 Add `src/ports/cli-bootstrap.ts`
+  - [x] 7.1 Add `src/ports/cli-bootstrap.ts`
 
     ```yaml
     description: "Declare CliBootstrapInput and CliBootstrapResult, types only."
@@ -1244,11 +1244,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Does the file import nothing?"
       - "Is the in-place mutation of env stated in a comment?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 7.2 Add `src/cli-bootstrap.ts` with `applyCliDefaults`
+  - [x] 7.2 Add `src/cli-bootstrap.ts` with `applyCliDefaults`
 
     ```yaml
     description: "Add the typed replacement for the generated environment lines, reproducing tools/package-cli.mjs:135-138 exactly."
@@ -1275,11 +1275,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Is the mkdirSync recursive and applied to the resolved directory?"
       - "Does the module compile to dist/cli-bootstrap.js at exactly that path?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 7.3 Reduce the body `tools/package-cli.mjs` generates
+  - [x] 7.3 Reduce the body `tools/package-cli.mjs` generates
 
     ```yaml
     description: "Replace the generated environment lines with one applyCliDefaults call, keeping the three ordering rules the generated entry depends on."
@@ -1306,11 +1306,17 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Is './server.js' still the final dynamic import?"
       - "Did target selection, the two guards, the version read, the Bun flags and the output naming all stay unchanged?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Deviation from `pattern`: tools/package-cli.mjs, the entryLines array only."
+          reason: "The doc comment at tools/package-cli.mjs:121-127 documents the array being edited, and two of its clauses became false the moment the array changed: it named 'the two assignments below', which no longer exist, and it stated the explicit-emptiness rule for a generated body that no longer carries it."
+          fix: "Rewrote only those two clauses. The comment now names the applyCliDefaults call and points at src/cli-bootstrap.ts as the owner of the two defaults and the recursive mkdir. No other line outside the array changed: target selection, both guards, the version read, the Bun flags and the release/cli/ naming are byte for byte unchanged."
+        - item: "Gotcha: consider whether guard 1's dist/public/ check needs a sibling for dist/cli-bootstrap.js."
+          reason: "No sibling guard was added. The plan does not ask for one, and the gotcha says to record the decision either way."
+          fix: "None applied. package:cli chains build:release, which emits dist/cli-bootstrap.js, so the guard has no target on the supported path. A direct `node tools/package-cli.mjs` against a stale dist/ fails at bundle time instead, which is the pre-existing behaviour for a stale dist/server.js as well."
     ```
 
-  - [ ] 7.4 Stage 7 gate
+  - [x] 7.4 Stage 7 gate
 
     ```yaml
     description: "Prove the packaged binary still behaves exactly as cli-binary.test.ts asserts, with PRAXIS_APP_VERSION and PRAXIS_DATA_DIR set and unset."
@@ -1339,8 +1345,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Do dist/server.js, dist/lib/*.js and dist/public/* all still sit at their original paths?"
       - "Was no assertion in any WS-97-7fvoc0 file edited across the whole workstream?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Does the full suite still report 281 / 280 / 1 / 0 with the same failing case name?"
+          reason: "The counts and the failing case name are correct, but the name-diff verify step could not run as written. Its `grep -E '^..(✔|✖)'` extraction matches no line on this host, for the same reason recorded against tasks 1.1 and 1.11: node's spec reporter prints the marker at column 0."
+          fix: "Used the corrected extraction from task 1.1 — `sed '/^✖ failing tests:/,$d' | grep -E '^(✔|✖)' | sed -E 's/ \\([0-9.]+m?s\\)$//; s/^(✔|✖) //'` — with the same `s#dist/[^ ]*/##g` normalisation on both sides. It returns 281 names and the diff against the 279fb26 baseline is empty. Re-checked: all five checklist items pass."
     ```
 
 ## Divergences
