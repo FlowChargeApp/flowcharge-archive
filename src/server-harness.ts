@@ -83,6 +83,12 @@ export async function startTestServer(): Promise<TestServer> {
 // The response handler is attached at request creation, BEFORE any body is
 // written, so an answer that arrives while the request is still being sent — and
 // is followed by the server destroying the request — is still observed.
+//
+// `agent: false` gives every request its own connection. Node's global agent
+// keeps connections alive and pools them, so a server that answers and then
+// destroys the connection leaves a dead socket in that pool, and the NEXT
+// request reuses it and fails with EPIPE before it ever reaches the server. One
+// connection per request removes that coupling between cases entirely.
 export function requestRaw(
   base: string,
   route: string,
@@ -98,6 +104,7 @@ export function requestRaw(
         method: init.method ?? 'GET',
         path: route,
         headers: init.headers,
+        agent: false,
       },
       (res) => {
         const chunks: Buffer[] = [];

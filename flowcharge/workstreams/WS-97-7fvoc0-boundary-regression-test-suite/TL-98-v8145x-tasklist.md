@@ -284,13 +284,13 @@ Four parent tasks, one per plan stage, in the plan's order.
       failures: []
     ```
 
-- [ ] 3. The request guards and static serving (plan stage 3)
+- [x] 3. The request guards and static serving (plan stage 3)
 
   ```yaml
   description: "Deliver src/server-guards.test.ts. This stage holds third position because it needs no fixture and introduces no new mechanism. At the end, every check above the route table, and the HTML and asset path, are covered."
   ```
 
-  - [ ] 3.1 Create `src/server-guards.test.ts` with the Content-Type, Host, Origin and traversal guards
+  - [x] 3.1 Create `src/server-guards.test.ts` with the Content-Type, Host, Origin and traversal guards
     ```yaml
     description: "Cover the four cross-cutting refusals that sit above the route table, driven through requestRaw so the Host header can be set."
     author: Anthony Koukoullis
@@ -318,11 +318,14 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Is the traversal case read through requestRaw and asserted against the plain-text body?"
       - "Is no exact error wording asserted in this file?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "pattern: `New file src/server-guards.test.ts. Covers the first four items of acceptance criterion 6 of PLN-84-c6d01h.`"
+          reason: "tsconfig.json's `include` is an explicit file list, not a glob over src/. A new file that is not named there is outside the program, so tsc emits nothing for it and `ls dist/server-guards.test.js` fails after the file is written. Tasks 1.1 and 2.2 hit the same thing and recorded the same divergence."
+          fix: "Added `src/server-guards.test.ts` to the `include` array on line 15 of tsconfig.json, beside the three entries tasks 1.1 and 2.2 added. One list entry, strictly required for the in-scope file to compile at all. Nothing else in tsconfig.json changed. Task 4.2 must add its own new file to the same array."
     ```
 
-  - [ ] 3.2 Cover the 413 oversize-body refusal
+  - [x] 3.2 Cover the 413 oversize-body refusal
     ```yaml
     description: "Add the one guard case with real flakiness risk: the server answers 413 and then destroys the request, so the response must be read before the socket closes."
     author: Anthony Koukoullis
@@ -348,11 +351,14 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Did five consecutive runs of the file pass with no flake?"
       - "If requestRaw changed, is src/server-harness.ts still free of any route path or payload field?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "implement: `If requestRaw as written in task 1.1 cannot express this, add the response-first ordering inside requestRaw rather than opening a second HTTP path in this test file.`"
+          reason: "The response-first ordering was already present from task 1.1, so the 413 case passed five consecutive runs on its own. A second, unstated harness defect surfaced only once task 3.3 added a case AFTER this one: Node's global http agent keeps connections alive and pools them, so the socket this case's req.destroy() kills is returned to the pool, and the next request in the file reuses the dead socket and fails with EPIPE before reaching the server."
+          fix: "Added `agent: false` to the http.request options in requestRaw in src/server-harness.ts, with a comment stating why. Every request now gets its own connection, so a destroyed connection cannot couple one case to the next. This is the harness edit the task's own `pattern` field permits — src/server-harness.ts is the one place that knows node:http. The change names no route path, payload field or registry field, so the module's knowledge boundary is unchanged. dist/server-projects.test.js (16 pass) and dist/server-board.test.js (13 pass) were re-run afterwards and stayed green."
     ```
 
-  - [ ] 3.3 Cover the method guard of `GET /api/integrations/releases`
+  - [x] 3.3 Cover the method guard of `GET /api/integrations/releases`
     ```yaml
     description: "Add the one integrations case this plan owns: the wrong method on the releases route answers 405 without calling the live release listing."
     author: Anthony Koukoullis
@@ -376,11 +382,14 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Is the 200 path of the route left uncovered?"
       - "Does the file still make no network call?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "implement: `Append a case to src/server-guards.test.ts asserting POST /api/integrations/releases answers 405 with an `error` string.`"
+          reason: "The first form of this case sent a `{}` request body. The method guard answers 405 before any body is read and the server then closes the connection without draining the request, so the body write raced that close and surfaced as an EPIPE on the request stream instead of as the answer."
+          fix: "The POST now sends the Content-Type header and no body at all, with a comment stating why. The Content-Type guard reads only the header, so the case still proves the 405 is the route's method guard rather than the 403 above it. The pooled-socket half of the same failure was fixed in the harness under task 3.2."
     ```
 
-  - [ ] 3.4 Cover static serving and the CSP header
+  - [x] 3.4 Cover static serving and the CSP header
     ```yaml
     description: "Add the HTML and asset path: 200 with the CSP header for / and /board.html, 200 with the documented MIME type and the CSP header for one static asset, and 404 for an unknown static path."
     author: Anthony Koukoullis
@@ -407,7 +416,7 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Is the unknown static path asserted as 404 and read as text rather than JSON?"
       - "Is the CSP header asserted by its directives rather than as one exact byte string?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
