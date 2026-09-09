@@ -684,13 +684,13 @@ string was run at `279fb26` while authoring, and records the value it actually r
           fix: "Used the corrected extraction recorded in task 1.1 — `sed '/^✖ failing tests:/,$d' | grep -E '^(✔|✖)' | sed -E 's/ \\([0-9.]+m?s\\)$//; s/^(✔|✖) //'` — with the same `s#dist/[^ ]*/##g` normalisation on both sides. The diff is empty across 281 names. Re-checked: all five checklist items pass."
     ```
 
-- [ ] 4. Stage 4 — core application service
+- [x] 4. Stage 4 — core application service
 
   ```yaml
   description: "Add the BoardApi driving port and src/core/board-api.ts implementing it over the two driven ports, and reduce the six route handlers to variant-to-status mappers."
   ```
 
-  - [ ] 4.1 Add `src/ports/app-api.ts`
+  - [x] 4.1 Add `src/ports/app-api.ts`
 
     ```yaml
     description: "Declare the driving port: BoardResult, DetailResult, AddProjectResult and the BoardApi interface, types only."
@@ -716,11 +716,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Does legacyLayoutDir appear on every ok variant?"
       - "Does the file import nothing and contain no numeric status code in a type?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.2 Add `src/core/board-api.ts`
+  - [x] 4.2 Add `src/core/board-api.ts`
 
     ```yaml
     description: "Add createBoardApi({ registry, store }) implementing BoardApi over the two driven ports — the only new orchestration module in this workstream."
@@ -750,11 +750,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Does src/core/ import only from src/ports/?"
       - "Is the BoardPayload key order identical to src/server.ts:765 at 279fb26?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.3 Reduce the six route handlers in `src/server.ts` to variant-to-status mappers
+  - [x] 4.3 Reduce the six route handlers in `src/server.ts` to variant-to-status mappers
 
     ```yaml
     description: "Have src/server.ts build one BoardApi and map its result variants to the exact statuses and message strings the routes send today."
@@ -781,11 +781,14 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Did the string-shape validation stay at the route boundary?"
       - "Is the LEGACY LAYOUT text unchanged?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Is the LEGACY LAYOUT text unchanged?"
+          reason: "This item passes — the warn text is byte for byte what it was at 279fb26, and warnLegacyLayout now takes the legacyLayoutDir the result carries instead of calling resolveLayout itself. Recorded here because the port shape moves WHEN the line prints on two paths. DetailResult carries legacyLayoutDir on its ok variant only, so an unknown workstream inside a legacy tree no longer prints the line; at 279fb26 the warn ran before readDetail. On the add and board paths the line now prints after the registry write and after the extraction rather than before, and on the board path an extraction that throws prints no line at all."
+          fix: "No change made. The variant shape is fixed by PLN-85-7knnfj's Design section, which puts legacyLayoutDir on the ok variants only, and by the rule that src/core/ logs nothing. Nothing user-visible moves: no status code, no response body and no error string differs, and the three HTTP boundary suites report the 279fb26 count of 42. Recorded so Stage 5 moves the same call into src/http/routes-board.ts knowing the ordering is already this shape."
     ```
 
-  - [ ] 4.4 Stage 4 gate
+  - [x] 4.4 Stage 4 gate
 
     ```yaml
     description: "Prove the core service landed with no observable change and that src/core/ stayed pure."
@@ -813,8 +816,11 @@ string was run at `279fb26` while authoring, and records the value it actually r
       - "Does the purity grep over src/core/ print nothing?"
       - "Was no assertion in any WS-97-7fvoc0 file edited?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Does the case-name diff against the 279fb26 run come back empty?"
+          reason: "The diff step's `grep -E '^..(✔|✖)'` extraction matches no line on this host, for the reason already recorded against tasks 1.1, 1.11 and 3.5: node's spec reporter prints the marker at column 0."
+          fix: "Used the corrected extraction recorded in task 1.1 — `sed '/^✖ failing tests:/,$d' | grep -E '^(✔|✖)' | sed -E 's/ \\([0-9.]+m?s\\)$//; s/^(✔|✖) //'` — with the same `s#dist/[^ ]*/##g` normalisation on both sides. The diff is empty across 281 names. Re-checked: all five checklist items pass."
     ```
 
 - [ ] 5. Stage 5 — HTTP adapter extraction

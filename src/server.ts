@@ -13,6 +13,8 @@ import { createJsonFileProjectRegistry } from './lib/projects.js';
 import type { ProjectRegistry } from './ports/project-registry.js';
 import { createMarkdownWorkstreamStore } from './lib/workstream-store.js';
 import type { WorkstreamStore } from './ports/workstream-store.js';
+import { createBoardApi } from './core/board-api.js';
+import type { BoardApi } from './ports/app-api.js';
 // The agentic-tools engine, imported statically. This file's ESM output and
 // src/lib's are the same compilation, so the dynamic-import wiring
 // electron/agentic-tools-ipc-handlers.cts needs does not apply here.
@@ -130,6 +132,12 @@ const registry: ProjectRegistry = createJsonFileProjectRegistry({
 // It is the only door from here to the markdown tree.
 const store: WorkstreamStore = createMarkdownWorkstreamStore();
 
+// The one BoardApi this transport uses, composed once at module scope over the
+// two driven ports above. Every project and board route below calls it and maps
+// the result variant it gets back to a status and a message; none of them branch
+// on filesystem state themselves.
+const api: BoardApi = createBoardApi({ registry, store });
+
 // The one write adapter the integrations routes hand to the install engine,
 // built once at module scope rather than per request.
 const installFsWrite = createNodeFsWriteAccess();
@@ -139,15 +147,15 @@ function isLoopbackHost(candidate: string): boolean {
 }
 
 // One greppable line per legacy resolution, printed at the route boundary. The
-// printing lives here and never in src/lib/, which returns facts and logs
-// nothing. There is deliberately NO seen-set and no cross-request dedupe: the
+// printing lives here and never in src/lib/ or src/core/, which return facts and
+// log nothing: the core hands back the legacy directory, and this decides the
+// wording. There is deliberately NO seen-set and no cross-request dedupe: the
 // line exists to show whether the fallback is still load-bearing, and a
 // suppressed repeat would hide exactly that.
-function warnLegacyLayout(target: string): void {
-  const layout = store.resolveLayout(target);
-  if (layout !== null && layout.legacy) {
+function warnLegacyLayout(legacyLayoutDir: string | null): void {
+  if (legacyLayoutDir !== null) {
     console.warn(
-      `LEGACY LAYOUT: ${layout.dir} uses prxwork/ — rename it to flowcharge/; ` +
+      `LEGACY LAYOUT: ${legacyLayoutDir} uses prxwork/ — rename it to flowcharge/; ` +
       `support for the old name will be removed`
     );
   }
@@ -365,14 +373,13 @@ function handleAddProject(req: http.IncomingMessage, res: http.ServerResponse): 
         sendJson(res, 400, { error: 'Path must be absolute — enter a full path starting with /' });
         return;
       }
-      if (!store.hasTree(input)) {
-        sendJson(res, 400, { error: `No flowcharge/ folder found under ${input} — a project is a directory containing flowcharge/ (a legacy prxwork/ folder is still accepted)` });
+      const result = api.addProject(input);
+      if (result.kind === 'no-tree') {
+        sendJson(res, 400, { error: `No flowcharge/ folder found under ${result.path} — a project is a directory containing flowcharge/ (a legacy prxwork/ folder is still accepted)` });
         return;
       }
-      warnLegacyLayout(input);
-
-      const { entry, created } = registry.add(input);
-      sendJson(res, created ? 201 : 200, { project: entry });
+      warnLegacyLayout(result.legacyLayoutDir);
+      sendJson(res, result.created ? 201 : 200, { project: result.entry });
     } catch (err) {
       console.error('POST /api/projects failed:', err);
       sendJson(res, 500, { error: 'Could not write the project registry' });
@@ -415,7 +422,7 @@ function handleRenameProject(req: http.IncomingMessage, res: http.ServerResponse
         return;
       }
 
-      const entry = registry.rename(id, name);
+      const entry = api.renameProject(id, name);
       if (!entry) {
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;
@@ -718,7 +725,7 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
   if (reqPath === '/api/projects') {
     if (method === 'GET') {
       try {
-        const list: ProjectList = { projects: registry.list() };
+        const list: ProjectList = { projects: api.listProjects() };
         sendJson(res, 200, list);
       } catch (err) {
         console.error('GET /api/projects failed:', err);
@@ -744,7 +751,7 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
       // never becomes a filesystem path, so it needs no shape check — the same
       // reasoning the .../data route already relies on.
       try {
-        const entry = registry.remove(id);
+        const entry = api.removeProject(id);
         if (!entry) {
           sendJson(res, 404, { error: `Unknown project ${id}` });
           return;
@@ -772,17 +779,17 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
     }
     const id = dataMatch[1];
     try {
-      const entry = registry.find(id);
-      if (!entry) {
+      const result = api.getBoard(id);
+      if (result.kind === 'unknown-project') {
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;
       }
-      if (!store.hasTree(entry.path)) {
-        sendJson(res, 410, { error: `${entry.path} no longer contains a flowcharge/ or prxwork/ folder` });
+      if (result.kind === 'tree-missing') {
+        sendJson(res, 410, { error: `${result.path} no longer contains a flowcharge/ or prxwork/ folder` });
         return;
       }
-      warnLegacyLayout(entry.path);
-      const payload: BoardPayload = { ...store.readBoard(entry.path), branch: store.readBranch(entry.path), name: entry.name };
+      warnLegacyLayout(result.legacyLayoutDir);
+      const payload: BoardPayload = result.payload;
       sendJson(res, 200, payload);
     } catch (err) {
       console.error(`GET /api/projects/${id}/data failed:`, err);
@@ -807,22 +814,21 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, reqPath:
       return;
     }
     try {
-      const entry = registry.find(id);
-      if (!entry) {
+      const result = api.getDetail(id, wsId);
+      if (result.kind === 'unknown-project') {
         sendJson(res, 404, { error: `Unknown project ${id}` });
         return;
       }
-      if (!store.hasTree(entry.path)) {
-        sendJson(res, 410, { error: `${entry.path} no longer contains a flowcharge/ or prxwork/ folder` });
+      if (result.kind === 'tree-missing') {
+        sendJson(res, 410, { error: `${result.path} no longer contains a flowcharge/ or prxwork/ folder` });
         return;
       }
-      warnLegacyLayout(entry.path);
-      const detail = store.readDetail(entry.path, wsId);
-      if (!detail) {
+      if (result.kind === 'unknown-workstream') {
         sendJson(res, 404, { error: `Unknown workstream ${wsId}` });
         return;
       }
-      sendJson(res, 200, detail);
+      warnLegacyLayout(result.legacyLayoutDir);
+      sendJson(res, 200, result.detail);
     } catch (err) {
       console.error(`GET /api/projects/${id}/workstreams/${wsId}/detail failed:`, err);
       sendJson(res, 500, { error: 'Detail extraction failed' });
