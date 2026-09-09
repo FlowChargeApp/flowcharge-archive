@@ -525,3 +525,141 @@ test('addProject ok reports the legacy directory for a legacy layout', () => {
     [[ADD_PATH]],
   );
 });
+
+test('addProject returns no-tree and never reaches the registry', () => {
+  const { api, registry } = makeApi({
+    store: { hasTree: () => false },
+  });
+
+  const result = api.addProject('/fake/not-a-project');
+
+  // The path carried is the input path, verbatim.
+  assert.deepEqual(result, { kind: 'no-tree', path: '/fake/not-a-project' });
+  // Guard order is the point of this case. If addProject reached registry.add
+  // before the hasTree guard, a rejected path would be written to the registry
+  // file while the caller was told the path was rejected. Assert the whole
+  // registry log is empty, not only that add is absent, so a future write of
+  // any kind fails here too.
+  assert.equal(registry.calls.length, 0);
+});
+
+test('addProject ok passes created true through from the registry', () => {
+  const added = { entry: ENTRY, created: true };
+  const { api } = makeApi({
+    registry: { add: () => added },
+  });
+
+  const result = api.addProject(ADD_PATH);
+
+  // resolveLayout stays on its default null answer, so legacyLayoutDir stays
+  // null. The matrix above is the only place that varies it.
+  assert.deepEqual(result, { kind: 'ok', entry: ENTRY, created: true, legacyLayoutDir: null });
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  // Compare by reference: the core hands back the registry's own entry.
+  assert.equal(result.entry, added.entry);
+});
+
+test('addProject ok passes created false through from the registry', () => {
+  const { api } = makeApi({
+    registry: { add: () => ({ entry: ENTRY, created: false }) },
+  });
+
+  const result = api.addProject(ADD_PATH);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  // The core passes the registry's flag through; it does not recompute it.
+  assert.equal(result.created, false);
+  assert.equal(result.legacyLayoutDir, null);
+});
+
+// A path whose normalised form differs from itself: it carries a redundant
+// segment and a trailing separator. Path normalisation is the adapter's job,
+// not the core's, so the core must forward this string untouched.
+const UNNORMALISED_PATH = '/fake/parent/../added-project/';
+
+test('addProject forwards its input path to both ports verbatim', () => {
+  const { api, registry, store } = makeApi();
+
+  api.addProject(UNNORMALISED_PATH);
+
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'hasTree').map((call) => call.args),
+    [[UNNORMALISED_PATH]],
+  );
+  assert.deepEqual(
+    registry.calls.filter((call) => call.fn === 'add').map((call) => call.args),
+    [[UNNORMALISED_PATH]],
+  );
+});
+
+test('listProjects returns the registry list unchanged and never touches the store', () => {
+  const entries = [ENTRY];
+  const { api, registry, store } = makeApi({
+    registry: { list: () => entries },
+  });
+
+  const result = api.listProjects();
+
+  // Reference comparison: deepEqual would pass on a copy, and pure delegation
+  // is the fact under test — the core does not copy, sort or filter the list.
+  assert.equal(result, entries);
+  assert.equal(registry.calls.filter((call) => call.fn === 'list').length, 1);
+  assert.equal(store.calls.length, 0);
+});
+
+test('removeProject passes the registry entry through by reference', () => {
+  const { api, registry, store } = makeApi({
+    registry: { remove: () => ENTRY },
+  });
+
+  const result = api.removeProject(ENTRY.id);
+
+  // removeProject answers a bare ProjectEntry or undefined, not a result
+  // variant, so there is no kind field on it to assert.
+  assert.equal(result, ENTRY);
+  assert.deepEqual(
+    registry.calls.filter((call) => call.fn === 'remove').map((call) => call.args),
+    [[ENTRY.id]],
+  );
+  assert.equal(store.calls.length, 0);
+});
+
+test('removeProject passes an undefined registry answer through', () => {
+  // registry.remove stays on its default undefined return.
+  const { api, store } = makeApi();
+
+  const result = api.removeProject('missing');
+
+  assert.equal(result, undefined);
+  assert.equal(store.calls.length, 0);
+});
+
+test('renameProject passes the registry entry through by reference', () => {
+  const { api, registry, store } = makeApi({
+    registry: { rename: () => ENTRY },
+  });
+
+  const result = api.renameProject(ENTRY.id, 'New name');
+
+  assert.equal(result, ENTRY);
+  // Both arguments are strings, so a swapped order type-checks cleanly and only
+  // this assertion catches it. The two literals differ visibly on purpose.
+  const calls = registry.calls.filter((call) => call.fn === 'rename');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].args.length, 2);
+  assert.equal(calls[0].args[0], ENTRY.id);
+  assert.equal(calls[0].args[1], 'New name');
+  assert.equal(store.calls.length, 0);
+});
+
+test('renameProject passes an undefined registry answer through', () => {
+  // registry.rename stays on its default undefined return.
+  const { api, store } = makeApi();
+
+  const result = api.renameProject('missing', 'New name');
+
+  assert.equal(result, undefined);
+  assert.equal(store.calls.length, 0);
+});

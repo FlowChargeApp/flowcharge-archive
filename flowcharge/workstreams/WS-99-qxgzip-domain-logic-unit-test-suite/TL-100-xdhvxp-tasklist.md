@@ -453,13 +453,13 @@ one test file and are not extracted into a shared helper module.
       failures: []
     ```
 
-- [ ] 4. Stage 4 — registry-facing methods
+- [x] 4. Stage 4 — registry-facing methods
 
   ```yaml
   description: "Assert addProject's variants and argument forwarding, plus the listProjects, removeProject and renameProject pass-through cases, so all six methods and every result variant are covered."
   ```
 
-  - [ ] 4.1 Add the addProject no-tree guard case
+  - [x] 4.1 Add the addProject no-tree guard case
     ```yaml
     description: "When hasTree is false, addProject returns { kind: 'no-tree', path } carrying the input path, and registry.add is never called."
     author: Anthony Koukoullis
@@ -482,11 +482,11 @@ one test file and are not extracted into a shared helper module.
       - "Does the comment explain the guard-order risk without naming a status code?"
       - "Is the input path the verbatim string passed to addProject?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.2 Add the addProject created-true and created-false cases
+  - [x] 4.2 Add the addProject created-true and created-false cases
     ```yaml
     description: "Assert both registry.add outcomes reach the ok variant unchanged, so created is passed through rather than recomputed."
     author: Anthony Koukoullis
@@ -509,11 +509,11 @@ one test file and are not extracted into a shared helper module.
       - "Does one case compare entry by reference against the registry's return?"
       - "Do both cases leave legacyLayoutDir null?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.3 Add the addProject argument-forwarding case
+  - [x] 4.3 Add the addProject argument-forwarding case
     ```yaml
     description: "Assert hasTree and registry.add both receive the absolute path verbatim, and that the core normalises nothing."
     author: Anthony Koukoullis
@@ -536,11 +536,11 @@ one test file and are not extracted into a shared helper module.
       - "Does it assert registry.add received the exact input string?"
       - "Is node:path still absent from the file's imports?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.4 Add the listProjects delegation case
+  - [x] 4.4 Add the listProjects delegation case
     ```yaml
     description: "Assert listProjects returns the registry's list unchanged and never touches the store."
     author: Anthony Koukoullis
@@ -563,11 +563,11 @@ one test file and are not extracted into a shared helper module.
       - "Does it assert the store's call log is empty?"
       - "Is listProjects now covered, as one of the six required methods?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.5 Add the removeProject pass-through cases
+  - [x] 4.5 Add the removeProject pass-through cases
     ```yaml
     description: "Assert both registry.remove outcomes pass through, the id is forwarded verbatim, and the store is never called."
     author: Anthony Koukoullis
@@ -590,11 +590,11 @@ one test file and are not extracted into a shared helper module.
       - "Does a case assert registry.remove received the id verbatim?"
       - "Does a case assert the store's call log is empty?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.6 Add the renameProject pass-through cases
+  - [x] 4.6 Add the renameProject pass-through cases
     ```yaml
     description: "Assert both registry.rename outcomes pass through, (id, name) are forwarded in that order, and the store is never called."
     author: Anthony Koukoullis
@@ -621,7 +621,7 @@ one test file and are not extracted into a shared helper module.
       - "Do all six BoardApi methods now appear in at least one case?"
       - "Are all five distinct result-kind strings present in the file?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
