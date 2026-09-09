@@ -42,3 +42,28 @@ recorded in `depends_on`.
 
 A second workstream, WS-99-qxgzip, follows this one: it writes a comprehensive unit test
 suite for the domain logic that this refactor isolates.
+
+## Test-folder layout to fold in
+
+This refactor should also move the project's test files into a proper folder structure,
+decided during WS-97-7fvoc0 but deliberately deferred to here rather than done standalone,
+since it is the same kind of structural change:
+
+- Target layout: `src/test/boundary/` and `src/test/unit/`, nested inside `src/`, not a
+  root-level `test/` sibling. `tsconfig.json` sets `"rootDir": "src"` and `"outDir": "dist"`;
+  a root-level `test/` folder would sit outside `rootDir` and force either widening it (which
+  reshapes the whole `dist/` layout — `dist/lib/...` and `dist/server.js` would move to
+  `dist/src/...`, breaking `tools/copy-assets.mjs`, `tools/package-cli.mjs`'s asset path, and
+  `package.json`'s `main: dist/electron/main.cjs`) or a second, separate tsconfig for tests.
+  `src/test/` stays inside the existing `rootDir` and compiles to `dist/test/...` with no
+  other config change beyond `tsconfig.json`'s `include` array.
+- "Boundary", not "integration": WS-97-7fvoc0 already established "boundary" as this
+  project's term for this test style (its title, its plan `PLN-84-c6d01h`, its task list
+  `TL-98-v8145x`), so keep that word rather than introducing a synonym.
+- `src/test/boundary/` receives the five files WS-97-7fvoc0 added:
+  `src/server-harness.ts`, `src/server-projects.test.ts`, `src/server-board.test.ts`,
+  `src/server-guards.test.ts`, `src/cli-binary.test.ts`.
+- `src/test/unit/` receives the existing colocated unit tests under `src/lib/` (and any
+  other `foo.ts`/`foo.test.ts` pairs outside the boundary set) — roughly two dozen files,
+  each needing its relative imports fixed for the new depth alongside `tsconfig.json`'s
+  `include` array.
