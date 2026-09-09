@@ -239,3 +239,98 @@ test('getBoard hands the store entry.path, never the project id', () => {
     }
   }
 });
+
+test('getBoard returns unknown-project and touches no store method', () => {
+  // registry.find stays on its default, which answers undefined.
+  const { api, registry, store } = makeApi();
+
+  const result = api.getBoard('missing');
+
+  // Compare the whole result, so no extra field can ride along.
+  assert.deepEqual(result, { kind: 'unknown-project' });
+  // The guard runs before any store method. Assert the whole log is empty
+  // rather than one named method, so a future reordering that probed the
+  // layout early cannot slip past this case.
+  assert.equal(store.calls.length, 0);
+  assert.deepEqual(
+    registry.calls.filter((call) => call.fn === 'find').map((call) => call.args),
+    [['missing']],
+  );
+});
+
+test('getBoard returns tree-missing carrying entry.path', () => {
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { hasTree: () => false },
+  });
+
+  const result = api.getBoard(ENTRY.id);
+
+  // The path carried is the entry's path, not the project id and not the input.
+  assert.deepEqual(result, { kind: 'tree-missing', path: ENTRY.path });
+  const names = store.calls.map((call) => call.fn);
+  assert.ok(!names.includes('readBoard'), 'store.readBoard must never be called');
+  assert.ok(!names.includes('readBranch'), 'store.readBranch must never be called');
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'hasTree').map((call) => call.args),
+    [[ENTRY.path]],
+  );
+});
+
+test('getDetail returns unknown-project and touches no store method', () => {
+  // registry.find stays on its default undefined return.
+  const { api, registry, store } = makeApi();
+
+  const result = api.getDetail('missing', 'WS-1-aa11bb');
+
+  assert.deepEqual(result, { kind: 'unknown-project' });
+  assert.equal(store.calls.length, 0);
+  // getDetail takes two ids. Assert which one reached the registry, or a
+  // swapped argument order would pass unnoticed.
+  assert.deepEqual(
+    registry.calls.filter((call) => call.fn === 'find').map((call) => call.args),
+    [['missing']],
+  );
+  for (const call of registry.calls) {
+    for (const arg of call.args) {
+      assert.notEqual(arg, 'WS-1-aa11bb', `registry.${call.fn} must never receive the workstream id`);
+    }
+  }
+});
+
+test('getDetail returns tree-missing carrying entry.path', () => {
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { hasTree: () => false },
+  });
+
+  const result = api.getDetail(ENTRY.id, 'WS-1-aa11bb');
+
+  // tree-missing and unknown-workstream both mean "nothing to show", but they
+  // are separate variants, so compare the exact object rather than checking
+  // that the kind is merely not 'ok'.
+  assert.deepEqual(result, { kind: 'tree-missing', path: ENTRY.path });
+  const names = store.calls.map((call) => call.fn);
+  assert.ok(!names.includes('readDetail'), 'store.readDetail must never be called');
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'hasTree').map((call) => call.args),
+    [[ENTRY.path]],
+  );
+});
+
+test('getDetail returns unknown-workstream when readDetail answers null', () => {
+  // hasTree and readDetail both stay on their defaults: true, then null.
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+  });
+
+  const result = api.getDetail(ENTRY.id, 'WS-404-nope');
+
+  // No path and no legacyLayoutDir ride on this variant.
+  assert.deepEqual(result, { kind: 'unknown-workstream' });
+  // ports/workstream-store.ts:19-24 splits the two failure shapes on purpose:
+  // readBoard throws when the tree is missing, while readDetail answers null
+  // when the workstream id is unknown. The core must keep them apart, so prove
+  // the null return produced this variant rather than an earlier guard.
+  assert.equal(store.calls.filter((call) => call.fn === 'readDetail').length, 1);
+});

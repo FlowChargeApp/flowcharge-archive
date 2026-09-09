@@ -193,13 +193,13 @@ one test file and are not extracted into a shared helper module.
       failures: []
     ```
 
-- [ ] 2. Stage 2 — read-path failure variants
+- [x] 2. Stage 2 — read-path failure variants
 
   ```yaml
   description: "Assert unknown-project, tree-missing and unknown-workstream for getBoard and getDetail, each with its 'port never called' assertion, fixing the guard order the transport layer depends on."
   ```
 
-  - [ ] 2.1 Add the getBoard unknown-project case
+  - [x] 2.1 Add the getBoard unknown-project case
     ```yaml
     description: "When registry.find returns undefined, getBoard returns { kind: 'unknown-project' } and calls no store method at all."
     author: Anthony Koukoullis
@@ -222,11 +222,11 @@ one test file and are not extracted into a shared helper module.
       - "Does it assert registry.find received the project id verbatim?"
       - "Does the file contain no HTTP status code and no error-body string?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.2 Add the getBoard tree-missing case
+  - [x] 2.2 Add the getBoard tree-missing case
     ```yaml
     description: "When hasTree is false, getBoard returns { kind: 'tree-missing', path } carrying entry.path, and neither readBoard nor readBranch is called."
     author: Anthony Koukoullis
@@ -249,11 +249,11 @@ one test file and are not extracted into a shared helper module.
       - "Does the case prove readBranch was never called?"
       - "Does the case assert hasTree received ENTRY.path?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.3 Add the getDetail unknown-project case
+  - [x] 2.3 Add the getDetail unknown-project case
     ```yaml
     description: "When registry.find returns undefined, getDetail returns { kind: 'unknown-project' } and calls no store method at all."
     author: Anthony Koukoullis
@@ -276,11 +276,11 @@ one test file and are not extracted into a shared helper module.
       - "Does the case assert registry.find received the project id, not the workstream id?"
       - "Does the case call getDetail with two visibly different id strings?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.4 Add the getDetail tree-missing case
+  - [x] 2.4 Add the getDetail tree-missing case
     ```yaml
     description: "When hasTree is false, getDetail returns { kind: 'tree-missing', path } carrying entry.path, and readDetail is never called."
     author: Anthony Koukoullis
@@ -303,11 +303,11 @@ one test file and are not extracted into a shared helper module.
       - "Does the case assert hasTree received ENTRY.path?"
       - "Is the assertion an exact object comparison rather than a negative check?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.5 Add the getDetail unknown-workstream case
+  - [x] 2.5 Add the getDetail unknown-workstream case
     ```yaml
     description: "When readDetail returns null, getDetail returns { kind: 'unknown-workstream' }, distinct from tree-missing and carrying no other field."
     author: Anthony Koukoullis
@@ -331,7 +331,7 @@ one test file and are not extracted into a shared helper module.
       - "Does a comment record the readBoard-throws versus readDetail-returns-null split?"
       - "Does the file report 0 failures?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
