@@ -225,13 +225,13 @@ coverage for both modules, then user-facing documentation across two repositorie
           fix: "None needed. All three checklist items this blocked are satisfied by that count: one event per binary start (3 events across 2 real starts + 1 probe, matching expectations), the same installId reused between run 1 and run 2 (dailyUsers: 1, i.e. one distinct user across those events), and zero events from the opt-out run (no fourth event)."
     ```
 
-- [ ] 2. Unit coverage for both telemetry modules
+- [x] 2. Unit coverage for both telemetry modules
 
   ```yaml
   description: "Lock the contract task 1.5 proved, with unit suites over the opt-out matrix, the session-ID format, the payload shape and every failure path. No boundary or HTTP coverage — telemetry touches no route."
   ```
 
-  - [ ] 2.1 Create `src/test/unit/telemetry-install-id.test.ts`
+  - [x] 2.1 Create `src/test/unit/telemetry-install-id.test.ts`
     ```yaml
     description: "Unit suite for readOrCreateInstallId: creation, reuse, corrupt-file rewrite, and the unwritable-directory path."
     author: Anthony Koukoullis
@@ -257,11 +257,17 @@ coverage for both modules, then user-facing documentation across two repositorie
       - "Does the unwritable-directory case return persisted: false without throwing?"
       - "Does every test use a temporary directory and clean it up?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Note, not a checklist failure: the unwritable-directory case carries a root skip guard the implement bullets do not ask for."
+          reason: "The gotcha records that chmod 0o500 does not restrain root, so under root the case would pass vacuously. Asserting persisted: false there would fail rather than pass vacuously, because the write succeeds."
+          fix: "The case asserts on the returned persisted flag as the gotcha requires, and restores the mode in a finally block, but is skipped when process.getuid() is 0. On this host it runs and passes. A second case asserts the same directory does not throw."
+        - item: "Note, not a checklist failure: the verify step `npm test` passes with the machine offline."
+          reason: "`npm test` reports 337 tests, 336 pass, 1 fail. The one failure is the same pre-existing, unrelated live-network case (`getInstallContent installs the newest live release...` in src/test/unit/skill-content-fetch.test.ts, reaching an unreachable LAN host) that task 1.4 recorded and accepted. This task adds no import that suite touches."
+          fix: "None needed. The total rose from 313 to 337, exactly the 24 cases tasks 2.1, 2.2 and 2.3 add, and the failure count stayed at the same single pre-existing case. `node --test dist/test/unit/telemetry-install-id.test.js` reports 7 pass, 0 fail."
     ```
 
-  - [ ] 2.2 Create `src/test/unit/telemetry.test.ts` — opt-out matrix, session ID and payload shape
+  - [x] 2.2 Create `src/test/unit/telemetry.test.ts` — opt-out matrix, session ID and payload shape
     ```yaml
     description: "Unit suite for the pure functions of src/lib/telemetry.ts: isTelemetryEnabled, newSessionId, osNameFor and buildAppStartedEvent."
     author: Anthony Koukoullis
@@ -289,11 +295,11 @@ coverage for both modules, then user-facing documentation across two repositorie
       - "Are the event's key sets asserted exactly, so an extra field would fail?"
       - "Is sdkVersion asserted as cut to forty characters for a long app version?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.3 Add the `trackAppStarted` cases to `src/test/unit/telemetry.test.ts`
+  - [x] 2.3 Add the `trackAppStarted` cases to `src/test/unit/telemetry.test.ts`
     ```yaml
     description: "Cover every failure path of trackAppStarted with a stubbed fetch, and prove the opt-out path touches neither fetch nor the filesystem."
     author: Anthony Koukoullis
@@ -322,8 +328,14 @@ coverage for both modules, then user-facing documentation across two repositorie
       - "Does the whole file run offline, with no case reaching the real endpoint?"
       - "Is the absence of console output asserted?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Does the whole file run offline, with no case reaching the real endpoint? — passed, after one change of technique"
+          reason: "The implement bullet asks that nothing written to stdout or stderr be asserted. The first draft hooked process.stdout.write and process.stderr.write. That failed: node:test writes its own result protocol to stdout while the cases run, so the captured buffer held about 9 KB of runner traffic and could never be empty."
+          fix: "The hooks now sit on console.log, console.info, console.warn, console.error and console.debug, restored in a finally block, and every case asserts the recorded list is empty. This is what the checklist item asks for literally — 'the absence of console output' — and it covers every logging path the module could use, since the module imports no logger."
+        - item: "Note, not a checklist failure: the hanging case needs the stub to honour the abort signal."
+          reason: "AbortSignal.timeout only aborts the real fetch. A stub that never settles and ignores the signal would hang the suite forever rather than prove the catch."
+          fix: "The stub rejects with signal.reason on the signal's abort event, which is the TimeoutError DOMException the real fetch raises. The case runs in about 22 ms with an explicit timeoutMs of 20 and resolves without throwing, proving the catch is unfiltered."
     ```
 
 - [ ] 3. User-facing documentation
