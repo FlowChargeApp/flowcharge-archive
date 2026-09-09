@@ -335,13 +335,13 @@ one test file and are not extracted into a shared helper module.
       failures: []
     ```
 
-- [ ] 3. Stage 3 — the legacyLayoutDir matrix
+- [x] 3. Stage 3 — the legacyLayoutDir matrix
 
   ```yaml
   description: "Assert all three layout resolutions — no layout, current layout, legacy layout — across the three ok variants, plus the getDetail ok result and its argument forwarding that the matrix needs."
   ```
 
-  - [ ] 3.1 Add the getDetail ok and readDetail argument-forwarding cases
+  - [x] 3.1 Add the getDetail ok and readDetail argument-forwarding cases
     ```yaml
     description: "Assert getDetail's ok variant returns the store's detail object unchanged, and that readDetail receives (entry.path, workstreamId) verbatim."
     author: Anthony Koukoullis
@@ -364,11 +364,11 @@ one test file and are not extracted into a shared helper module.
       - "Does it assert the workstream id is readDetail's second argument, verbatim?"
       - "Are the argument values read from the recorded call log?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.2 Add the getBoard legacyLayoutDir matrix
+  - [x] 3.2 Add the getBoard legacyLayoutDir matrix
     ```yaml
     description: "Assert getBoard's ok variant carries legacyLayoutDir null for no layout, null for the current layout and the legacy directory for the legacy layout."
     author: Anthony Koukoullis
@@ -392,11 +392,11 @@ one test file and are not extracted into a shared helper module.
       - "Do the three cases differ only in the resolveLayout return?"
       - "Does a case assert resolveLayout received ENTRY.path?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.3 Add the getDetail legacyLayoutDir matrix
+  - [x] 3.3 Add the getDetail legacyLayoutDir matrix
     ```yaml
     description: "Assert getDetail's ok variant carries legacyLayoutDir for all three layout resolutions, with assertions identical to the getBoard set."
     author: Anthony Koukoullis
@@ -420,11 +420,11 @@ one test file and are not extracted into a shared helper module.
       - "Does the legacy case assert LAYOUT_LEGACY.dir?"
       - "Are the assertions the same shape as task 3.2's?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.4 Add the addProject legacyLayoutDir matrix
+  - [x] 3.4 Add the addProject legacyLayoutDir matrix
     ```yaml
     description: "Assert addProject's ok variant carries legacyLayoutDir for all three layout resolutions, completing the nine-case matrix."
     author: Anthony Koukoullis
@@ -449,7 +449,7 @@ one test file and are not extracted into a shared helper module.
       - "Is the input path used here different from ENTRY.path, so the assertion can fail?"
       - "Does the matrix now total nine cases across the three ok variants?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

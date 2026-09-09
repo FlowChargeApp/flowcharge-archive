@@ -334,3 +334,194 @@ test('getDetail returns unknown-workstream when readDetail answers null', () => 
   // the null return produced this variant rather than an earlier guard.
   assert.equal(store.calls.filter((call) => call.fn === 'readDetail').length, 1);
 });
+
+test('getDetail ok returns the store detail object unchanged', () => {
+  const { api } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { readDetail: () => DETAIL },
+  });
+
+  const result = api.getDetail(ENTRY.id, DETAIL.id);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  // Compare by reference. deepEqual would pass on a rebuilt copy, and the core
+  // must hand back the very object the store returned.
+  assert.equal(result.detail, DETAIL);
+});
+
+test('getDetail forwards entry.path and the workstream id to readDetail verbatim', () => {
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { readDetail: () => DETAIL },
+  });
+
+  api.getDetail(ENTRY.id, DETAIL.id);
+
+  // Read the values out of the recorded call rather than re-deriving them, so
+  // the assertion proves what the core actually passed. The core normalises
+  // neither argument.
+  const calls = store.calls.filter((call) => call.fn === 'readDetail');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].args.length, 2);
+  assert.equal(calls[0].args[0], ENTRY.path);
+  assert.equal(calls[0].args[1], DETAIL.id);
+});
+
+test('getBoard ok reports legacyLayoutDir null when no layout resolves', () => {
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { resolveLayout: () => null },
+  });
+
+  const result = api.getBoard(ENTRY.id);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  assert.equal(result.legacyLayoutDir, null);
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'resolveLayout').map((call) => call.args),
+    [[ENTRY.path]],
+  );
+});
+
+test('getBoard ok reports legacyLayoutDir null for a current layout', () => {
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { resolveLayout: () => LAYOUT_CURRENT },
+  });
+
+  const result = api.getBoard(ENTRY.id);
+
+  // This is the discriminating case of the three: LAYOUT_CURRENT carries a real
+  // dir with legacy false, so a core that returned layout.dir without testing
+  // layout.legacy would pass the null-layout case and fail only here.
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  assert.equal(result.legacyLayoutDir, null);
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'resolveLayout').map((call) => call.args),
+    [[ENTRY.path]],
+  );
+});
+
+test('getBoard ok reports the legacy directory for a legacy layout', () => {
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { resolveLayout: () => LAYOUT_LEGACY },
+  });
+
+  const result = api.getBoard(ENTRY.id);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  assert.equal(result.legacyLayoutDir, LAYOUT_LEGACY.dir);
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'resolveLayout').map((call) => call.args),
+    [[ENTRY.path]],
+  );
+});
+
+test('getDetail ok reports legacyLayoutDir null when no layout resolves', () => {
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { readDetail: () => DETAIL, resolveLayout: () => null },
+  });
+
+  const result = api.getDetail(ENTRY.id, DETAIL.id);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  assert.equal(result.legacyLayoutDir, null);
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'resolveLayout').map((call) => call.args),
+    [[ENTRY.path]],
+  );
+});
+
+test('getDetail ok reports legacyLayoutDir null for a current layout', () => {
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { readDetail: () => DETAIL, resolveLayout: () => LAYOUT_CURRENT },
+  });
+
+  const result = api.getDetail(ENTRY.id, DETAIL.id);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  assert.equal(result.legacyLayoutDir, null);
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'resolveLayout').map((call) => call.args),
+    [[ENTRY.path]],
+  );
+});
+
+test('getDetail ok reports the legacy directory for a legacy layout', () => {
+  const { api, store } = makeApi({
+    registry: { find: () => ENTRY },
+    store: { readDetail: () => DETAIL, resolveLayout: () => LAYOUT_LEGACY },
+  });
+
+  const result = api.getDetail(ENTRY.id, DETAIL.id);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  assert.equal(result.legacyLayoutDir, LAYOUT_LEGACY.dir);
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'resolveLayout').map((call) => call.args),
+    [[ENTRY.path]],
+  );
+});
+
+// addProject resolves the layout from its own input path, because no registry
+// entry exists yet. ADD_PATH is deliberately different from ENTRY.path, so the
+// argument assertions below can fail.
+const ADD_PATH = '/fake/added-project';
+
+test('addProject ok reports legacyLayoutDir null when no layout resolves', () => {
+  const { api, store } = makeApi({
+    store: { resolveLayout: () => null },
+  });
+
+  const result = api.addProject(ADD_PATH);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  assert.equal(result.legacyLayoutDir, null);
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'resolveLayout').map((call) => call.args),
+    [[ADD_PATH]],
+  );
+});
+
+test('addProject ok reports legacyLayoutDir null for a current layout', () => {
+  const { api, store } = makeApi({
+    store: { resolveLayout: () => LAYOUT_CURRENT },
+  });
+
+  const result = api.addProject(ADD_PATH);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  assert.equal(result.legacyLayoutDir, null);
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'resolveLayout').map((call) => call.args),
+    [[ADD_PATH]],
+  );
+});
+
+test('addProject ok reports the legacy directory for a legacy layout', () => {
+  const { api, store } = makeApi({
+    store: { resolveLayout: () => LAYOUT_LEGACY },
+  });
+
+  const result = api.addProject(ADD_PATH);
+
+  assert.equal(result.kind, 'ok');
+  if (result.kind !== 'ok') return;
+  assert.equal(result.legacyLayoutDir, LAYOUT_LEGACY.dir);
+  assert.deepEqual(
+    store.calls.filter((call) => call.fn === 'resolveLayout').map((call) => call.args),
+    [[ADD_PATH]],
+  );
+});
