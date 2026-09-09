@@ -4,7 +4,7 @@ type: tasklist
 workstream: WS-98-tbznpw
 slug: ports-and-adapters-refactor
 title: "Ports and adapters refactor with test folder restructure"
-status: ready
+status: done
 created: 2026-09-09
 updated: 2026-09-09
 author: Anthony Koukoullis
