@@ -146,13 +146,13 @@ Four parent tasks, one per plan stage, in the plan's order.
       failures: []
     ```
 
-- [ ] 2. The board payload and the workstream detail, end to end over HTTP (plan stage 2)
+- [x] 2. The board payload and the workstream detail, end to end over HTTP (plan stage 2)
 
   ```yaml
   description: "Deliver the fixture builder and src/server-board.test.ts. This stage holds second position because it is the largest coverage gap and the behaviour the later refactor is most likely to disturb."
   ```
 
-  - [ ] 2.1 Add `withBoardFixtureProject` to `src/lib/fixture-project.ts`
+  - [x] 2.1 Add `withBoardFixtureProject` to `src/lib/fixture-project.ts`
     ```yaml
     description: "Add one additive export that writes a realistic two-workstream project tree with an archived third workstream, in either name generation, and removes it again."
     author: Anthony Koukoullis
@@ -185,11 +185,11 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Does a string `branch` option write .git/HEAD, and does the default leave no .git directory?"
       - "Is the tree removed in a finally block even when the callback throws?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.2 Cover `GET /api/projects/:id/data` for the `flowcharge` generation
+  - [x] 2.2 Cover `GET /api/projects/:id/data` for the `flowcharge` generation
     ```yaml
     description: "Create src/server-board.test.ts and assert the whole board payload for a realistic flowcharge/ fixture tree, from files on disk through to the JSON body."
     author: Anthony Koukoullis
@@ -219,11 +219,14 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Are the 404, 405 and 410 refusals covered by status and an `error` string only?"
       - "Does the file import no parser from src/lib/extract.js and no function from src/lib/projects.js?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "pattern: `New file src/server-board.test.ts. Covers acceptance criterion 4 of PLN-84-c6d01h for the flowcharge generation.`"
+          reason: "tsconfig.json's `include` is an explicit file list, not a glob over src/. A new file that is not named there is outside the program, so tsc emitted nothing for it and the verify step `ls dist/server-board.test.js` failed after the file was written. Task 1.1 hit the same thing and recorded the same divergence."
+          fix: "Added `src/server-board.test.ts` to the `include` array on line 15 of tsconfig.json, beside the two entries task 1.1 added. One list entry, strictly required for the in-scope file to compile at all. Nothing else in tsconfig.json changed. Tasks 3.1 and 4.2 must add their own new files to the same array."
     ```
 
-  - [ ] 2.3 Cover the legacy `prxwork` generation of the same route
+  - [x] 2.3 Cover the legacy `prxwork` generation of the same route
     ```yaml
     description: "Add the second-generation case so the board payload is asserted for a prxwork/ tree as well as a flowcharge/ one."
     author: Anthony Koukoullis
@@ -246,11 +249,11 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Does the file name neither marker filename directly?"
       - "Is the LEGACY LAYOUT warning left unasserted?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.4 Cover `GET /api/projects/:id/workstreams/:wsId/detail`
+  - [x] 2.4 Cover `GET /api/projects/:id/workstreams/:wsId/detail`
     ```yaml
     description: "Add the workstream detail route to src/server-board.test.ts: the success payload for the fixture tree, plus its documented 400, 404, 410 and 405 refusals."
     author: Anthony Koukoullis
@@ -277,7 +280,7 @@ Four parent tasks, one per plan stage, in the plan's order.
       - "Is the archived workstream's detail asserted with archived: true?"
       - "Are the plan body, the issue items and the task tree all asserted in the 200 payload?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
