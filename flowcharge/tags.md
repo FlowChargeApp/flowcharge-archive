@@ -49,6 +49,7 @@ A tag is defined once it is listed here. See `prx-orchestrate/CONVENTIONS.md`.
 - styling
 - tasks
 - tauri
+- telemetry
 - testing
 - tooling
 - typescript

@@ -4,10 +4,10 @@ type: workstream
 workstream: WS-94-ked1ye
 slug: code-signing-notarization-deferral
 title: "Park Electron code signing and notarization behind the D-26 deferral"
-status: ready
+status: backlog
 tags: [electron, packaging, security, desktop]
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-09
 author: Anthony Koukoullis
 depends_on: [WS-92-t964y8]
 links: []
