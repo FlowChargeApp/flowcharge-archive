@@ -10,13 +10,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export type LayoutGeneration = 'flowcharge' | 'prxwork';
+// The port owns these two types and this module implements them. They are
+// re-exported here so every existing importer of `./lib/tree-layout.js` keeps
+// resolving them at the name it already uses.
+import type { LayoutGeneration, TreeLayout } from '../ports/workstream-store.js';
 
-export interface TreeLayout {
-  dir: string;
-  generation: LayoutGeneration;
-  legacy: boolean;
-}
+export type { LayoutGeneration, TreeLayout };
 
 // Candidate folder basenames, NEW GENERATION FIRST. Order is the whole of the
 // precedence rule: a root holding both folders resolves `flowcharge/`, and the

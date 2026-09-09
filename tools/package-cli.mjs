@@ -120,22 +120,21 @@ console.log(`found bun ${bunProbe.stdout.trim()}`);
 //
 // The last statement must be a dynamic import, never a static one. server.js,
 // src/lib/projects.ts and src/lib/update-prefs.ts all read their environment at
-// module scope, and a static import hoists above the two assignments below.
-// electron/main.cts:68 carries the same constraint and solves it the same way.
+// module scope, and a static import hoists above the applyCliDefaults call
+// below. electron/main.cts:68 carries the same constraint and solves it the
+// same way.
 //
-// Both guards are explicit emptiness tests, not ??=: an environment variable set
-// to '' is '', not undefined, and an explicit value must still win.
+// applyCliDefaults is called as a statement for that same reason: its own
+// import is hoisted, but the call runs before ./server.js is imported. It lives
+// in src/cli-bootstrap.ts, which owns the two environment defaults and the
+// recursive mkdir of the directory they resolve to.
 const entryLines = [
   ...assets.map((relative) => `import './public/${relative}' with { type: 'file' };`),
   '',
-  "import fs from 'node:fs';",
   "import os from 'node:os';",
-  "import path from 'node:path';",
+  "import { applyCliDefaults } from './cli-bootstrap.js';",
   '',
-  `if (!process.env.PRAXIS_APP_VERSION) process.env.PRAXIS_APP_VERSION = ${JSON.stringify(version)};`,
-  '',
-  "if (!process.env.PRAXIS_DATA_DIR) process.env.PRAXIS_DATA_DIR = path.join(os.homedir(), '.flowcharge');",
-  'fs.mkdirSync(process.env.PRAXIS_DATA_DIR, { recursive: true });',
+  `applyCliDefaults({ version: ${JSON.stringify(version)}, homeDir: os.homedir(), env: process.env });`,
   '',
   "await import('./server.js');",
 ];

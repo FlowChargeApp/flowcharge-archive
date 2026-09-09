@@ -42,7 +42,8 @@ npm run build:release    # the hardened build, used by every packaging script
 
 `build:base` compiles three separate TypeScript projects and then copies the static assets:
 
-- `tsconfig.json` — the Node side: `src/server.ts`, `src/lib/`, `src/scripts/`, `src/types/`.
+- `tsconfig.json` — the Node side: `src/server.ts`, `src/cli-bootstrap.ts`, `src/core/`,
+  `src/http/`, `src/lib/`, `src/ports/`, `src/scripts/`, `src/test/`, `src/types/`.
 - `src/public/tsconfig.json` — the browser side: DOM libs, no Node types.
 - `electron/tsconfig.json` — the Electron main and preload code.
 - `node tools/copy-assets.mjs` — the HTML, CSS, fonts and images into `dist/public/`.
@@ -79,12 +80,13 @@ To run one compiled test file, build once and then call `node --test` directly:
 
 ```bash
 npm run build
-node --test dist/lib/extract.test.js
+node --test dist/test/unit/extract.test.js
 ```
 
-Test files sit beside the code they cover — `src/lib/extract.ts` and
-`src/lib/extract.test.ts`, `.github/scripts/release.mjs` and
-`.github/scripts/release.test.mjs`.
+Test files under `src/` sit in two folders, not beside the code they cover: the boundary
+suites in `src/test/boundary/`, and the unit suites in `src/test/unit/` — `src/lib/extract.ts`
+is covered by `src/test/unit/extract.test.ts`. The release-script tests do sit beside the
+code they cover — `.github/scripts/release.mjs` and `.github/scripts/release.test.mjs`.
 
 CI runs `npm ci` and then `npm test` on every push and pull request against `main`. There
 is no release job in CI, by design: the release is local commands, and the tag lands in a
@@ -99,6 +101,8 @@ Praxis-Dashboard/
 │   ├── lib/             the pure libraries — extract, projects, detail, tree-layout,
 │   │                    yaml-block, git, update-check, and the agentic-tools-* engine
 │   ├── scripts/         extract-praxis-data.ts, a thin CLI over extract.ts
+│   ├── test/            the test sources — boundary/ for the HTTP and packaged-CLI
+│   │                    suites, unit/ for the library suites, and fixture-project.ts
 │   ├── types/           shared payload types, used by both compilations
 │   └── public/          the browser side — HTML, CSS, app.ts, home.ts, theme, fonts, img
 ├── electron/            main.cts, preload.cts and the four IPC handler modules
@@ -131,10 +135,10 @@ Every script below is defined in `package.json`.
 | `npm run package:win` | `build:release`, then `electron-builder --win --x64 --arm64`. |
 | `npm run package:cli` | `build:release`, then `node tools/package-cli.mjs` — the four Bun binaries in `release/cli/`. |
 
-`package:cli` is the version 1 build path. `package:mac`, `package:linux` and `package:win`
-build the Electron desktop apps, which stay a supported but secondary path. Those desktop
-builds are unsigned and unnotarized; see the Electron section of `README.md` before copying
-one to another machine.
+`package:cli` is the only real release path — see `CLAUDE.md`. `package:mac`, `package:linux`
+and `package:win` build Electron desktop apps from leftover scaffolding; there is no plan to
+ship them, and they are not maintained. Windows and macOS notarization requirements make an
+Electron build not worth pursuing for an app with no users yet.
 
 ### What `package:cli` produces
 
