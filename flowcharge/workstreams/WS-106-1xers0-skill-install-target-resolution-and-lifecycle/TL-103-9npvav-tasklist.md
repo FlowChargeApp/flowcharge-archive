@@ -1634,13 +1634,13 @@ returns no lines.
     failures: []
   ```
 
-- [ ] 7. Correct the two tests that assert the defects as correct (ISS-37-niiof1)
+- [x] 7. Correct the two tests that assert the defects as correct (ISS-37-niiof1)
 
   ```yaml
   description: "One test asserts the doubled Cursor global path, the other asserts that removal makes exactly one remove call. Both now assert the corrected behaviour."
   ```
 
-  - [ ] 7.1 Assert the Cursor paths the tool actually reads
+  - [x] 7.1 Assert the Cursor paths the tool actually reads
     ```yaml
     description: "Cursor's rules format is project-scoped, so the test installs at project scope and asserts that global scope resolves to no format."
     author: Anthony Koukoullis
@@ -1724,11 +1724,11 @@ returns no lines.
       - "A second test asserts skipped-no-format at global scope with zero content writes."
       - "The skill-directory Claude Code test above is untouched."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 7.2 Assert that removal deletes every path the install wrote
+  - [x] 7.2 Assert that removal deletes every path the install wrote
     ```yaml
     description: "The remove test asserted exactly one remove call, which is the defect. It now asserts the full set."
     author: Anthony Koukoullis
@@ -1782,7 +1782,7 @@ returns no lines.
       - "The whole agentic-tools install suite passes."
       - "No source file was changed to make a test pass."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

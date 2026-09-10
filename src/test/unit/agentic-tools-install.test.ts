@@ -163,28 +163,43 @@ test('installToTarget returns skipped-no-format rather than throwing when no non
   assert.equal(fsWrite.calls.filter((c) => c.fn === 'writeTextFileAtomic').length, 0);
 });
 
-test('installToTarget writes exactly the expected rule-directory files for Cursor at global scope', async () => {
+test('installToTarget writes exactly the expected rule-directory files for Cursor at project scope', async () => {
   const fsWrite = fakeFsWriteAccess();
-  const target: InstallTarget = { tool: cursor(), basePath: '/home/fakeuser/.cursor', scope: { kind: 'global' } };
+  const target: InstallTarget = {
+    tool: cursor(),
+    basePath: '/home/fakeuser/repo',
+    scope: { kind: 'project', projectPath: '/home/fakeuser/repo' },
+  };
 
   const result = await installToTarget(target, twoSkillContent, REGISTRY_PATH, { fsWrite });
 
   assert.equal(result.status, 'installed');
   assert.equal(result.toolId, 'cursor');
-  // Cursor's real catalogue rule-directory format resolves to a rules entry,
-  // never the mcp-json entry that sits alongside it.
-  assert.equal(result.resolvedPath, '/home/fakeuser/.cursor/.cursor/rules/prx-alpha.mdc');
+  // The path Cursor actually reads: .cursor/rules/*.mdc under a PROJECT
+  // root, never that template appended to the ~/.cursor configDir.
+  assert.equal(result.resolvedPath, '/home/fakeuser/repo/.cursor/rules/prx-alpha.mdc');
 
   const writeCalls = contentWriteCalls(fsWrite);
   assert.deepEqual(
     writeCalls.map((c) => c.path),
     [
-      '/home/fakeuser/.cursor/.cursor/rules/prx-alpha.mdc',
-      '/home/fakeuser/.cursor/.cursor/rules/prx-beta.mdc',
+      '/home/fakeuser/repo/.cursor/rules/prx-alpha.mdc',
+      '/home/fakeuser/repo/.cursor/rules/prx-beta.mdc',
     ],
   );
   assert.equal(writeCalls[0]?.content, 'alpha body');
   assert.equal(writeCalls[1]?.content, 'beta body');
+});
+
+test('installToTarget writes nothing for Cursor at global scope, because Cursor reads no user-level rules directory', async () => {
+  const fsWrite = fakeFsWriteAccess();
+  const target: InstallTarget = { tool: cursor(), basePath: '/home/fakeuser/.cursor', scope: { kind: 'global' } };
+
+  const result = await installToTarget(target, twoSkillContent, REGISTRY_PATH, { fsWrite });
+
+  assert.equal(result.status, 'skipped-no-format');
+  assert.equal(result.resolvedPath, null);
+  assert.equal(contentWriteCalls(fsWrite).length, 0);
 });
 
 test('installToTarget install/no-op/update lifecycle against Claude Code (acceptance criteria 4, 5)', async () => {
@@ -298,7 +313,7 @@ test('installToTarget backfills a changed version on an up-to-date install, writ
   assert.equal(record!.version, 'v1.5.0');
 });
 
-test('removeInstallation deletes the tracked file and the record for that (toolId, scope) pair (acceptance criterion 6)', async () => {
+test('removeInstallation deletes every file the install wrote and the record for that (toolId, scope) pair (acceptance criterion 6)', async () => {
   const fsWrite = fakeFsWriteAccess();
   const target: InstallTarget = { tool: claudeCode(), basePath: '/home/fakeuser/.claude', scope: { kind: 'global' } };
 
@@ -307,8 +322,15 @@ test('removeInstallation deletes the tracked file and the record for that (toolI
 
   await removeInstallation('claude-code', { kind: 'global' }, REGISTRY_PATH, { fsWrite });
 
+  // twoSkillContent writes three files — one SKILL.md per skill plus
+  // prx-alpha's bundled reference file — so removal must delete three,
+  // not just the first one the record used to carry.
   const removeCalls = fsWrite.calls.filter((c) => c.fn === 'remove');
-  assert.deepEqual(removeCalls.map((c) => c.path), [installed.resolvedPath]);
+  assert.deepEqual(removeCalls.map((c) => c.path), [
+    '/home/fakeuser/.claude/skills/prx-alpha/SKILL.md',
+    '/home/fakeuser/.claude/skills/prx-alpha/reference.md',
+    '/home/fakeuser/.claude/skills/prx-beta/SKILL.md',
+  ]);
 
   const registryRaw = await fsWrite.readTextFile(REGISTRY_PATH);
   assert.ok(registryRaw);
