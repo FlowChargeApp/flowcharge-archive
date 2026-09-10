@@ -4,7 +4,7 @@ type: issuelist
 workstream: WS-106-1xers0
 slug: skill-install-target-resolution-and-lifecycle
 title: "Install removal concurrency and dead install-content type"
-status: ready
+status: done
 created: 2026-09-10
 updated: 2026-09-10
 depends_on: []
@@ -13,11 +13,11 @@ links: [IL-16-78bnrq, ISS-41-qbdzgt, ISS-32-3hfjhe]
 
 # FlowCharge Issue List
 
-- [ ] ISS-48-zlx88q. removeInstallation bypasses the per-registry install queue, so a concurrent remove and install resurrect the removed record
+- [x] ISS-48-zlx88q. removeInstallation bypasses the per-registry install queue, so a concurrent remove and install resurrect the removed record
 
   ```yaml
   id: ISS-48-zlx88q
-  status: ready
+  status: done
   severity: low
   author: Anthony Koukoullis
   description: "src/lib/agentic-tools-install.ts serializes registry access per ledger path through `registryChains` and `withRegistryLock` at :85-95. Only installToTarget uses that queue, at :103, where it wraps installToTargetLocked. removeInstallation at :216-231 performs its own unqueued read-modify-write of the same ledger: readRegistry at :222, a loop that removes every recorded path, then writeRegistry at :230. Its production caller is the POST /api/integrations/installs/remove route, which calls it at src/http/routes-integrations.ts:401. A remove and an install that overlap on the same ledger path therefore each read the ledger, each compute a next state from their own copy, and each write it, with nothing ordering the two."
@@ -36,11 +36,11 @@ links: [IL-16-78bnrq, ISS-41-qbdzgt, ISS-32-3hfjhe]
   notes: "Confidence is high: the race was measured in both start orders against the compiled code, not inferred. This is not a regression and is not ISS-41-qbdzgt reopened. ISS-41-qbdzgt serialized the installToTarget read-modify-write only, because that issue named installToTarget alone, and its task deliberately left removeInstallation unserialized. This issue is the gap that scoping left. Live exposure today is narrow: no interface control calls removeInstallation (ISS-32-3hfjhe), so the race is reachable only by a direct loopback POST to the remove route that overlaps an install. Severity is low today because the UI cannot reach it. It rises to medium once ISS-32-3hfjhe gets a remove control, because the race then becomes an ordinary user action. This issue names no fix. File for the src/ impact only; electron/ is leftover scaffolding per CLAUDE.md. Any correction must add no runtime dependency."
   ```
 
-- [ ] ISS-49-my5t2k. GetInstallContent is an exported type that nothing imports, and its comment makes a false claim
+- [x] ISS-49-my5t2k. GetInstallContent is an exported type that nothing imports, and its comment makes a false claim
 
   ```yaml
   id: ISS-49-my5t2k
-  status: ready
+  status: done
   severity: low
   author: Anthony Koukoullis
   description: "src/lib/agentic-tools-content.ts:24-27 exports `export type GetInstallContent = (toolId: string) => Promise<InstallContent>;` under a comment that calls it the Gap 1 seam, which stays a port with only fixture or placeholder implementations everywhere in this workstream, including the real IPC wiring in Phase 6 (plan Assumption 9). `grep -rn GetInstallContent src electron` finds only that definition in src/. Its only consumer, installAllGlobal, was deleted by TL-103-9npvav task 3 under ISS-43-xszeei. electron/agentic-tools-ipc-handlers.cts:197 declares its own local `GetInstallContentFn` type and does not import this one. The comment is false: install content is not placeholder-only. getInstallContent in src/lib/skill-content-fetch.ts is the real implementation, and the HTTP install route calls it."
