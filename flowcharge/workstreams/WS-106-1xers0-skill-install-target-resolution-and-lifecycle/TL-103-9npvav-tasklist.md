@@ -1042,13 +1042,13 @@ returns no lines.
       failures: []
     ```
 
-- [ ] 4. Record every path an install writes (ISS-35-m54y06)
+- [x] 4. Record every path an install writes (ISS-35-m54y06)
 
   ```yaml
   description: "InstallRecord gains an optional resolvedPaths array beside the existing single resolvedPath, installToTarget fills it, removeInstallation deletes every path in it instead of only the first, and the HTTP remove route validates every path in it before it lets that deletion run."
   ```
 
-  - [ ] 4.1 Add `resolvedPaths` to `InstallRecord`
+  - [x] 4.1 Add `resolvedPaths` to `InstallRecord`
     ```yaml
     description: "Additive and optional, so a record already on disk in the single-path shape still reads back."
     author: Anthony Koukoullis
@@ -1097,11 +1097,11 @@ returns no lines.
       - "The pure functions below the interface are unchanged."
       - "The type-check passes."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.2 Collect every written path and persist it
+  - [x] 4.2 Collect every written path and persist it
     ```yaml
     description: "The write loop keeps the whole set instead of discarding all but the first path."
     author: Anthony Koukoullis
@@ -1184,11 +1184,11 @@ returns no lines.
       - "resolvedPath is the first written path, or the empty string when nothing was written."
       - "The containment gate is unchanged."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.3 Delete every recorded path on removal
+  - [x] 4.3 Delete every recorded path on removal
     ```yaml
     description: "removeInstallation loops over the recorded set through one shared reader that also handles a legacy single-path record."
     author: Anthony Koukoullis
@@ -1275,11 +1275,11 @@ returns no lines.
       - "The no-record early return still makes zero remove calls."
       - "The probe reports 'removes total: 3'."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.4 Mirror the new field on the browser side
+  - [x] 4.4 Mirror the new field on the browser side
     ```yaml
     description: "src/public/lib/agentic-tools-api.ts mirrors InstallRecord by hand, so the shape must move with it."
     author: Anthony Koukoullis
@@ -1324,11 +1324,11 @@ returns no lines.
       - "The browser type-check passes."
       - "No other interface in the file changed."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.5 Validate every recorded path in the HTTP remove route
+  - [x] 4.5 Validate every recorded path in the HTTP remove route
     ```yaml
     description: "Task 4.3 makes removeInstallation delete every path recordedInstallPaths answers, but the remove route still checked record.resolvedPath alone before calling it. A ledger that is corrupt, hand-edited or tampered with, whose first path sits inside the permitted root and whose second does not, passed that check and had the second path deleted recursively. The route now applies the unchanged rule to every path in that same list and refuses the whole request with 400 before anything is deleted."
     author: Anthony Koukoullis
@@ -1448,7 +1448,7 @@ returns no lines.
       - "The inside-path probe answers 200 with both files gone and an empty ledger."
       - "No status code or HTTP concern was added to src/lib."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

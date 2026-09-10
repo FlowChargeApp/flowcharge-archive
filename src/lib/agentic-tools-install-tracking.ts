@@ -13,7 +13,12 @@ export type InstallScope = { kind: 'global' } | { kind: 'project'; projectPath: 
 
 export interface InstallRecord {
   toolId: string;
-  resolvedPath: string;
+  resolvedPath: string; // the FIRST path written; kept for readers written against the single-path shape
+  // Every path the install wrote. Optional, because .praxis-installs.json
+  // is a live on-disk format: a record written before this field existed
+  // carries resolvedPath alone, and readers fall back to it rather than
+  // treating the record as unreadable.
+  resolvedPaths?: string[];
   format: IntegrationFormat['kind'];
   scope: InstallScope;
   installedAt: string;

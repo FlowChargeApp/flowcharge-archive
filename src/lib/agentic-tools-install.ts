@@ -111,7 +111,7 @@ export async function installToTarget(
 
   const writes = formatForTarget(format, content);
 
-  let resolvedPath: string | null = null;
+  const writtenPaths: string[] = [];
   for (const write of writes) {
     const fullPath = `${target.basePath}/${write.relativePath}`;
     // Containment gate in front of the write: resolve both sides with the
@@ -125,13 +125,18 @@ export async function installToTarget(
     const dir = fullPath.replace(/\/[^/]+$/, '');
     await deps.fsWrite.mkdir(dir);
     await deps.fsWrite.writeTextFileAtomic(fullPath, write.content);
-    if (resolvedPath === null) resolvedPath = fullPath;
+    writtenPaths.push(fullPath);
   }
 
+  // One install of the canonical suite writes one SKILL.md per skill plus
+  // one file per bundled reference file. Recording only the first of them
+  // is what left removal deleting a fraction of the install.
+  const resolvedPath = writtenPaths.length === 0 ? null : writtenPaths[0];
   const now = new Date().toISOString();
   const record: InstallRecord = {
     toolId: target.tool.id,
     resolvedPath: resolvedPath ?? '',
+    resolvedPaths: writtenPaths,
     format: format.kind,
     scope: target.scope,
     installedAt: existing?.installedAt ?? now,
@@ -149,7 +154,16 @@ export async function installToTarget(
   return { toolId: target.tool.id, status: existing === undefined ? 'installed' : 'updated', resolvedPath };
 }
 
-// Deletes the tracked file/directory at the record's resolvedPath (if any),
+// Every path a record says its install wrote. A record written before
+// resolvedPaths existed carries the single resolvedPath alone, so it falls
+// back to that one path and keeps exactly the behaviour it had. Exported
+// because the HTTP remove route must validate exactly the list this
+// module deletes, never a list of its own derivation.
+export function recordedInstallPaths(record: InstallRecord): string[] {
+  return record.resolvedPaths ?? [record.resolvedPath];
+}
+
+// Deletes every tracked file/directory the record says the install wrote,
 // then removes the record and persists the registry. No-op (does not throw)
 // if no record exists for the (toolId, scope) pair, matching the port's
 // documented idempotent-remove contract.
@@ -163,7 +177,9 @@ export async function removeInstallation(
   const existing = findInstallRecord(records, toolId, scope);
   if (existing === undefined) return;
 
-  await deps.fsWrite.remove(existing.resolvedPath);
+  for (const target of recordedInstallPaths(existing)) {
+    await deps.fsWrite.remove(target);
+  }
   const nextRecords = removeInstallRecord(records, toolId, scope);
   await writeRegistry(registryPath, nextRecords, deps.fsWrite);
 }

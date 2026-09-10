@@ -19,7 +19,7 @@ import type { ProjectRegistry } from '../ports/project-registry.js';
 
 import { detectAllTools } from '../lib/agentic-tools-detect.js';
 import { checkSkillPresence } from '../lib/agentic-tools-skill-presence.js';
-import { installToTarget, removeInstallation } from '../lib/agentic-tools-install.js';
+import { installToTarget, removeInstallation, recordedInstallPaths } from '../lib/agentic-tools-install.js';
 import { parseInstallRegistry, findInstallRecord } from '../lib/agentic-tools-install-tracking.js';
 import { TOOL_CATALOGUE } from '../lib/agentic-tools-catalogue.js';
 import { CANONICAL_PRAXIS_SKILL_IDS } from '../lib/agentic-tools-canonical-skills.js';
@@ -328,10 +328,12 @@ function handleIntegrationsInstallsPost(
 
 // POST /api/integrations/installs/remove — mirrors the removeInstallation IPC
 // channel (electron/agentic-tools-ipc-handlers.cts:421-457). The engine's
-// removeInstallation deletes the record's resolvedPath recursively, so the
-// boundary check runs first, against a root this process derived rather than
-// one the client supplied. The 200 body is the literal null, because the shim's
-// fetchIpc assigns the parsed body straight to `data`.
+// removeInstallation deletes EVERY path recordedInstallPaths answers for the
+// record, recursively, so the boundary check runs first over that same list,
+// against a root this process derived rather than one the client supplied,
+// and the whole request is refused before anything is deleted. The 200 body
+// is the literal null, because the shim's fetchIpc assigns the parsed body
+// straight to `data`.
 function handleIntegrationsInstallRemove(
   req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -367,16 +369,24 @@ function handleIntegrationsInstallRemove(
 
       const detections = scope.kind === 'global' ? await detectionsForPermittedRoots(deps) : [];
       const permittedRoot = permittedRootFor(toolId, scope, detections, deps.registry);
-      const resolvedTarget = path.resolve(record.resolvedPath);
-      // The trailing path.sep is what makes this a boundary rather than a bare
-      // prefix: without it a sibling whose name merely begins with the root's
-      // name would pass. Equality with the root is refused too — a tracked
-      // install is always a path under its base, never the base.
-      if (permittedRoot === null || !resolvedTarget.startsWith(permittedRoot + path.sep)) {
-        sendJson(res, 400, {
-          error: `Refused remove path outside the permitted root for ${toolId}: ${record.resolvedPath}`,
-        });
-        return;
+      // The list checked here is the list the engine deletes, read through
+      // the same recordedInstallPaths the engine reads, so a ledger that is
+      // corrupt, hand-edited or tampered with cannot pass one path inside
+      // the root and have a second one outside it deleted. Every path is
+      // checked before any is removed, and one failure refuses the whole
+      // request.
+      for (const recorded of recordedInstallPaths(record)) {
+        const resolvedTarget = path.resolve(recorded);
+        // The trailing path.sep is what makes this a boundary rather than a bare
+        // prefix: without it a sibling whose name merely begins with the root's
+        // name would pass. Equality with the root is refused too — a tracked
+        // install is always a path under its base, never the base.
+        if (permittedRoot === null || !resolvedTarget.startsWith(permittedRoot + path.sep)) {
+          sendJson(res, 400, {
+            error: `Refused remove path outside the permitted root for ${toolId}: ${recorded}`,
+          });
+          return;
+        }
       }
       await removeInstallation(toolId, scope, deps.installRegistryPath, { fsWrite: deps.fsWrite });
       sendJson(res, 200, null);
