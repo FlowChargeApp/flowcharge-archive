@@ -1866,13 +1866,13 @@ returns no lines.
     failures: []
   ```
 
-- [ ] 9. Serialize the registry read-modify-write and make the temp file unique (ISS-41-qbdzgt)
+- [x] 9. Serialize the registry read-modify-write and make the temp file unique (ISS-41-qbdzgt)
 
   ```yaml
   description: "Two overlapping installs both read the registry, both compute a next state from their own stale copy, and one tool's record is lost. Their atomic writes also share one temp filename."
   ```
 
-  - [ ] 9.1 Import a unique-suffix source in the filesystem adapter
+  - [x] 9.1 Import a unique-suffix source in the filesystem adapter
     ```yaml
     description: "node:crypto is a built-in, so randomUUID adds no dependency."
     author: Anthony Koukoullis
@@ -1902,11 +1902,11 @@ returns no lines.
       - "package.json was not edited."
       - "The type-check passes."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 9.2 Give each atomic text write its own temp filename
+  - [x] 9.2 Give each atomic text write its own temp filename
     ```yaml
     description: "Two concurrent writes to one path from one process shared a single pid-keyed temp file."
     author: Anthony Koukoullis
@@ -1957,11 +1957,11 @@ returns no lines.
       - "The temp file is still a sibling of the target path."
       - "The rename still follows the write."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 9.3 Serialize `installToTarget` per registry path
+  - [x] 9.3 Serialize `installToTarget` per registry path
     ```yaml
     description: "One in-flight read-modify-write per registry path, so a second install queues instead of computing its next state from a stale copy."
     author: Anthony Koukoullis
@@ -2040,7 +2040,7 @@ returns no lines.
       - "A rejected install does not reject the ones queued behind it."
       - "The concurrency probe reports both tool ids."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

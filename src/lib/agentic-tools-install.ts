@@ -76,7 +76,34 @@ async function writeRegistry(registryPath: string, records: InstallRecord[], fsW
 // as before, then upserts and persists the tracking record — always AFTER
 // the content writes succeed, so a failed content write never leaves a
 // tracking record for content that was never actually written to disk.
-export async function installToTarget(
+// One in-flight install per registry path, chained through a promise per
+// path. Without it two overlapping requests both read the registry, both
+// compute a next state from their own stale copy, and the second write
+// drops the first tool's record. An in-process chain is the whole fix
+// here: one server process owns the registry, and the project ships no
+// runtime dependency to reach for a file lock with.
+const registryChains = new Map<string, Promise<unknown>>();
+
+function withRegistryLock<T>(registryPath: string, run: () => Promise<T>): Promise<T> {
+  const previous = registryChains.get(registryPath) ?? Promise.resolve();
+  const next = previous.then(run);
+  // The stored link swallows rejection; the returned promise does not. A
+  // failed install must reject its own caller without failing every
+  // install queued behind it.
+  registryChains.set(registryPath, next.catch(() => undefined));
+  return next;
+}
+
+export function installToTarget(
+  target: InstallTarget,
+  content: InstallContent,
+  registryPath: string,
+  deps: { fsWrite: FsWriteAccess },
+): Promise<InstallResult> {
+  return withRegistryLock(registryPath, () => installToTargetLocked(target, content, registryPath, deps));
+}
+
+async function installToTargetLocked(
   target: InstallTarget,
   content: InstallContent,
   registryPath: string,

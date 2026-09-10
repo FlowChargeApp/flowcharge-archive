@@ -4,6 +4,7 @@
 // any tool, format, or install-tracking concept, per Design > 'What each
 // module knows / must not know' in PLN-32-m51bp8.
 
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -98,14 +99,18 @@ export function createNodeFsWriteAccess(): FsWriteAccess {
       }
     },
 
-    // Writes to a sibling `${path}.${process.pid}.tmp` file first, then
-    // renames it over the target — the same reasoning as src/lib/projects.ts's
-    // writeProjects (src/lib/projects.ts:42-47), generalized here from one
-    // fixed registryPath to any caller-supplied path. The tmp file must be a
+    // Writes to a sibling temp file first, then renames it over the target
+    // — the same reasoning as src/lib/projects.ts's writeProjects
+    // (src/lib/projects.ts:42-47), generalized here from one fixed
+    // registryPath to any caller-supplied path. The tmp file must be a
     // sibling of the real path (same directory), never under the OS temp
     // directory, or fs.rename can fail with EXDEV across filesystems.
+    // The name carries a per-call random suffix as well as the pid: a
+    // pid-only name is shared by two concurrent writes to the same path
+    // from ONE process, which lets the second writeFile interleave with
+    // the first rename and leave a truncated or mixed file behind.
     async writeTextFileAtomic(path: string, content: string): Promise<void> {
-      const tmpPath = `${path}.${process.pid}.tmp`;
+      const tmpPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
       await fs.writeFile(tmpPath, content, 'utf8');
       await fs.rename(tmpPath, path);
     },
