@@ -162,11 +162,11 @@ links: []
   notes: "Shares the IntegrationFormat model gap with ISS-33-6bxf6h and ISS-34-mpy9n0, and the workstream record groups all three behind that one change. Any correction must add no runtime dependency."
   ```
 
-- [ ] ISS-39-mu5wkq. installAllGlobal reports every thrown failure as skipped-no-format
+- [x] ISS-39-mu5wkq. installAllGlobal reports every thrown failure as skipped-no-format
 
   ```yaml
   id: ISS-39-mu5wkq
-  status: ready
+  status: dropped
   severity: medium
   author: Anthony Koukoullis
   description: "The per-tool try/catch in installAllGlobal at src/lib/agentic-tools-install.ts:171-181 pushes `{ status: 'skipped-no-format' }` for any thrown error, with no discrimination between a format the engine does not implement and a filesystem failure. The client maps that status to the user-facing string 'No format for this tool' in INSTALL_STATUS_LABEL in src/public/home.ts."
@@ -180,7 +180,7 @@ links: []
   affected: "src/lib/agentic-tools-install.ts:171-181 (installAllGlobal); src/public/home.ts (INSTALL_STATUS_LABEL)"
   environment: "Node >=20.14."
   tasks: []
-  notes: "This function is currently unreachable, which is recorded separately as ISS-43-xszeei, so the defect is latent rather than live. It is the error handling any future caller inherits. Any correction must add no runtime dependency."
+  notes: "This function is currently unreachable, which is recorded separately as ISS-43-xszeei, so the defect is latent rather than live. It is the error handling any future caller inherits. Any correction must add no runtime dependency. Dropped: task 3 of TL-103-9npvav deleted installAllGlobal under ISS-43-xszeei, so the code this issue describes no longer exists and its failure scenario cannot occur."
   ```
 
 - [x] ISS-40-798x06. parseInstallRegistry documents a wrong-shape rejection it does not perform

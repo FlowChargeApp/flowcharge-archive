@@ -244,7 +244,7 @@ C4Component
     Rel(routesIntegrations, portProjectRegistry, "list() for permitted roots", "injected interface")
     Rel(routesIntegrations, toolDetect, "detectAllTools", "direct import")
     Rel(routesIntegrations, toolCatalogue, "TOOL_CATALOGUE lookup", "direct import")
-    Rel(routesIntegrations, installEngine, "installToTarget, removeInstallation", "direct import")
+    Rel(routesIntegrations, installEngine, "installToTarget, removeInstallation, recordedInstallPaths", "direct import")
     Rel(routesIntegrations, installTracking, "parseInstallRegistry, findInstallRecord", "direct import")
     Rel(routesIntegrations, skillPresence, "checkSkillPresence", "direct import")
     Rel(routesIntegrations, canonicalSkills, "CANONICAL_PRAXIS_SKILL_IDS", "direct import")
@@ -310,7 +310,7 @@ directories rather than as authored files.
 ├── package.json                             # Scripts, devDependencies, engines, electron-builder block
 ├── tsconfig.json                            # The Node-side compilation: src/server.ts, core, http, lib, ports, scripts, test, types
 ├── bun.lock                                 # The only committed lockfile; no package-lock.json exists, so ci.yml's npm ci has nothing to read
-├── .gitignore                               # dist/, release/, .praxis-projects.json, .praxis-update.json, the generated index, board and ids/
+├── .gitignore                               # dist/, release/, the four .praxis-*.json state files, the generated index, board and ids/
 ├── flowcharge-theme-toggle.gif              # README screencast of the board and the theme toggle
 │
 ├── .claude/
@@ -476,8 +476,8 @@ directories rather than as authored files.
 
 Four state files live outside this tree, in `PRAXIS_DATA_DIR` — the repository root during
 development, and `~/.flowcharge` in the packaged binary: `.praxis-projects.json`,
-`.praxis-installs.json`, `.praxis-update.json` and `.praxis-telemetry.json`. Only the
-first and third are listed in `.gitignore`. Two untracked Pixelmator `.pxd` bundles sit
+`.praxis-installs.json`, `.praxis-update.json` and `.praxis-telemetry.json`. All four
+are listed in `.gitignore`. Two untracked Pixelmator `.pxd` bundles sit
 under `src/public/img/`; they are design working files, neither tracked nor built.
 
 ## 5. Data & Type Definitions
@@ -791,6 +791,7 @@ classDiagram
         <<interface>>
         +kind FormatKind
         +pathTemplate string
+        +scopes array of global or project
         +deprecatedFallback string optional
         +notes string optional
     }
@@ -900,6 +901,7 @@ classDiagram
         <<interface>>
         +toolId string
         +resolvedPath string
+        +resolvedPaths string[] optional
         +format FormatKind
         +scope InstallScope
         +installedAt string
@@ -1331,17 +1333,22 @@ sequenceDiagram
     skillContentFetch-->>routesIntegrations: InstallContent
     loop one iteration per validated target
         routesIntegrations->>installEngine: installToTarget(target, content, registryPath, fsWrite)
-        installEngine->>installFormat: selectPrimaryFormat
+        installEngine->>installEngine: queue behind any in-flight install on the same registry path
+        installEngine->>installFormat: selectPrimaryFormat(tool, scope.kind)
         installEngine->>fsAdapter: readTextFile(.praxis-installs.json)
         installEngine->>installTracking: parseInstallRegistry, findInstallRecord, then compare hashInstallContent
         alt the hash is unchanged
             installEngine-->>routesIntegrations: { status: "up-to-date" } — the ledger is rewritten only to backfill a missing version
         else the hash differs or no record exists
+            opt a record exists, so this is an update
+                installEngine->>fsAdapter: remove every recorded path of the previous install
+                fsAdapter->>ToolDir: deletes the previous skill files
+            end
             installEngine->>installFormat: formatForTarget
             installFormat-->>installEngine: FileWrite[]
             installEngine->>fsAdapter: mkdir then writeTextFileAtomic per FileWrite, each inside basePath
             fsAdapter->>ToolDir: creates the skill files
-            installEngine->>installTracking: upsertInstallRecord
+            installEngine->>installTracking: upsertInstallRecord, with every written path in resolvedPaths
             installEngine->>fsAdapter: writeTextFileAtomic(.praxis-installs.json)
             installEngine-->>routesIntegrations: { status: "installed" } or { status: "updated" }
         end
@@ -1567,15 +1574,15 @@ Owned by `installEngine` over the `.praxis-installs.json` records `installTracki
 stateDiagram-v2
     [*] --> absent
     absent --> installed: installToTarget writes the files and upserts a record
-    absent --> skipped: selectPrimaryFormat returns null, so no record is written
+    absent --> skipped: selectPrimaryFormat returns null at the target scope, so no record is written
     skipped --> [*]
     installed --> up_to_date: a later install finds the content hash unchanged
-    up_to_date --> updated: a later install finds a different content hash
-    installed --> updated: a later install finds a different content hash
+    up_to_date --> updated: a later install finds a different content hash, deletes every recorded path, then writes afresh
+    installed --> updated: a later install finds a different content hash, deletes every recorded path, then writes afresh
     updated --> up_to_date: a further install finds the hash unchanged
-    installed --> absent: removeInstallation deletes resolvedPath and the record
-    updated --> absent: removeInstallation deletes resolvedPath and the record
-    up_to_date --> absent: removeInstallation deletes resolvedPath and the record
+    installed --> absent: removeInstallation deletes every recorded path and the record
+    updated --> absent: removeInstallation deletes every recorded path and the record
+    up_to_date --> absent: removeInstallation deletes every recorded path and the record
 
     note right of absent
         removeInstallation is idempotent.
@@ -1707,7 +1714,7 @@ names no type, the payload is a primitive or a plain filesystem path.
 | routesIntegrations | toolCatalogue | direct import | `ToolDefinition`, `OS` | Index alignment with the detection array is load-bearing. |
 | routesIntegrations | canonicalSkills | direct import | none | The canonical skill id list handed to the presence probe. |
 | routesIntegrations | skillPresence | direct import | `SkillPresenceResult`, `ToolDefinition`, `FsAccess` | Deliberately has no permitted-root check; the loopback gate is what bounds it. |
-| routesIntegrations | installEngine | direct import | `InstallTarget`, `InstallContent`, `InstallResult`, `FsWriteAccess`, `InstallScope` | Every target is validated before any target is installed. |
+| routesIntegrations | installEngine | direct import | `InstallTarget`, `InstallContent`, `InstallResult`, `InstallRecord`, `FsWriteAccess`, `InstallScope` | Every target is validated before any target is installed. The remove route checks every path `recordedInstallPaths` returns, the same list `removeInstallation` deletes, and one path outside the permitted root refuses the whole request. |
 | routesIntegrations | installTracking | direct import | `InstallRecord`, `InstallScope` | `parseInstallRegistry` and `findInstallRecord` for the read and remove routes. |
 | routesIntegrations | skillContentFetch | direct import | `InstallContent`, `SkillReleaseSummary` | `getInstallContent` is resolved once per request, not once per target. |
 | boardApi | projectRegistryAdapter | injected port call | `ProjectRegistry`, `ProjectEntry` | The core holds no filesystem knowledge of its own. |
@@ -1729,7 +1736,7 @@ names no type, the payload is a primitive or a plain filesystem path.
 | toolSignals | toolCatalogue | direct import | `OsPath`, `SourceConfidence`, `ToolDefinition` | A `ToolDefinition` is a plain argument, never a switch target. |
 | skillPresence | toolSignals | injected port call | `FsAccess` | Uses `pathExists` only, never anything from `FsWriteAccess`. |
 | skillPresence | installFormat | direct import | `IntegrationFormat`, `FileWrite`, `InstallContent` | Derives each expected path through `selectPrimaryFormat` and `formatForTarget` over a stub `InstallContent`, never a hand-rolled path guess. |
-| installEngine | installFormat | direct import | `IntegrationFormat`, `FileWrite`, `InstallContent` | `selectPrimaryFormat` returns null for a tool with no usable format. |
+| installEngine | installFormat | direct import | `IntegrationFormat`, `FileWrite`, `InstallContent` | `selectPrimaryFormat` returns null for a tool with no usable format at the target's scope, so Cursor and Windsurf are skipped at global scope. |
 | installEngine | installContent | direct import | `InstallContent`, `SkillContent` | `hashInstallContent` is what distinguishes up-to-date from updated. |
 | installEngine | installTracking | direct import | `InstallRecord`, `InstallScope` | The engine owns reading and persisting the ledger file. |
 | installEngine | fsAdapter | injected port call | `FsWriteAccess` | Never `node:fs` directly. |
@@ -1746,7 +1753,7 @@ names no type, the payload is a primitive or a plain filesystem path.
 | electronMain | electronThemeIpc | direct import | none | `registerThemeIpcHandlers`, synchronous because it imports nothing from `src/lib`. |
 | electronIpcHandlers | electronMain | direct import | none | Reads `SERVER_URL`, the loopback base every relayed request targets. |
 | electronIpcHandlers | httpDispatcher | loopback HTTP request | `PraxisIpcResult`, `ProjectList`, `ProjectEntry`, `BoardPayload`, `PraxisWorkstreamDetail` | No validation lives in the handler; every rule still runs inside the server. |
-| electronToolsIpc | installEngine | in-process call via dynamic import | `InstallTarget`, `InstallResult`, `InstallContent`, `InstallScope` | Hand-mirrors routesIntegrations; the two are changed together. |
+| electronToolsIpc | installEngine | in-process call via dynamic import | `InstallTarget`, `InstallResult`, `InstallContent`, `InstallScope` | Hand-mirrors routesIntegrations, with one gap: the remove channel still checks only `resolvedPath` against the permitted root, while `removeInstallation` deletes every recorded path. |
 | electronToolsIpc | installTracking | in-process call via dynamic import | `InstallRecord`, `InstallScope` | `parseInstallRegistry` and `findInstallRecord`, for the status and remove channels. |
 | electronToolsIpc | projectRegistryAdapter | in-process call via dynamic import | `ProjectEntry` | `readProjects`, the module-scope default instance, re-read per call for project-scope permitted roots. |
 | electronToolsIpc | fsAdapter | in-process call via dynamic import | `FsWriteAccess`, `FsAccess` | Builds one write adapter at registration and one read adapter per detection sweep. |
@@ -1779,8 +1786,8 @@ names no type, the payload is a primitive or a plain filesystem path.
 | publishRelease | GitHub Releases API | `gh release create` in a child process | none | The one outward-facing release call, run by the maintainer; the running application never makes it. |
 | telemetry | Aptabase | outbound POST with a 3000 ms abort timeout | `AptabaseEvent` | No cookie and no credential, and the response body is ignored entirely. Only the generated CLI entry calls this, so `npm start` and `npm test` send nothing. |
 | updateCheck | GitHub Releases API | outbound GET with a 10000 ms abort timeout | `LatestRelease` | The owner and repository constants are unset placeholders today, so no request is made. |
-| skillReleaseFetch | FlowCharge Core release host | outbound GET, no abort timeout, body capped at 4 MB | `SkillReleaseSummary` | The base URL arrives as a parameter, never as a constant in this module. |
-| skillContentFetch | FlowCharge Core release host | outbound GET for the asset, no abort timeout, body capped at 64 MB | `ZipEntry`, `InstallContent` | A missing release or a release with no `.zip` asset is a named failure, never a silent substitution. The one `src/lib/` module that logs: one `console.error` line before it rethrows. |
+| skillReleaseFetch | FlowCharge Core release host | outbound GET with a 10000 ms abort timeout, body capped at 4 MB | `SkillReleaseSummary` | The base URL arrives as a parameter, never as a constant in this module. |
+| skillContentFetch | FlowCharge Core release host | outbound GET for the asset with a 30000 ms abort timeout over the whole transfer, body capped at 64 MB | `ZipEntry`, `InstallContent` | A missing release or a release with no `.zip` asset is a named failure, never a silent substitution. It logs nothing: the error is rethrown untouched, and the calling route owns the failure report. |
 | fsAdapter | Tool config directory | node:fs/promises writes and recursive removes | `FileWrite` | The only runtime component that writes into a tool's configuration directory; it also holds the temporary zip under `os.tmpdir()` for `skillContentFetch`. |
 | projectRegistryAdapter | FlowCharge data directory | node:fs read and write of `.praxis-projects.json` | `ProjectEntry`, `ProjectRegistryConfig` | `PRAXIS_DATA_DIR` overrides the repository root. |
 | updatePrefs | FlowCharge data directory | node:fs read and atomic write of `.praxis-update.json` | `UpdatePrefs` | Every read failure returns the defaults rather than throwing; a write failure throws to the caller. |
@@ -1847,7 +1854,7 @@ Every rule below is enforceable by a named mechanism that already exists in the 
 | `src/http/` must not import the extractor. | The workstream-id pattern is built in `serverBootstrap` and passed through `HttpServerConfig.workstreamIdPattern`; `src/test/boundary/server-board.test.ts` pins the `400 Malformed workstream id` behaviour the injected pattern produces. |
 | `src/ports/` files carry no imports of any kind. | Enforced by review and stated in each port file's header; a port that imports stops being a type-only contract. |
 | `src/core/` knows no transport, no status code and no user-facing string. | `boardApi` returns result variants; the status mapping is recorded in `src/ports/app-api.ts` and applied in `routesBoard` and `routesProjects`. |
-| `src/core/` and the four markdown libraries log nothing. | The `LEGACY LAYOUT` warning is printed by `warnLegacyLayout` in `routesBoard` and, byte for byte, by `extractCli`. One `src/lib/` module does log: `skillContentFetch` writes a single `console.error` line before rethrowing an install failure. |
+| `src/core/` and the four markdown libraries log nothing. | The `LEGACY LAYOUT` warning is printed by `warnLegacyLayout` in `routesBoard` and, byte for byte, by `extractCli`. No `src/lib/` module logs either: `skillContentFetch` rethrows an install failure untouched, and the calling route owns the report. |
 | Test files carrying no assertions must not carry `.test.` in the name. | `src/test/fixture-project.ts` and `src/test/boundary/server-harness.ts` follow this; a `.test.` name would double-register the importing file's cases. |
 
 ### 10.2 Quality Gates
@@ -1870,7 +1877,7 @@ Every rule below is enforceable by a named mechanism that already exists in the 
 | Board poll interval | 5000 ms (`POLL_MS` in `boardEntry`); a tick is dropped whenever a request is still in flight. |
 | Board repaint on an unchanged payload | zero DOM writes beyond the `#live-status` timestamp — the raw JSON is compared against `lastBody` first. |
 | Request body size | 8192 bytes (`MAX_BODY_BYTES` in `jsonTransport`); anything larger gets a 413 and the request is destroyed. |
-| Outbound network call timeout | telemetry carries `AbortSignal.timeout(3000)` and the update check `AbortSignal.timeout(10000)`, each the module's `DEFAULT_TIMEOUT_MS`. The two release-host fetches in `skillReleaseFetch` and `skillContentFetch` carry no timeout; they cap the body at 4 MB and 64 MB instead. |
+| Outbound network call timeout | telemetry carries `AbortSignal.timeout(3000)`, the update check and `skillReleaseFetch` `AbortSignal.timeout(10000)`, and `skillContentFetch` `AbortSignal.timeout(30000)`, each the module's `DEFAULT_TIMEOUT_MS`. The two release-host signals stay armed while the body streams, so each budget covers the whole transfer, and the two fetches also cap the body at 4 MB and 64 MB. |
 | Telemetry cost to startup | zero — `trackAppStarted` is the last statement of the generated entry, is unawaited, and runs after the `./server.js` import, by which time `listen` has been called. |
 | Tool detection cost | at most one full catalogue sweep per `/api/integrations/*` request, and never cached across requests. |
 | Skill content resolution | exactly one release fetch and one temporary zip per install request, whatever the batch size. |
@@ -2013,8 +2020,11 @@ already exists, named in the kebab-case, tier-prefixed convention.
   never `node:fs` or `node:fs/promises` directly.
 - `skillPresence` must call only `FsAccess.pathExists`. It checks presence and must never
   gain a write path.
-- The remove-path boundary check must use `startsWith(permittedRoot + path.sep)` and must
-  refuse equality with the root itself. `removeInstallation` deletes recursively.
+- The remove-path boundary check must run over every path `recordedInstallPaths` returns,
+  the same list `removeInstallation` deletes, before anything is deleted. Each path must
+  pass `startsWith(permittedRoot + path.sep)`, equality with the root itself must be
+  refused, and one failure refuses the whole request. `removeInstallation` deletes
+  recursively.
 - `skillContentFetch` must own the downloaded zip's whole lifetime, and `zipRead` must
   parse the bytes read back from the file — never the HTTP response buffer.
 - `skillReleaseFetch` must hold no host constant. The base URL always arrives as a
