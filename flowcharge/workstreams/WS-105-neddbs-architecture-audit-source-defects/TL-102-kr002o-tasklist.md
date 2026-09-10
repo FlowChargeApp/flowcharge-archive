@@ -70,13 +70,13 @@ down.
     failures: []
   ```
 
-- [ ] 2. Give both outbound release-host fetches an abort timeout (ISS-29-m7w4dm)
+- [x] 2. Give both outbound release-host fetches an abort timeout (ISS-29-m7w4dm)
 
   ```yaml
   description: "Add a module-level DEFAULT_TIMEOUT_MS and an AbortSignal.timeout signal to the release-list fetch and the asset-download fetch, following the pattern in src/lib/telemetry.ts and src/lib/update-check.ts."
   ```
 
-  - [ ] 2.1 Declare `DEFAULT_TIMEOUT_MS` in `src/lib/skill-release-fetch.ts`
+  - [x] 2.1 Declare `DEFAULT_TIMEOUT_MS` in `src/lib/skill-release-fetch.ts`
     ```yaml
     description: "Add the module-level timeout constant beside the existing MAX_BODY_BYTES ceiling."
     author: Anthony Koukoullis
@@ -115,11 +115,11 @@ down.
       - "Were no import statements added to this file?"
       - "Does the Node type-check still exit 0?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.2 Pass the abort signal in `fetchReleases`
+  - [x] 2.2 Pass the abort signal in `fetchReleases`
     ```yaml
     description: "Give the release-list fetch a signal built from DEFAULT_TIMEOUT_MS."
     author: Anthony Koukoullis
@@ -154,11 +154,11 @@ down.
       - "Is the catch clause still one unconditional catch, unmodified?"
       - "Do the 12 offline unit tests still pass?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.3 Declare `DEFAULT_TIMEOUT_MS` in `src/lib/skill-content-fetch.ts`
+  - [x] 2.3 Declare `DEFAULT_TIMEOUT_MS` in `src/lib/skill-content-fetch.ts`
     ```yaml
     description: "Add the module-level timeout constant beside the existing MAX_ARCHIVE_BYTES ceiling."
     author: Anthony Koukoullis
@@ -191,11 +191,11 @@ down.
       - "Were no import statements added to this file?"
       - "Does the Node type-check still exit 0?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.4 Pass the abort signal on the asset download in `getInstallContent`
+  - [x] 2.4 Pass the abort signal on the asset download in `getInstallContent`
     ```yaml
     description: "Give the release asset download a signal built from DEFAULT_TIMEOUT_MS."
     author: Anthony Koukoullis
@@ -225,7 +225,7 @@ down.
       - "Is the catch clause still unconditional and still re-throwing?"
       - "Does the Node type-check still exit 0?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
