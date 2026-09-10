@@ -845,13 +845,13 @@ returns no lines.
       failures: []
     ```
 
-- [ ] 3. Remove the unreachable `installAllGlobal` (ISS-43-xszeei)
+- [x] 3. Remove the unreachable `installAllGlobal` (ISS-43-xszeei)
 
   ```yaml
   description: "Delete the exported function no production caller reaches, its only test, and the imports that existed for it alone."
   ```
 
-  - [ ] 3.1 Drop the `GetInstallContent` type import
+  - [x] 3.1 Drop the `GetInstallContent` type import
     ```yaml
     description: "That type is imported for installAllGlobal's signature and nothing else."
     author: Anthony Koukoullis
@@ -876,11 +876,11 @@ returns no lines.
       - "The file still imports node:path."
       - "hashInstallContent is still imported."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.2 Delete the `installAllGlobal` function
+  - [x] 3.2 Delete the `installAllGlobal` function
     ```yaml
     description: "Remove the function and the comment block that documents it."
     author: Anthony Koukoullis
@@ -937,11 +937,11 @@ returns no lines.
       - "installToTarget is intact."
       - "ToolDefinition is still imported and still used by InstallTarget."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.3 Drop the test imports that existed only for that function
+  - [x] 3.3 Drop the test imports that existed only for that function
     ```yaml
     description: "ToolDefinition, GetInstallContent and the installAllGlobal binding are used only by the test task 3.4 removes."
     author: Anthony Koukoullis
@@ -971,11 +971,11 @@ returns no lines.
       - "No test body changed in this task."
       - "Import order is otherwise unchanged."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.4 Delete the `installAllGlobal` test
+  - [x] 3.4 Delete the `installAllGlobal` test
     ```yaml
     description: "The only coverage of the removed function goes with it."
     author: Anthony Koukoullis
@@ -1038,7 +1038,7 @@ returns no lines.
       - "The type-check passes."
       - "The file ends with a newline."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

@@ -12,7 +12,7 @@
 import path from 'node:path';
 
 import type { ToolDefinition } from './agentic-tools-catalogue.js';
-import type { InstallContent, GetInstallContent } from './agentic-tools-content.js';
+import type { InstallContent } from './agentic-tools-content.js';
 import { hashInstallContent } from './agentic-tools-content.js';
 import { selectPrimaryFormat, formatForTarget } from './agentic-tools-format.js';
 import type { InstallScope, InstallRecord } from './agentic-tools-install-tracking.js';
@@ -147,39 +147,6 @@ export async function installToTarget(
   await writeRegistry(registryPath, nextRecords, deps.fsWrite);
 
   return { toolId: target.tool.id, status: existing === undefined ? 'installed' : 'updated', resolvedPath };
-}
-
-// Runs installToTarget for every catalogue tool at global scope, resolving
-// each tool's basePath via the caller-supplied resolveGlobalBasePath and its
-// InstallContent via the caller-supplied getInstallContent (the still-
-// placeholder Gap 1 port) — one getInstallContent call per target per run, no
-// caching layer, per plan Assumption 6. Each tool is isolated in its own
-// try/catch: a tool whose selectPrimaryFormat resolves to null already
-// returns 'skipped-no-format' from installToTarget without throwing, but a
-// tool whose primary format is a kind formatForTarget does not implement
-// (e.g. OpenCode's real catalogue entry resolves to a structured-config-file
-// format, out of scope for this workstream) throws instead — caught here and
-// folded into the same 'skipped-no-format' result, so one tool's failure
-// never aborts the batch for the remaining tools.
-export async function installAllGlobal(
-  catalogue: ToolDefinition[],
-  resolveGlobalBasePath: (tool: ToolDefinition) => string,
-  registryPath: string,
-  deps: { fsWrite: FsWriteAccess; getInstallContent: GetInstallContent },
-): Promise<InstallResult[]> {
-  const results: InstallResult[] = [];
-  for (const tool of catalogue) {
-    try {
-      const basePath = resolveGlobalBasePath(tool);
-      const content = await deps.getInstallContent(tool.id);
-      const target: InstallTarget = { tool, basePath, scope: { kind: 'global' } };
-      const result = await installToTarget(target, content, registryPath, { fsWrite: deps.fsWrite });
-      results.push(result);
-    } catch {
-      results.push({ toolId: tool.id, status: 'skipped-no-format', resolvedPath: null });
-    }
-  }
-  return results;
 }
 
 // Deletes the tracked file/directory at the record's resolvedPath (if any),

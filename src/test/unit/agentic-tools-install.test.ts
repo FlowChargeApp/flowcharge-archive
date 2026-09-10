@@ -12,10 +12,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
-import type { ToolDefinition } from '../../lib/agentic-tools-catalogue.js';
-import type { GetInstallContent, InstallContent } from '../../lib/agentic-tools-content.js';
+import type { InstallContent } from '../../lib/agentic-tools-content.js';
 import type { FsWriteAccess, InstallTarget } from '../../lib/agentic-tools-install.js';
-import { installAllGlobal, installToTarget, removeInstallation } from '../../lib/agentic-tools-install.js';
+import { installToTarget, removeInstallation } from '../../lib/agentic-tools-install.js';
 
 const REGISTRY_PATH = '/home/fakeuser/.praxis-installs.json';
 
@@ -323,40 +322,4 @@ test('removeInstallation against a nonexistent (toolId, scope) pair does not thr
     removeInstallation('claude-code', { kind: 'global' }, REGISTRY_PATH, { fsWrite }),
   );
   assert.equal(fsWrite.calls.filter((c) => c.fn === 'remove').length, 0);
-});
-
-test('installAllGlobal runs across the real four-tool TOOL_CATALOGUE with no write ever reaching mcp-json', async () => {
-  const fsWrite = fakeFsWriteAccess();
-  const resolveGlobalBasePath = (tool: ToolDefinition) => `/home/fakeuser/.${tool.id}`;
-  const getInstallContent: GetInstallContent = async () => twoSkillContent;
-
-  const results = await installAllGlobal(TOOL_CATALOGUE, resolveGlobalBasePath, REGISTRY_PATH, {
-    fsWrite,
-    getInstallContent,
-  });
-
-  // One InstallResult per catalogue entry, in catalogue order.
-  assert.equal(results.length, 4);
-  assert.deepEqual(results.map((r) => r.toolId), TOOL_CATALOGUE.map((t) => t.id));
-
-  // Claude Code, Cursor, Windsurf, and OpenCode all resolve to a real,
-  // implemented format and install successfully. (installAllGlobal's
-  // try/catch around each per-tool install remains defensive for any future
-  // catalogue entry that resolves to an unimplemented format — it just isn't
-  // exercised by any of these four tools today.)
-  for (const toolId of ['claude-code', 'cursor', 'windsurf', 'opencode']) {
-    const result = results.find((r) => r.toolId === toolId);
-    assert.ok(result, `missing InstallResult for ${toolId}`);
-    assert.equal(result!.status, 'installed', `expected ${toolId} to install`);
-  }
-
-  // No recorded write ever targets an mcp-json path — mcp-json is excluded
-  // by selectPrimaryFormat and guarded independently inside formatForTarget,
-  // so it should never be reachable from installAllGlobal for any tool.
-  const writeCalls = contentWriteCalls(fsWrite);
-  assert.ok(writeCalls.length > 0);
-  for (const call of writeCalls) {
-    assert.ok(!call.path.endsWith('.cursor/mcp.json'), `unexpected mcp-json write: ${call.path}`);
-    assert.ok(!call.path.endsWith('mcp_config.json'), `unexpected mcp-json write: ${call.path}`);
-  }
 });
