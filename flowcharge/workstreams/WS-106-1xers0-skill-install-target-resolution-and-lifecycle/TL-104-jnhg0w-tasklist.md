@@ -122,7 +122,7 @@ self-contained, need only a build, and must run from the project root.
     failures: []
   ```
 
-- [ ] 2. Delete the unused GetInstallContent type and its false comment (ISS-49-my5t2k)
+- [x] 2. Delete the unused GetInstallContent type and its false comment (ISS-49-my5t2k)
   ```yaml
   description: "Delete the exported GetInstallContent type alias, which nothing imports, together with the comment above it that falsely calls install content placeholder-only."
   author: Anthony Koukoullis
@@ -146,7 +146,7 @@ self-contained, need only a build, and must run from the project root.
     - "SkillContent, InstallContent and hashInstallContent are unchanged, so content hashes are unaffected."
     - "electron/ and src/lib/skill-content-fetch.ts are unchanged."
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
