@@ -1452,7 +1452,7 @@ returns no lines.
       failures: []
     ```
 
-- [ ] 5. Delete the previous install before writing an update (ISS-36-vl2cpx)
+- [x] 5. Delete the previous install before writing an update (ISS-36-vl2cpx)
 
   ```yaml
   description: "installToTarget removes every path the previous record wrote before it writes the new set, so a renamed suite cannot leave two generations on disk."
@@ -1492,7 +1492,7 @@ returns no lines.
     - "The up-to-date early return above still makes zero remove calls."
     - "The probe reports 'removes after update: 3'."
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 

@@ -109,6 +109,18 @@ export async function installToTarget(
     return { toolId: target.tool.id, status: 'up-to-date', resolvedPath: existing.resolvedPath };
   }
 
+  // An update REPLACES the previous install rather than layering on top of
+  // it. Without this, a machine carrying the pre-rename prx-* suite keeps
+  // all eight of those directories alongside the eight fc-* ones, and the
+  // tool loads two generations of the same skills. Reached only when a
+  // record exists and its contentHash did not match, because the matching
+  // branch above returns early.
+  if (existing !== undefined) {
+    for (const stale of recordedInstallPaths(existing)) {
+      await deps.fsWrite.remove(stale);
+    }
+  }
+
   const writes = formatForTarget(format, content);
 
   const writtenPaths: string[] = [];
