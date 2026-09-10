@@ -64,6 +64,7 @@ the same bundler with `--harden`, which obfuscates the output.
 | `ALLOWED_HOSTS` | empty | Extra hostnames accepted in the `Host` header, comma-separated. IP literals and `localhost` are always accepted. It does not open the server to the network — only `HOST` does that. |
 | `PRAXIS_APP_VERSION` | unset | The version the server reports. The CLI binary injects it at build time. |
 | `PRAXIS_DATA_DIR` | the repo root | Where the registry and preference files live. The CLI binary points it at `~/.flowcharge`. |
+| `FLOWCHARGE_NO_TELEMETRY` | unset | Turns the anonymous app-start ping off. Any value except an empty string and `0` turns it off. Only the packaged CLI binary ever sends it; `npm start` and `npm test` never do. |
 
 ## Test
 

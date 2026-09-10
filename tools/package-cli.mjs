@@ -127,16 +127,32 @@ console.log(`found bun ${bunProbe.stdout.trim()}`);
 // applyCliDefaults is called as a statement for that same reason: its own
 // import is hoisted, but the call runs before ./server.js is imported. It lives
 // in src/cli-bootstrap.ts, which owns the two environment defaults and the
-// recursive mkdir of the directory they resolve to.
+// recursive mkdir of the directory they resolve to. Its result carries the
+// resolved dataDir, which the telemetry call below needs.
+//
+// ./lib/telemetry.js may be a static import, unlike ./server.js, because it
+// reads no environment variable at module scope — it reads the opt-out variable
+// inside isTelemetryEnabled, at call time, which is after applyCliDefaults has
+// run.
+//
+// The telemetry call is the LAST statement, after the dynamic import of
+// ./server.js, so nothing in it precedes the socket bind. It is unawaited so the
+// process never waits on the request. The module resolves on every path, logs
+// nothing and never rejects, so an unhandled rejection is not possible. This
+// generated entry is the only call site: an `npm start`, a test run and any
+// unpackaged server therefore send nothing.
 const entryLines = [
   ...assets.map((relative) => `import './public/${relative}' with { type: 'file' };`),
   '',
   "import os from 'node:os';",
   "import { applyCliDefaults } from './cli-bootstrap.js';",
+  "import { trackAppStarted } from './lib/telemetry.js';",
   '',
-  `applyCliDefaults({ version: ${JSON.stringify(version)}, homeDir: os.homedir(), env: process.env });`,
+  `const { dataDir } = applyCliDefaults({ version: ${JSON.stringify(version)}, homeDir: os.homedir(), env: process.env });`,
   '',
   "await import('./server.js');",
+  '',
+  'trackAppStarted({ dataDir, appVersion: process.env.PRAXIS_APP_VERSION, platform: process.platform, osRelease: os.release(), env: process.env });',
 ];
 fs.writeFileSync(cliEntryPath, `${entryLines.join('\n')}\n`);
 console.log(`wrote ${path.relative(repoRoot, cliEntryPath)}`);

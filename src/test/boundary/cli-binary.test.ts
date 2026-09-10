@@ -187,6 +187,11 @@ function startOnce(
   // The default: a private data directory, so no case writes into a real one
   // unless it explicitly asks to.
   env.PRAXIS_DATA_DIR = makeTempDir('flowcharge-cli-data-');
+  // Set explicitly rather than inherited, because the env above is a spread of
+  // process.env: without this the suite would send a real telemetry event from
+  // every developer machine that has Bun, and .praxis-telemetry.json would be a
+  // second file in PRAXIS_DATA_DIR, failing the one-file assertion below.
+  env.FLOWCHARGE_NO_TELEMETRY = '1';
   for (const [key, value] of Object.entries(overrides)) {
     if (value === undefined) delete env[key];
     else env[key] = value;
