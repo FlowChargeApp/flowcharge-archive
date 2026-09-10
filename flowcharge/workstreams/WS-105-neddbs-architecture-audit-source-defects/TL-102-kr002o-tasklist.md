@@ -275,13 +275,13 @@ down.
     failures: []
   ```
 
-- [ ] 4. Correct the two header comments that under-count the IPC surface (ISS-31-t8rpze)
+- [x] 4. Correct the two header comments that under-count the IPC surface (ISS-31-t8rpze)
 
   ```yaml
   description: "Both headers say six. The PraxisAPI interface at src/public/ipc-adapter.ts:30-39 declares eight members. Comments only, no runtime change."
   ```
 
-  - [ ] 4.1 Correct the header in `src/public/ipc-adapter.ts`
+  - [x] 4.1 Correct the header in `src/public/ipc-adapter.ts`
     ```yaml
     description: "State the eight-channel surface size that PraxisAPI actually declares."
     author: Anthony Koukoullis
@@ -310,11 +310,11 @@ down.
       - "Is the PraxisAPI interface untouched?"
       - "Does the browser type-check still exit 0?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 4.2 Correct the header in `src/public/browser-ipc-shim.ts`
+  - [x] 4.2 Correct the header in `src/public/browser-ipc-shim.ts`
     ```yaml
     description: "State that the shim implements seven of PraxisAPI's eight members, omitting the optional Electron-only pickProjectFolder."
     author: Anthony Koukoullis
@@ -345,7 +345,7 @@ down.
       - "Was the praxisSkillInstallAPI paragraph left unchanged?"
       - "Does the browser type-check still exit 0?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

@@ -1,4 +1,4 @@
-// Shared renderer-side adapter for window.praxisAPI, the six-channel IPC
+// Shared renderer-side adapter for window.praxisAPI, the eight-channel IPC
 // surface electron/preload.cts exposes via contextBridge. This file is an ES
 // module. Its published surface — PraxisIpcResult, unwrapIpc and PraxisAPI —
 // is consumed by home.ts, app.ts and browser-ipc-shim.ts, which reach it by
