@@ -28,11 +28,13 @@ function mcpJsonEntry(tool: ReturnType<typeof catalogueTool>): IntegrationFormat
 const skillDirectoryFormat: IntegrationFormat = {
   kind: 'skill-directory',
   pathTemplate: 'skills/<name>/SKILL.md',
+  scopes: ['global'],
 };
 
 const mcpJsonFormat: IntegrationFormat = {
   kind: 'mcp-json',
   pathTemplate: '.mcp.json',
+  scopes: ['global'],
 };
 
 const twoSkillContent: InstallContent = {
@@ -72,11 +74,11 @@ test('formatForTarget throws for a not-yet-implemented kind', () => {
   // four-tool/three-kind narrowing (rule-directory and single-rule-file /
   // markdown-context-file are implemented as of task 2.1), so it remains the
   // one kind that must still hit the generic throw.
-  const structuredConfigFile: IntegrationFormat = { kind: 'structured-config-file', pathTemplate: 'settings.json' };
+  const structuredConfigFile: IntegrationFormat = { kind: 'structured-config-file', pathTemplate: 'settings.json', scopes: ['global'] };
   assert.throws(() => formatForTarget(structuredConfigFile, twoSkillContent));
 });
 
-test('selectPrimaryFormat returns the first non-mcp-json entry', () => {
+test('selectPrimaryFormat returns the first non-mcp-json entry valid at the scope', () => {
   const tool = {
     id: 'fixture-tool',
     displayName: 'Fixture Tool',
@@ -84,7 +86,7 @@ test('selectPrimaryFormat returns the first non-mcp-json entry', () => {
     configDir: {},
     integrationFormats: [mcpJsonFormat, skillDirectoryFormat],
   };
-  assert.deepEqual(selectPrimaryFormat(tool), skillDirectoryFormat);
+  assert.deepEqual(selectPrimaryFormat(tool, 'global'), skillDirectoryFormat);
 });
 
 test('selectPrimaryFormat returns null when only mcp-json is available', () => {
@@ -95,28 +97,45 @@ test('selectPrimaryFormat returns null when only mcp-json is available', () => {
     configDir: {},
     integrationFormats: [mcpJsonFormat],
   };
-  assert.equal(selectPrimaryFormat(tool), null);
+  assert.equal(selectPrimaryFormat(tool, 'global'), null);
 });
 
-test('selectPrimaryFormat resolves the real Cursor catalogue entry to its rules format, never mcp-json', () => {
+test('selectPrimaryFormat returns null for a format the tool does not declare at that scope', () => {
+  const tool = {
+    id: 'fixture-tool',
+    displayName: 'Fixture Tool',
+    category: 'cli' as const,
+    configDir: {},
+    integrationFormats: [skillDirectoryFormat],
+  };
+  assert.equal(selectPrimaryFormat(tool, 'project'), null);
+});
+
+test('selectPrimaryFormat resolves the real Cursor catalogue entry to its rules format at project scope only', () => {
   const cursor = catalogueTool('cursor');
-  const resolved = selectPrimaryFormat(cursor);
-  assert.notEqual(resolved, null);
-  assert.equal(resolved?.kind, 'rule-directory');
-  assert.notEqual(resolved?.kind, 'mcp-json');
+  const atProject = selectPrimaryFormat(cursor, 'project');
+  assert.equal(atProject?.kind, 'rule-directory');
+  assert.equal(atProject?.pathTemplate, '.cursor/rules/*.mdc');
+  // Cursor reads no user-level rules directory, so a global install has
+  // no target at all rather than a doubled configDir path.
+  assert.equal(selectPrimaryFormat(cursor, 'global'), null);
 });
 
-test('selectPrimaryFormat resolves the real Windsurf catalogue entry to its rules format, never mcp-json', () => {
+test('selectPrimaryFormat resolves the real Windsurf catalogue entry to its rules format at project scope only', () => {
   const windsurf = catalogueTool('windsurf');
-  const resolved = selectPrimaryFormat(windsurf);
-  assert.notEqual(resolved, null);
-  assert.equal(resolved?.kind, 'rule-directory');
-  assert.notEqual(resolved?.kind, 'mcp-json');
+  const atProject = selectPrimaryFormat(windsurf, 'project');
+  assert.equal(atProject?.kind, 'rule-directory');
+  assert.equal(atProject?.pathTemplate, '.devin/rules/*.md');
+  // Windsurf's one user-level surface is memories/global_rules.md, the
+  // user-authored rules document, which the catalogue declares at no
+  // scope. A global install therefore has no target at all rather than
+  // one combined document written over that file.
+  assert.equal(selectPrimaryFormat(windsurf, 'global'), null);
 });
 
 test('selectPrimaryFormat resolves the real OpenCode catalogue entry to its skill-directory format, never structured-config-file', () => {
   const opencode = catalogueTool('opencode');
-  const resolved = selectPrimaryFormat(opencode);
+  const resolved = selectPrimaryFormat(opencode, 'global');
   assert.notEqual(resolved, null);
   assert.equal(resolved?.kind, 'skill-directory');
   assert.notEqual(resolved?.kind, 'structured-config-file');

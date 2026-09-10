@@ -153,7 +153,7 @@ test('installToTarget returns skipped-no-format rather than throwing when no non
     displayName: 'MCP Only Tool',
     category: 'cli' as const,
     configDir: {},
-    integrationFormats: [{ kind: 'mcp-json' as const, pathTemplate: '.mcp.json' }],
+    integrationFormats: [{ kind: 'mcp-json' as const, pathTemplate: '.mcp.json', scopes: ['global' as const] }],
   };
   const target: InstallTarget = { tool: noFormatTool, basePath: '/home/fakeuser/.mcp-only', scope: { kind: 'global' } };
 

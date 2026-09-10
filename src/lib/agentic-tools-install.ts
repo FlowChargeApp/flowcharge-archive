@@ -82,7 +82,7 @@ export async function installToTarget(
   registryPath: string,
   deps: { fsWrite: FsWriteAccess },
 ): Promise<InstallResult> {
-  const format = selectPrimaryFormat(target.tool);
+  const format = selectPrimaryFormat(target.tool, target.scope.kind);
   if (format === null) {
     return { toolId: target.tool.id, status: 'skipped-no-format', resolvedPath: null };
   }

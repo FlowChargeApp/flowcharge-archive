@@ -49,13 +49,13 @@ suite passes 10 of 10, the format unit suite passes 10 of 10, `grep -c "scopes:"
 src/lib/agentic-tools-catalogue.ts` returns 0, and `grep -rn "resolvedPaths" src`
 returns no lines.
 
-- [ ] 1. Make format selection scope-aware (ISS-33-6bxf6h)
+- [x] 1. Make format selection scope-aware (ISS-33-6bxf6h)
 
   ```yaml
   description: "Add a machine-readable scopes array to IntegrationFormat, filter selectPrimaryFormat on it, and annotate the Cursor and Windsurf entries so a global install stops writing a project-relative template under a configDir."
   ```
 
-  - [ ] 1.1 Add `scopes` to the `IntegrationFormat` interface
+  - [x] 1.1 Add `scopes` to the `IntegrationFormat` interface
     ```yaml
     description: "Declare the scopes an integration format is valid at as data, not as free text in notes."
     author: Anthony Koukoullis
@@ -100,11 +100,11 @@ returns no lines.
       - "No InstallScope type is imported or referenced."
       - "No catalogue entry was edited by this task."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.2 Annotate the Cursor integration formats
+  - [x] 1.2 Annotate the Cursor integration formats
     ```yaml
     description: "Cursor reads .cursor/rules/*.mdc from a project root, so both its entries are project-scope only and a global install resolves to no format."
     author: Anthony Koukoullis
@@ -155,11 +155,11 @@ returns no lines.
       - "pathTemplate, deprecatedFallback and kind values are unchanged."
       - "No other tool's entry was edited."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.3 Annotate the Windsurf integration formats
+  - [x] 1.3 Annotate the Windsurf integration formats
     ```yaml
     description: "Windsurf reads .devin/rules/*.md and .windsurfrules from a project root, and its one user-level surface is a user-authored rules document, so both project entries are project-scope only and a global install resolves to no format."
     author: Anthony Koukoullis
@@ -235,11 +235,11 @@ returns no lines.
       - "Array order is unchanged, so project scope still resolves to rule-directory first."
       - "No pathTemplate value was changed."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.4 Filter `selectPrimaryFormat` on the requested scope
+  - [x] 1.4 Filter `selectPrimaryFormat` on the requested scope
     ```yaml
     description: "selectPrimaryFormat takes the install scope kind and skips any format not declared valid at it."
     author: Anthony Koukoullis
@@ -283,11 +283,11 @@ returns no lines.
       - "formatForTarget is unchanged."
       - "No import was added to this file."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.5 Pass the target scope at the install call site
+  - [x] 1.5 Pass the target scope at the install call site
     ```yaml
     description: "installToTarget already knows its scope; hand it to the selector."
     author: Anthony Koukoullis
@@ -312,11 +312,11 @@ returns no lines.
       - "No import changed."
       - "The null branch below the call is untouched."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.6 Pass the global scope at the presence-check call site
+  - [x] 1.6 Pass the global scope at the presence-check call site
     ```yaml
     description: "checkSkillPresence is documented as running at global scope only, so it selects the global format explicitly."
     author: Anthony Koukoullis
@@ -344,11 +344,11 @@ returns no lines.
       - "No caller of checkSkillPresence needed an edit."
       - "The comment records why the literal is correct."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.7 Add `scopes` to the format-test fixtures
+  - [x] 1.7 Add `scopes` to the format-test fixtures
     ```yaml
     description: "The two shared IntegrationFormat fixtures gain the now-required field."
     author: Anthony Koukoullis
@@ -391,11 +391,11 @@ returns no lines.
       - "kind and pathTemplate values are unchanged."
       - "twoSkillContent is untouched."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.8 Add `scopes` to the structured-config-file fixture
+  - [x] 1.8 Add `scopes` to the structured-config-file fixture
     ```yaml
     description: "The inline fixture inside the not-yet-implemented-kind test gains the now-required field."
     author: Anthony Koukoullis
@@ -420,11 +420,11 @@ returns no lines.
       - "No other line changed."
       - "The fixture is still typed as IntegrationFormat."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.9 Update the `selectPrimaryFormat` tests for scope-aware selection
+  - [x] 1.9 Update the `selectPrimaryFormat` tests for scope-aware selection
     ```yaml
     description: "The five selection tests pass a scope, and the Cursor and Windsurf cases assert the corrected global behaviour."
     author: Anthony Koukoullis
@@ -555,11 +555,11 @@ returns no lines.
       - "The Windsurf test asserts null at global scope."
       - "No formatForTarget test was changed."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.10 Add `scopes` to the install-test no-format fixture
+  - [x] 1.10 Add `scopes` to the install-test no-format fixture
     ```yaml
     description: "The inline mcp-json-only tool in the install suite gains the now-required field."
     author: Anthony Koukoullis
@@ -584,11 +584,11 @@ returns no lines.
       - "The assertions in that test are unchanged."
       - "No other region of this file changed in this task."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 1.11 Add `scopes` to the presence-test fixtures
+  - [x] 1.11 Add `scopes` to the presence-test fixtures
     ```yaml
     description: "The three IntegrationFormat fixtures in the presence suite gain the now-required field."
     author: Anthony Koukoullis
@@ -645,7 +645,7 @@ returns no lines.
       - "The OpenCode real-catalogue test is untouched."
       - "kind and pathTemplate values are unchanged."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

@@ -32,7 +32,10 @@ export async function checkSkillPresence(
   skillIds: string[],
   fsAccess: FsAccess,
 ): Promise<SkillPresenceResult> {
-  const format = selectPrimaryFormat(tool);
+  // 'global' is a literal, not a parameter: presence checking is a
+  // documented global-scope-only capability, so this module has no
+  // project scope to forward.
+  const format = selectPrimaryFormat(tool, 'global');
   if (format === null) {
     return { checkKind: 'no-format' };
   }

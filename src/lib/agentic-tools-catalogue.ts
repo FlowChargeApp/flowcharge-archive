@@ -18,6 +18,13 @@ export interface IntegrationFormat {
   kind: 'skill-directory' | 'rule-directory' | 'single-rule-file'
       | 'mcp-json' | 'markdown-context-file' | 'structured-config-file';
   pathTemplate: string; // e.g. 'skills/<name>/SKILL.md', relative to configDir or project root
+  // The scopes this entry is a valid install target at, as data the
+  // selector reads rather than as prose in `notes`. A 'global' entry's
+  // pathTemplate is relative to the tool's resolved configDir; a
+  // 'project' entry's is relative to the project root. Order inside
+  // integrationFormats still carries priority: selectPrimaryFormat
+  // takes the FIRST implemented entry valid at the requested scope.
+  scopes: ('global' | 'project')[];
   deprecatedFallback?: string;
   notes?: string;
 }
@@ -108,12 +115,14 @@ export const TOOL_CATALOGUE: ToolDefinition[] = [
       {
         kind: 'rule-directory',
         pathTemplate: '.cursor/rules/*.mdc',
+        scopes: ['project'],
         deprecatedFallback: '.cursorrules',
-        notes: 'Markdown + frontmatter rule files; .cursorrules is the deprecated single-file fallback.',
+        notes: 'Markdown + frontmatter rule files, read from a project root; .cursorrules is the deprecated single-file fallback. Cursor has no user-level rules directory, so there is no global install target here.',
       },
       {
         kind: 'mcp-json',
         pathTemplate: '.cursor/mcp.json',
+        scopes: ['project'],
         notes: 'Project-level MCP server config; global config lives at ~/.cursor/mcp.json (configDir).',
       },
     ],
@@ -151,22 +160,26 @@ export const TOOL_CATALOGUE: ToolDefinition[] = [
       {
         kind: 'rule-directory',
         pathTemplate: '.devin/rules/*.md',
+        scopes: ['project'],
         deprecatedFallback: '.windsurf/rules/*.md',
-        notes: '.devin/rules/*.md now takes precedence; .windsurf/rules/*.md is the fallback.',
+        notes: '.devin/rules/*.md now takes precedence; .windsurf/rules/*.md is the fallback. Both are read from a project root.',
       },
       {
         kind: 'single-rule-file',
         pathTemplate: '.windsurfrules',
-        notes: 'Legacy single-file format, superseded by the rule-directory formats above.',
+        scopes: ['project'],
+        notes: 'Legacy single-file format at the project root, superseded by the rule-directory formats above.',
       },
       {
         kind: 'markdown-context-file',
         pathTemplate: 'memories/global_rules.md',
-        notes: 'Relative to configDir; global (user-level) rules, not project-scoped.',
+        scopes: [],
+        notes: 'Relative to configDir; global (user-level) rules, not project-scoped. Recorded for reference and declared at NO scope: this file is the user-authored Windsurf rules document, and the markdown-context-file writer replaces its whole target with one combined skill document, so installing here would destroy what the user wrote. Windsurf therefore has no global install target.',
       },
       {
         kind: 'mcp-json',
         pathTemplate: 'mcp_config.json',
+        scopes: ['global'],
         notes: 'Relative to configDir. Corroborated by three independent secondary sources but not independently confirmed against docs.devin.ai directly this pass.',
       },
     ],
