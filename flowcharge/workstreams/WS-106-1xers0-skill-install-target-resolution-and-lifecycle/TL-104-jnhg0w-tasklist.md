@@ -38,7 +38,7 @@ Run the tasks in order. Every count and state quoted in a `verify` step was meas
 `base_commit` 7fe1564. The two `node --input-type=module -e` snippets in task 1 are
 self-contained, need only a build, and must run from the project root.
 
-- [ ] 1. Serialize removeInstallation through the existing per-registry-path queue (ISS-48-zlx88q)
+- [x] 1. Serialize removeInstallation through the existing per-registry-path queue (ISS-48-zlx88q)
   ```yaml
   description: "Route removeInstallation's read-modify-write of the install ledger through the withRegistryLock queue that installToTarget already uses, so a concurrent remove and install on one ledger path can no longer resurrect a removed record or drop an installed one."
   author: Anthony Koukoullis
@@ -118,7 +118,7 @@ self-contained, need only a build, and must run from the project root.
     - "The file holds one queue mechanism only, registryChains with withRegistryLock, and no second map, mutex or lock helper."
     - "src/http/routes-integrations.ts and electron/ are unchanged, and no status code or user-facing string entered src/lib/."
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
