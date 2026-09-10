@@ -176,7 +176,7 @@ self-contained, need only a build, and must run from the project root.
     failures: []
   ```
 
-- [ ] 4. Closing ARCHITECTURE.md review against this task list's changes
+- [x] 4. Closing ARCHITECTURE.md review against this task list's changes
   ```yaml
   description: "Closing task 2 of 2, required by CLAUDE.md \"Closing a task list\", and traced to no issue. Review ARCHITECTURE.md against what this task list changed in src/, and update every section that no longer matches the code."
   author: Anthony Koukoullis
@@ -205,6 +205,6 @@ self-contained, need only a build, and must run from the project root.
     - "The validator prints 'N blocks, 0 failing' for ARCHITECTURE.md."
     - "All three cross-section consistency rules hold."
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```

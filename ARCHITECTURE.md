@@ -854,11 +854,6 @@ classDiagram
         +skills SkillContent[]
     }
 
-    class GetInstallContent {
-        <<type>>
-        function from toolId to a Promise of InstallContent
-    }
-
     class FsWriteAccess {
         <<interface>>
         +readTextFile(path: string) Promise~string nullable~
@@ -953,7 +948,6 @@ classDiagram
     ToolDetectionRow --> DetectionResult
     ToolDetectionRow --> ToolCategory
     InstallContent --> SkillContent
-    GetInstallContent --> InstallContent
     InstallTarget --> ToolDefinition
     InstallTarget --> InstallScope
     InstallResult --> InstallStatus
@@ -1333,7 +1327,7 @@ sequenceDiagram
     skillContentFetch-->>routesIntegrations: InstallContent
     loop one iteration per validated target
         routesIntegrations->>installEngine: installToTarget(target, content, registryPath, fsWrite)
-        installEngine->>installEngine: queue behind any in-flight install on the same registry path
+        installEngine->>installEngine: queue behind any in-flight install or removal on the same registry path
         installEngine->>installFormat: selectPrimaryFormat(tool, scope.kind)
         installEngine->>fsAdapter: readTextFile(.praxis-installs.json)
         installEngine->>installTracking: parseInstallRegistry, findInstallRecord, then compare hashInstallContent
@@ -1569,6 +1563,8 @@ stateDiagram-v2
 ### 7.5 Install record — one per tool and scope pair in the ledger
 
 Owned by `installEngine` over the `.praxis-installs.json` records `installTracking` parses.
+`installToTarget` and `removeInstallation` share one queue per registry path, so no two
+transitions on the same ledger overlap.
 
 ```mermaid
 stateDiagram-v2
@@ -1714,7 +1710,7 @@ names no type, the payload is a primitive or a plain filesystem path.
 | routesIntegrations | toolCatalogue | direct import | `ToolDefinition`, `OS` | Index alignment with the detection array is load-bearing. |
 | routesIntegrations | canonicalSkills | direct import | none | The canonical skill id list handed to the presence probe. |
 | routesIntegrations | skillPresence | direct import | `SkillPresenceResult`, `ToolDefinition`, `FsAccess` | Deliberately has no permitted-root check; the loopback gate is what bounds it. |
-| routesIntegrations | installEngine | direct import | `InstallTarget`, `InstallContent`, `InstallResult`, `InstallRecord`, `FsWriteAccess`, `InstallScope` | Every target is validated before any target is installed. The remove route checks every path `recordedInstallPaths` returns, the same list `removeInstallation` deletes, and one path outside the permitted root refuses the whole request. |
+| routesIntegrations | installEngine | direct import | `InstallTarget`, `InstallContent`, `InstallResult`, `InstallRecord`, `FsWriteAccess`, `InstallScope` | Every target is validated before any target is installed. The remove route checks every path `recordedInstallPaths` returns, the same list `removeInstallation` deletes, and one path outside the permitted root refuses the whole request. That check answers 400 before `removeInstallation` is called, and the remove then queues behind any install or removal on the same registry path. |
 | routesIntegrations | installTracking | direct import | `InstallRecord`, `InstallScope` | `parseInstallRegistry` and `findInstallRecord` for the read and remove routes. |
 | routesIntegrations | skillContentFetch | direct import | `InstallContent`, `SkillReleaseSummary` | `getInstallContent` is resolved once per request, not once per target. |
 | boardApi | projectRegistryAdapter | injected port call | `ProjectRegistry`, `ProjectEntry` | The core holds no filesystem knowledge of its own. |
@@ -2024,7 +2020,9 @@ already exists, named in the kebab-case, tier-prefixed convention.
   the same list `removeInstallation` deletes, before anything is deleted. Each path must
   pass `startsWith(permittedRoot + path.sep)`, equality with the root itself must be
   refused, and one failure refuses the whole request. `removeInstallation` deletes
-  recursively.
+  recursively. The check stays in the route, outside the registry-path queue that
+  `removeInstallation` shares with `installToTarget`, so a status code never enters
+  `src/lib/`.
 - `skillContentFetch` must own the downloaded zip's whole lifetime, and `zipRead` must
   parse the bytes read back from the file — never the HTTP response buffer.
 - `skillReleaseFetch` must hold no host constant. The base URL always arrives as a
