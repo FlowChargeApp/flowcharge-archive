@@ -106,6 +106,9 @@ hand-editing whole sections. Update the sections your change affects when you ch
 component boundary, a port signature, an ADR-level decision, or an external
 integration. Never write it as a bare `@` import — link it or wrap it in backticks.
 
+At the end of every completed workstream, review `ARCHITECTURE.md` against what the
+workstream changed, and update every section that no longer matches the code.
+
 ## Hygiene
 
 This file has a high bar for new rules. Add one only after an agent has actually got
