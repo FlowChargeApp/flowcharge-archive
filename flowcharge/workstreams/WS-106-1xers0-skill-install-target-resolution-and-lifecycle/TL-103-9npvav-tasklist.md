@@ -4,7 +4,7 @@ type: tasklist
 workstream: WS-106-1xers0
 slug: skill-install-target-resolution-and-lifecycle
 title: "Skill install target resolution and lifecycle fixes"
-status: ready
+status: done
 created: 2026-09-10
 updated: 2026-09-10
 author: Anthony Koukoullis

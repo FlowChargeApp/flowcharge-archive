@@ -34,11 +34,11 @@ links: []
   notes: "The direction is UNDECIDED, and this issue is additionally blocked behind the InstallRecord record-shape change described by ISS-35-m54y06 and ISS-36-vl2cpx in this workstream, because removal must delete every path an install wrote before a control that triggers it is worth building. A maintainer must choose it before any task is authored from this issue, and this issue names no direction. Status is blocked on that decision, not on any other artefact, so depends_on stays empty. Verified twice against the working tree: once by the audit that found it, and once by an independent validation pass. File this for the src/ impact only: the Electron counterpart is leftover scaffolding per CLAUDE.md and is not in scope. ARCHITECTURE.md line 1531 already records the state: the page has no remove control, and homeEntry never calls removeInstallation."
   ```
 
-- [ ] ISS-33-6bxf6h. Global installs for Cursor and Windsurf write to a path the tool never reads
+- [x] ISS-33-6bxf6h. Global installs for Cursor and Windsurf write to a path the tool never reads
 
   ```yaml
   id: ISS-33-6bxf6h
-  status: ready
+  status: done
   severity: critical
   author: Anthony Koukoullis
   description: "selectPrimaryFormat at src/lib/agentic-tools-format.ts:27 returns the first entry in tool.integrationFormats whose kind is implemented, and it takes no scope argument. resolveBasePathForScope at src/public/lib/agentic-tools-scope.ts:19 returns detection.resolvedConfigDir for global scope, and it takes no format argument. Whether a pathTemplate is relative to the tool config directory or to a project root is stated only inside the free-text notes string of IntegrationFormat (src/lib/agentic-tools-catalogue.ts:17-23), which no code reads. At global scope the join at src/lib/agentic-tools-install.ts:116 therefore appends a project-relative rule-directory template to a configDir. Measured by running the compiled modules in dist/lib/ against the real TOOL_CATALOGUE: cursor resolves configDir '~/.cursor/' and format '.cursor/rules/*.mdc', so a global install writes /Users/<user>/.cursor//.cursor/rules/fc-git.mdc; windsurf resolves configDir '~/.codeium/windsurf/' and format '.devin/rules/*.md', so it writes /Users/<user>/.codeium/windsurf//.devin/rules/fc-git.md. Cursor reads .cursor/rules/*.mdc from a project root. Windsurf reads .devin/rules/*.md from a project root, and its user-level surface is memories/global_rules.md relative to configDir. Windsurf already declares that correct global format at src/lib/agentic-tools-catalogue.ts:162-166, but selectPrimaryFormat never reaches it because rule-directory sits earlier in the array."
@@ -56,11 +56,11 @@ links: []
   notes: "Shares one root cause with ISS-34-mpy9n0 and ISS-38-gv3p2x: IntegrationFormat carries no machine-readable statement of what its pathTemplate is relative to, or which scopes it is valid at. The workstream record puts that format-model change first in the fix order. The project has no runtime dependency and must keep none, so any correction uses Node and browser built-ins only."
   ```
 
-- [ ] ISS-34-mpy9n0. Project installs for Claude Code and OpenCode omit the tool config prefix
+- [x] ISS-34-mpy9n0. Project installs for Claude Code and OpenCode omit the tool config prefix
 
   ```yaml
   id: ISS-34-mpy9n0
-  status: ready
+  status: done
   severity: critical
   author: Anthony Koukoullis
   description: "The same gap as ISS-33-6bxf6h, in the other direction. At project scope resolveBasePathForScope (src/public/lib/agentic-tools-scope.ts:19) returns scope.projectPath, and selectPrimaryFormat (src/lib/agentic-tools-format.ts:27) returns a skill-directory format whose pathTemplate is written relative to the tool config directory. Claude Code's own catalogue note at src/lib/agentic-tools-catalogue.ts:53 states the template is relative to configDir at user level or to .claude/ at the project root at project level. That project-level prefix exists only in the note, never in code. OpenCode's note at :210 states configDir-relative and names no project-level form at all. Measured by running the compiled modules against the real TOOL_CATALOGUE: both claude-code and opencode write <projectRoot>/skills/fc-orchestrate/SKILL.md at project scope. Claude Code reads project skills from <projectRoot>/.claude/skills/."
@@ -78,11 +78,11 @@ links: []
   notes: "Shares its root cause with ISS-33-6bxf6h and ISS-38-gv3p2x. The workstream record puts the IntegrationFormat model change first, because one change addresses all three. Both tools have a documented project-level target: Claude Code reads <projectRoot>/.claude/skills/<name>/SKILL.md, and OpenCode reads <projectRoot>/.opencode/skills/<name>/SKILL.md (https://opencode.ai/docs/skills/, checked 2026-09-10), so neither needs to be reported ineligible at project scope. Any correction must add no runtime dependency."
   ```
 
-- [ ] ISS-35-m54y06. removeInstallation deletes one installed file out of many and orphans the rest
+- [x] ISS-35-m54y06. removeInstallation deletes one installed file out of many and orphans the rest
 
   ```yaml
   id: ISS-35-m54y06
-  status: ready
+  status: done
   severity: high
   author: Anthony Koukoullis
   description: "InstallRecord.resolvedPath at src/lib/agentic-tools-install-tracking.ts:16 is a single string. The write loop at src/lib/agentic-tools-install.ts:128 keeps only the first path, with `if (resolvedPath === null) resolvedPath = fullPath;`, and every later path is discarded before the record is built at :134. An install of the canonical suite writes one SKILL.md per skill, eight from CANONICAL_PRAXIS_SKILL_IDS, plus one write per bundled reference file, because skillDirectoryWrites at src/lib/agentic-tools-format.ts:31-42 emits an extra FileWrite for every entry in skill.files and mapEntriesToSkills in src/lib/skill-content-fetch.ts populates skill.files from the release archive. Exactly one of those paths is recorded, and removeInstallation at src/lib/agentic-tools-install.ts:199 removes only that one."
@@ -99,11 +99,11 @@ links: []
   notes: "The recorded-path arithmetic was confirmed by running the modules. InstallRecord must carry the set of paths written, or a single containing directory, and that same change is the prerequisite for ISS-36-vl2cpx. ISS-37-niiof1 pins the current behaviour in a test and must be corrected in the same change. The correction in TL-103-9npvav records the files written, not the directories the install created with mkdir, so the per-skill directories stay behind empty after a removal; the tool loads nothing from an empty directory, and TL-103-9npvav Divergence 5 records the residue. Any correction must add no runtime dependency."
   ```
 
-- [ ] ISS-36-vl2cpx. An update writes the new skill set and never deletes the previous install
+- [x] ISS-36-vl2cpx. An update writes the new skill set and never deletes the previous install
 
   ```yaml
   id: ISS-36-vl2cpx
-  status: ready
+  status: done
   severity: high
   author: Anthony Koukoullis
   description: "installToTarget compares the content hash at src/lib/agentic-tools-install.ts:94, and on a mismatch the branch at :112-129 computes the FileWrite list for the new content and writes it. Nothing enumerates or deletes what the previous install wrote. This is live rather than hypothetical, because the skill suite was renamed from prx-* to fc-*: CANONICAL_PRAXIS_SKILL_IDS now lists fc-orchestrate, fc-git, fc-bug-hunt, fc-issue-list, fc-dev-principles, fc-plan-feature, fc-task-list and fc-plain-text-kanban."
@@ -120,11 +120,11 @@ links: []
   notes: "Depends on the same InstallRecord shape change as ISS-35-m54y06: an update cannot clean up what the ledger never recorded. Any correction must add no runtime dependency."
   ```
 
-- [ ] ISS-37-niiof1. Two unit tests assert the defective install and remove behaviour as correct
+- [x] ISS-37-niiof1. Two unit tests assert the defective install and remove behaviour as correct
 
   ```yaml
   id: ISS-37-niiof1
-  status: ready
+  status: done
   severity: high
   author: Anthony Koukoullis
   description: "src/test/unit/agentic-tools-install.test.ts:177 asserts `assert.equal(result.resolvedPath, '/home/fakeuser/.cursor/.cursor/rules/prx-alpha.mdc');` — the doubled Cursor path from ISS-33-6bxf6h, written down as the expected value. Line 312 asserts `assert.deepEqual(removeCalls.map((c) => c.path), [installed.resolvedPath]);`, which requires exactly one remove call. The fixture twoSkillContent at lines 68-85 of the same file carries two skills, prx-alpha and prx-beta, so prx-beta survives the removal described by ISS-35-m54y06 and the assertion still passes."
@@ -183,11 +183,11 @@ links: []
   notes: "This function is currently unreachable, which is recorded separately as ISS-43-xszeei, so the defect is latent rather than live. It is the error handling any future caller inherits. Any correction must add no runtime dependency."
   ```
 
-- [ ] ISS-40-798x06. parseInstallRegistry documents a wrong-shape rejection it does not perform
+- [x] ISS-40-798x06. parseInstallRegistry documents a wrong-shape rejection it does not perform
 
   ```yaml
   id: ISS-40-798x06
-  status: ready
+  status: done
   severity: medium
   author: Anthony Koukoullis
   description: "The comment above parseInstallRegistry at src/lib/agentic-tools-install-tracking.ts:31-33 states that it returns an empty list on any parse failure, naming malformed JSON and wrong shape. The body at :34-41 is `Array.isArray(parsed) ? (parsed as InstallRecord[]) : []`, which is a blind cast. Malformed JSON is handled by the catch. Wrong shape is not checked at all, so any array of arbitrary objects is returned as InstallRecord[]."
@@ -204,11 +204,11 @@ links: []
   notes: "The comparable posture the comment cites, readProjects in src/lib/projects.ts, is named in the comment itself. Any correction must add no runtime dependency, so the shape check uses plain Node and TypeScript, never a schema library."
   ```
 
-- [ ] ISS-41-qbdzgt. The install registry read-modify-write has no locking and its atomic write is keyed on pid alone
+- [x] ISS-41-qbdzgt. The install registry read-modify-write has no locking and its atomic write is keyed on pid alone
 
   ```yaml
   id: ISS-41-qbdzgt
-  status: ready
+  status: done
   severity: medium
   author: Anthony Koukoullis
   description: "installToTarget reads the registry at src/lib/agentic-tools-install.ts:91 and writes it at :147, with the whole install between them and nothing serializing the pair. src/http/routes-integrations.ts states in its own comment at line 248 that overlapping install requests are left unserialized. Separately, writeTextFileAtomic at src/lib/agentic-tools-fs-adapter.ts:107-111 writes to `${path}.${process.pid}.tmp` and then renames it over the target, so two concurrent writes to the same registry path from the same process share one temp filename."
@@ -246,11 +246,11 @@ links: []
   notes: "checkSkillPresence running only at global scope is a documented, bounded scope limit and is not part of this issue. Any correction must add no runtime dependency."
   ```
 
-- [ ] ISS-43-xszeei. installAllGlobal is exported and tested but no caller reaches it
+- [x] ISS-43-xszeei. installAllGlobal is exported and tested but no caller reaches it
 
   ```yaml
   id: ISS-43-xszeei
-  status: ready
+  status: done
   severity: low
   author: Anthony Koukoullis
   description: "installAllGlobal is defined at src/lib/agentic-tools-install.ts:164 and covered by a unit test at src/test/unit/agentic-tools-install.test.ts:328. `grep -rn \"installAllGlobal\" src/ electron/` with the tests excluded returns the definition and nothing else, so no production code path reaches it."
@@ -266,11 +266,11 @@ links: []
   notes: "No runtime failure. If the function is kept rather than removed, ISS-39-mu5wkq applies to it."
   ```
 
-- [ ] ISS-44-mm57nt. An install that writes nothing records an empty path, which removal then passes to fs.rm
+- [x] ISS-44-mm57nt. An install that writes nothing records an empty path, which removal then passes to fs.rm
 
   ```yaml
   id: ISS-44-mm57nt
-  status: ready
+  status: done
   severity: low
   author: Anthony Koukoullis
   description: "resolvedPath starts as null at src/lib/agentic-tools-install.ts:114 and is only assigned inside the write loop. The record at :134 persists `resolvedPath: resolvedPath ?? ''`, so an install that produced no writes is stored with an empty string. removeInstallation at :199 passes that stored value straight to fsWrite.remove, and the only production caller, the POST /api/integrations/installs/remove route, first runs `path.resolve(record.resolvedPath)` on it at src/http/routes-integrations.ts:370 for the permitted-root check at :375."
@@ -287,11 +287,11 @@ links: []
   notes: "mapEntriesToSkills returns an empty skills array without throwing when the release archive holds no SKILL.md, so getInstallContent hands the route empty content and the precondition is reachable. The InstallRecord shape change behind ISS-35-m54y06 touches the same field. Any correction must add no runtime dependency."
   ```
 
-- [ ] ISS-45-fugjwv. Install paths are assembled with a hardcoded forward slash
+- [x] ISS-45-fugjwv. Install paths are assembled with a hardcoded forward slash
 
   ```yaml
   id: ISS-45-fugjwv
-  status: ready
+  status: done
   severity: low
   author: Anthony Koukoullis
   description: "src/lib/agentic-tools-install.ts:116 builds the target with `${target.basePath}/${write.relativePath}`, and :125 derives the directory to create by calling fullPath.replace with a regular expression that strips the final segment, matching forward slashes only. src/lib/agentic-tools-skill-presence.ts:53 and :71 join the same way. The catalogue carries Windows configDir values written with backslashes, for example '%USERPROFILE%\\\\.claude\\\\' at src/lib/agentic-tools-catalogue.ts:47."
