@@ -1786,7 +1786,7 @@ returns no lines.
       failures: []
     ```
 
-- [ ] 8. Validate the registry shape the comment already promises (ISS-40-798x06)
+- [x] 8. Validate the registry shape the comment already promises (ISS-40-798x06)
 
   ```yaml
   description: "parseInstallRegistry documents a wrong-shape rejection it never performs, so a hand-edited or crash-truncated record reaches path.resolve and throws. Add the check the comment describes."
@@ -1862,7 +1862,7 @@ returns no lines.
     - "A complete record with a string[] resolvedPaths still parses."
     - "No schema library or other runtime dependency was added."
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
@@ -2345,3 +2345,13 @@ returns no lines.
    Divergence 4: for a rule-directory format that parent is `.cursor/rules/`, which
    holds the user's own rules. ISS-35-m54y06's expected outcome names directories as
    well as files, so this is recorded as a residue of that fix.
+
+6. **Task 8's shape check rejected a pre-existing test fixture.** Task 8's whole-file
+   shape check rejected the ledger seeded by `src/test/unit/server-env-seams.test.ts`,
+   whose `SEEDED_RECORD` used the scope `{ kind: 'user' }`. That value was never a
+   valid `InstallScope`, which has been `global | project` since it was created, and
+   it appears in no production code: the HTTP route's `isInstallScope` guard accepts
+   only those two kinds, so no real ledger can carry it. The old unchecked parser hid
+   the invalid fixture. With the maintainer's approval the fixture was corrected to
+   `{ kind: 'global' }`, because the test verifies the `PRAXIS_DATA_DIR` seam and its
+   scope value is incidental. No task in this list authored that edit.
