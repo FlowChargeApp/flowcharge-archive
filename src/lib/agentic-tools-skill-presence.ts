@@ -4,6 +4,10 @@
 // only ever calls FsAccess.pathExists, never anything from FsWriteAccess
 // (agentic-tools-install.ts) — this module checks presence, it never writes.
 
+// node:path is pure path algebra and touches no filesystem, so it does
+// not breach this module's read-only, FsAccess-only contract.
+import path from 'node:path';
+
 import type { ToolDefinition } from './agentic-tools-catalogue.js';
 import type { FsAccess } from './agentic-tools-signals.js';
 import { selectPrimaryFormat, formatForTarget } from './agentic-tools-format.js';
@@ -53,7 +57,9 @@ export async function checkSkillPresence(
     const presentSkillIds: string[] = [];
     const missingSkillIds: string[] = [];
     for (let i = 0; i < skillIds.length; i++) {
-      const fullPath = `${basePath}/${writes[i].relativePath}`;
+      // path.join, not a hardcoded '/', so the probed path matches what
+      // the install engine writes on every platform.
+      const fullPath = path.join(basePath, writes[i].relativePath);
       const exists = await fsAccess.pathExists(fullPath);
       if (exists) {
         presentSkillIds.push(skillIds[i]);
@@ -71,7 +77,7 @@ export async function checkSkillPresence(
   // of skill count, so no individual skill's presence can be distinguished
   // within it — return the coarser shared-file result from a single
   // pathExists call on that one resolved path.
-  const fullPath = `${basePath}/${writes[0].relativePath}`;
+  const fullPath = path.join(basePath, writes[0].relativePath);
   const exists = await fsAccess.pathExists(fullPath);
   return { checkKind: 'shared-file', exists };
 }

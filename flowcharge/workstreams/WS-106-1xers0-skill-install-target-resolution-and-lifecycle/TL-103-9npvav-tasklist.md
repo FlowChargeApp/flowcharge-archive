@@ -2044,13 +2044,13 @@ returns no lines.
       failures: []
     ```
 
-- [ ] 10. Join and split install paths with the host separator rules (ISS-45-fugjwv)
+- [x] 10. Join and split install paths with the host separator rules (ISS-45-fugjwv)
 
   ```yaml
   description: "Paths are built with a hardcoded forward slash and the mkdir target is derived with a forward-slash-only regular expression, so a Windows base path mis-derives the directory the engine creates. Latent: Windows is not a shipping target."
   ```
 
-  - [ ] 10.1 Use `path.join` and `path.dirname` in the install write loop
+  - [x] 10.1 Use `path.join` and `path.dirname` in the install write loop
     ```yaml
     description: "node:path is already imported in this file for the containment gate."
     author: Anthony Koukoullis
@@ -2098,11 +2098,11 @@ returns no lines.
       - "The containment gate between them is unchanged."
       - "Every path assertion in the install suite still passes."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 10.2 Import `node:path` in the presence checker
+  - [x] 10.2 Import `node:path` in the presence checker
     ```yaml
     description: "That module joins paths today with no path import at all."
     author: Anthony Koukoullis
@@ -2133,11 +2133,11 @@ returns no lines.
       - "The comment records why the import is allowed here."
       - "The type-check passes."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 10.3 Join both presence-check paths with `path.join`
+  - [x] 10.3 Join both presence-check paths with `path.join`
     ```yaml
     description: "The per-skill probe and the shared-document probe both build their path with a hardcoded slash."
     author: Anthony Koukoullis
@@ -2216,7 +2216,7 @@ returns no lines.
       - "The presence suite passes with its existing path fixtures."
       - "Both type-checks pass."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

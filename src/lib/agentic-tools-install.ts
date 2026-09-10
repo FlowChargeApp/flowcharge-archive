@@ -152,7 +152,11 @@ async function installToTargetLocked(
 
   const writtenPaths: string[] = [];
   for (const write of writes) {
-    const fullPath = `${target.basePath}/${write.relativePath}`;
+    // path.join, not a hardcoded '/': a Windows configDir expands with
+    // backslashes, and joining it to a forward-slash template produced a
+    // mixed-separator path that the directory derivation below then
+    // mis-split. path.dirname applies the host's own separator rules.
+    const fullPath = path.join(target.basePath, write.relativePath);
     // Containment gate in front of the write: resolve both sides with the
     // host's own rules and compare on a separator boundary, so a sibling
     // directory whose name merely begins with the base's name is refused.
@@ -161,7 +165,7 @@ async function installToTargetLocked(
     if (!resolvedFull.startsWith(resolvedBase + path.sep)) {
       throw new Error(`Refusing to write outside the install target: ${write.relativePath}`);
     }
-    const dir = fullPath.replace(/\/[^/]+$/, '');
+    const dir = path.dirname(fullPath);
     await deps.fsWrite.mkdir(dir);
     await deps.fsWrite.writeTextFileAtomic(fullPath, write.content);
     writtenPaths.push(fullPath);
