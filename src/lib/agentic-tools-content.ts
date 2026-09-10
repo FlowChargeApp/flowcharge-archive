@@ -21,11 +21,6 @@ export interface InstallContent {
   skills: SkillContent[];
 }
 
-// The Gap 1 seam: stays a port with only fixture/placeholder implementations
-// everywhere in this workstream, including the real IPC wiring in Phase 6
-// (plan Assumption 9).
-export type GetInstallContent = (toolId: string) => Promise<InstallContent>;
-
 // Canonicalises a SkillContent for hashing: its own files[] array is sorted by
 // relativePath so file order never changes the hash either.
 function canonicalSkill(skill: SkillContent): unknown {
