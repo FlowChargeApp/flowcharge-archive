@@ -110,16 +110,21 @@ integration. Never write it as a bare `@` import — link it or wrap it in backt
 
 Every task list authored for this project ends with two final tasks, after all its
 other tasks. Both run on the task list's branch, before any merge. Merge only after
-both pass.
+both pass. Both are fixed boilerplate. The task-list author adds them as written
+here, without reading source code or `ARCHITECTURE.md` and without predicting any
+edit. Their checks are gates, not change detectors. They pass before the change by
+nature, so no rule that a verify step must fail at the base commit applies to them.
 
 1. **Test gate.** Build and run the full suite with `npm test`. If anything fails, do
    not merge. Record every failure in a new issue list in the same workstream, author
    tasks for those issues, execute them on the same branch, then run the gate again.
    Repeat until the suite is green. No fix goes in unrecorded.
-2. **`ARCHITECTURE.md` review.** Review `ARCHITECTURE.md` against what the task list
-   changed, and update every section that no longer matches the code. Write this task
-   as an instruction, not a pre-written diff. Its edits are unknown until the code
-   lands.
+2. **`ARCHITECTURE.md` review.** Review every section of `ARCHITECTURE.md` against
+   `git diff <base_commit>..HEAD`, and update what no longer matches the code. Write
+   this task as an instruction, not a pre-written diff. It names no section and
+   forecasts no edit. The executor, who has the real diff, decides the edits. The
+   review passes only when every Mermaid block still parses and each component, type
+   and endpoint keeps the same name across sections.
 
 Author tasks in spec mode by default, including the tasks for test-gate failures. Use
 diff mode only when the user asks for it.
