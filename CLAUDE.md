@@ -106,8 +106,23 @@ hand-editing whole sections. Update the sections your change affects when you ch
 component boundary, a port signature, an ADR-level decision, or an external
 integration. Never write it as a bare `@` import — link it or wrap it in backticks.
 
-At the end of every completed workstream, review `ARCHITECTURE.md` against what the
-workstream changed, and update every section that no longer matches the code.
+## Closing a task list
+
+Every task list authored for this project ends with two final tasks, after all its
+other tasks. Both run on the task list's branch, before any merge. Merge only after
+both pass.
+
+1. **Test gate.** Build and run the full suite with `npm test`. If anything fails, do
+   not merge. Record every failure in a new issue list in the same workstream, author
+   tasks for those issues, execute them on the same branch, then run the gate again.
+   Repeat until the suite is green. No fix goes in unrecorded.
+2. **`ARCHITECTURE.md` review.** Review `ARCHITECTURE.md` against what the task list
+   changed, and update every section that no longer matches the code. Write this task
+   as an instruction, not a pre-written diff. Its edits are unknown until the code
+   lands.
+
+Author tasks in spec mode by default, including the tasks for test-gate failures. Use
+diff mode only when the user asks for it.
 
 ## Hygiene
 
