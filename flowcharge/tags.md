@@ -4,6 +4,7 @@ Canonical workstream tags, one per line, lowercase, letters/digits/hyphens only.
 A tag is defined once it is listed here. See `prx-orchestrate/CONVENTIONS.md`.
 
 - agentic-tools
+- animation
 - architecture
 - board
 - board-card
