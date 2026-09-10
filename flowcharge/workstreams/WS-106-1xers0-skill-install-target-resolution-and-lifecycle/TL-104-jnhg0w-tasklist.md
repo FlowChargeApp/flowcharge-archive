@@ -150,7 +150,7 @@ self-contained, need only a build, and must run from the project root.
     failures: []
   ```
 
-- [ ] 3. Closing test gate: run the full suite with npm test
+- [x] 3. Closing test gate: run the full suite with npm test
   ```yaml
   description: "Closing task 1 of 2, required by CLAUDE.md \"Closing a task list\", and traced to no issue. Run the full test suite on this branch after tasks 1 and 2. Pass only when the suite reports zero failures."
   author: Anthony Koukoullis
@@ -172,7 +172,7 @@ self-contained, need only a build, and must run from the project root.
     - "Any skill-content-fetch failure caused by an unreachable release host is labelled environmental."
     - "This task edited no source, test or config file."
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
