@@ -4,7 +4,8 @@ Working notes for this repository — the private source of the FlowCharge appli
 The package name is still `praxis-dashboard`; the product name is FlowCharge.
 
 `README.md` describes what the application is and how it ships. This file describes how to
-build it, test it, and cut a release.
+build it, test it, and cut a release. For the component design, data types, application
+flows and architecture constraints, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Prerequisites
 
