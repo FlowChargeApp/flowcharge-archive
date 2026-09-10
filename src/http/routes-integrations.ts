@@ -367,25 +367,35 @@ function handleIntegrationsInstallRemove(
         return;
       }
 
-      const detections = scope.kind === 'global' ? await detectionsForPermittedRoots(deps) : [];
-      const permittedRoot = permittedRootFor(toolId, scope, detections, deps.registry);
-      // The list checked here is the list the engine deletes, read through
-      // the same recordedInstallPaths the engine reads, so a ledger that is
-      // corrupt, hand-edited or tampered with cannot pass one path inside
-      // the root and have a second one outside it deleted. Every path is
-      // checked before any is removed, and one failure refuses the whole
-      // request.
-      for (const recorded of recordedInstallPaths(record)) {
-        const resolvedTarget = path.resolve(recorded);
-        // The trailing path.sep is what makes this a boundary rather than a bare
-        // prefix: without it a sibling whose name merely begins with the root's
-        // name would pass. Equality with the root is refused too — a tracked
-        // install is always a path under its base, never the base.
-        if (permittedRoot === null || !resolvedTarget.startsWith(permittedRoot + path.sep)) {
-          sendJson(res, 400, {
-            error: `Refused remove path outside the permitted root for ${toolId}: ${recorded}`,
-          });
-          return;
+      // An install that wrote nothing recorded an empty resolvedPath, and
+      // path.resolve('') is this process's working directory, which never
+      // sits under the permitted root: the check below then refused the one
+      // request that could drop that record. recordedInstallPaths now drops
+      // empty entries, so a record naming no non-empty path answers an
+      // empty list here, has nothing on disk to contain, and goes straight
+      // to removeInstallation, which deletes nothing and drops the record.
+      const recordedPaths = recordedInstallPaths(record);
+      if (recordedPaths.length > 0) {
+        const detections = scope.kind === 'global' ? await detectionsForPermittedRoots(deps) : [];
+        const permittedRoot = permittedRootFor(toolId, scope, detections, deps.registry);
+        // The list checked here is the list the engine deletes, read through
+        // the same recordedInstallPaths the engine reads, so a ledger that is
+        // corrupt, hand-edited or tampered with cannot pass one path inside
+        // the root and have a second one outside it deleted. Every path is
+        // checked before any is removed, and one failure refuses the whole
+        // request.
+        for (const recorded of recordedPaths) {
+          const resolvedTarget = path.resolve(recorded);
+          // The trailing path.sep is what makes this a boundary rather than a bare
+          // prefix: without it a sibling whose name merely begins with the root's
+          // name would pass. Equality with the root is refused too — a tracked
+          // install is always a path under its base, never the base.
+          if (permittedRoot === null || !resolvedTarget.startsWith(permittedRoot + path.sep)) {
+            sendJson(res, 400, {
+              error: `Refused remove path outside the permitted root for ${toolId}: ${recorded}`,
+            });
+            return;
+          }
         }
       }
       await removeInstallation(toolId, scope, deps.installRegistryPath, { fsWrite: deps.fsWrite });

@@ -170,9 +170,12 @@ export async function installToTarget(
 // resolvedPaths existed carries the single resolvedPath alone, so it falls
 // back to that one path and keeps exactly the behaviour it had. Exported
 // because the HTTP remove route must validate exactly the list this
-// module deletes, never a list of its own derivation.
+// module deletes, never a list of its own derivation. Empty entries are
+// dropped: an install that produced no writes stores an empty
+// resolvedPath, and nothing on disk answers to it, so neither removal nor
+// the update cleanup should hand '' to fsWrite.remove at all.
 export function recordedInstallPaths(record: InstallRecord): string[] {
-  return record.resolvedPaths ?? [record.resolvedPath];
+  return (record.resolvedPaths ?? [record.resolvedPath]).filter((p) => p !== '');
 }
 
 // Deletes every tracked file/directory the record says the install wrote,

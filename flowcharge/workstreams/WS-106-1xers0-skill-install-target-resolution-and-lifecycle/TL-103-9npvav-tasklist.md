@@ -1496,7 +1496,7 @@ returns no lines.
     failures: []
   ```
 
-- [ ] 6. Treat a record with no recorded path as nothing to delete (ISS-44-mm57nt)
+- [x] 6. Treat a record with no recorded path as nothing to delete (ISS-44-mm57nt)
 
   ```yaml
   description: "An install that wrote nothing records an empty resolvedPath, and a legacy record can hold one too. The engine hands that empty string to fsWrite.remove, and the HTTP remove route runs path.resolve('') on it, which is the server's working directory, so the permitted-root check answers 400 and the record can never be removed through the app. Filter empty entries in the one place the engine reads recorded paths, and let the route skip the containment check for a record that names nothing on disk."
@@ -1630,7 +1630,7 @@ returns no lines.
     - "The route probe answers 200 and leaves an empty ledger."
     - "No other function changed."
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
