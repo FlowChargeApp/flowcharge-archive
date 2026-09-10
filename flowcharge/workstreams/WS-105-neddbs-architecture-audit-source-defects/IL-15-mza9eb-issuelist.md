@@ -4,7 +4,7 @@ type: issuelist
 workstream: WS-105-neddbs
 slug: architecture-audit-source-defects
 title: "Source defects found while auditing ARCHITECTURE.md"
-status: ready
+status: done
 created: 2026-09-10
 updated: 2026-09-10
 depends_on: []
@@ -13,11 +13,11 @@ links: []
 
 # FlowCharge Issue List
 
-- [ ] ISS-28-uphhhu. Two state files written to the repository root are not gitignored
+- [x] ISS-28-uphhhu. Two state files written to the repository root are not gitignored
 
   ```yaml
   id: ISS-28-uphhhu
-  status: ready
+  status: done
   severity: medium
   author: Anthony Koukoullis
   description: "The app writes four state files into the directory that PRAXIS_DATA_DIR resolves to. .gitignore lines 5-6 list only .praxis-projects.json and .praxis-update.json. The other two, .praxis-installs.json and .praxis-telemetry.json, are left trackable. The two entries that are present show the intent. The two files reach the repository root by different routes. .praxis-installs.json is written by writeRegistry in src/lib/agentic-tools-install.ts (called from installToTarget and removeInstallation) at the path src/server.ts:57-60 computes, which is the repository root whenever PRAXIS_DATA_DIR is unset, so every unpackaged install writes it there. .praxis-telemetry.json is written by readOrCreateInstallId in src/lib/telemetry-install-id.ts, whose only caller is trackAppStarted in the generated CLI entry (tools/package-cli.mjs:149-155). An unpackaged run never calls it, and the packaged binary defaults PRAXIS_DATA_DIR to ~/.flowcharge (src/cli-bootstrap.ts:20), so that file lands at the repository root only when a developer runs the packaged binary with PRAXIS_DATA_DIR pointed at the checkout. Listing it is still the consistent choice: it is a state file of the same family and the same directory seam."
@@ -34,11 +34,11 @@ links: []
   notes: "ARCHITECTURE.md lines 477-479 name all four files and record that only the first and third are listed in .gitignore. Its statement that all four live in the repository root during development overstates the telemetry file, for the reason in the description; that is a documentation matter outside this issue."
   ```
 
-- [ ] ISS-29-m7w4dm. Two outbound release-host fetches carry no timeout and can hang a request indefinitely
+- [x] ISS-29-m7w4dm. Two outbound release-host fetches carry no timeout and can hang a request indefinitely
 
   ```yaml
   id: ISS-29-m7w4dm
-  status: ready
+  status: done
   severity: high
   author: Anthony Koukoullis
   description: "The fetch call in fetchReleases at src/lib/skill-release-fetch.ts:143 and the asset download inside getInstallContent at src/lib/skill-content-fetch.ts:289 pass no `signal`. Every other outbound call in the codebase passes one: src/lib/telemetry.ts:131 and src/lib/update-check.ts:138 both use `signal: AbortSignal.timeout(timeoutMs)`. The comment at src/lib/skill-release-fetch.ts:137-140 even discusses an AbortSignal-style rejection arriving as a DOMException, so the module anticipates a timeout that it never sets."
@@ -55,11 +55,11 @@ links: []
   notes: "`AbortSignal.timeout` is a Node built-in and is already used in two modules, so no runtime dependency is needed. The project has no runtime dependency and must keep none. ARCHITECTURE.md lines 1782-1783 and 1873 already record both calls as carrying no abort timeout."
   ```
 
-- [ ] ISS-30-a05gs5. A src/lib module logs to the console, so one failure produces two differently-worded reports
+- [x] ISS-30-a05gs5. A src/lib module logs to the console, so one failure produces two differently-worded reports
 
   ```yaml
   id: ISS-30-a05gs5
-  status: ready
+  status: done
   severity: low
   author: Anthony Koukoullis
   description: "src/lib/skill-content-fetch.ts:330 calls console.error with a fixed message before rethrowing. It is the only console.* call anywhere under src/lib/. Sibling module headers state the opposite rule: src/lib/tree-layout.ts says it returns facts and logs nothing so the caller decides what to print, src/lib/workstream-store.ts says it adds no logging of its own, and src/lib/git.ts says nothing is logged. The established pattern puts the wording at the route boundary, which is why warnLegacyLayout exists in src/http/routes-board.ts."
@@ -75,11 +75,11 @@ links: []
   notes: "ARCHITECTURE.md lines 1783 and 1850 already record this module as the one src/lib/ module that logs."
   ```
 
-- [ ] ISS-31-t8rpze. Two module header comments state a six-method IPC surface that has eight members
+- [x] ISS-31-t8rpze. Two module header comments state a six-method IPC surface that has eight members
 
   ```yaml
   id: ISS-31-t8rpze
-  status: ready
+  status: done
   severity: low
   author: Anthony Koukoullis
   description: "src/public/ipc-adapter.ts:1 calls it 'the six-channel IPC surface' and src/public/browser-ipc-shim.ts:4 says 'This file defines the same six-method surface'. The PraxisAPI interface at src/public/ipc-adapter.ts:30-39 declares eight members: listProjects, addProject, renameProject, removeProject, getProjectData, getWorkstreamDetail, getAppVersion, and the optional pickProjectFolder. The shim implements seven of the eight, omitting pickProjectFolder, which is optional because it is Electron-only."

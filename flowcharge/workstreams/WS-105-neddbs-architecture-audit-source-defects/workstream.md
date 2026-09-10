@@ -5,7 +5,7 @@ workstream: WS-105-neddbs
 slug: architecture-audit-source-defects
 title: "Close five source defects: untracked state files, unbounded release fetches, library logging, unreachable remove wiring and stale comments"
 description: "Five defects surfaced while auditing the newly written ARCHITECTURE.md against the source. None was introduced by that audit and none is a documentation problem — the document now describes all five accurately. They are unrelated to each other and vary in severity, so they are filed as one issue list rather than one fix: the unbounded release fetches can hang an install request indefinitely and are the only one with a user-visible failure mode, while the stale comments are cosmetic. Deliberately excluded are four already-known gaps recorded elsewhere: the update-check repository placeholders, the missing package-lock.json against CI's npm ci, DEVELOPMENT.md's four-binaries claim, and the uncopied fonts."
-status: in-progress
+status: done
 tags: [bug, maintenance, agentic-tools, hardening, server, issue]
 created: 2026-09-10
 updated: 2026-09-10

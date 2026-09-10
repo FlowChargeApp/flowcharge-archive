@@ -4,7 +4,7 @@ type: tasklist
 workstream: WS-105-neddbs
 slug: architecture-audit-source-defects
 title: "Source defects found while auditing ARCHITECTURE.md"
-status: ready
+status: done
 created: 2026-09-10
 updated: 2026-09-10
 author: Anthony Koukoullis
