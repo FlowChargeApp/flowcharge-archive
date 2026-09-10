@@ -12,7 +12,7 @@
 import path from 'node:path';
 
 import type { ToolDefinition } from './agentic-tools-catalogue.js';
-import type { InstallContent, GetInstallContent } from './agentic-tools-content.js';
+import type { InstallContent } from './agentic-tools-content.js';
 import { hashInstallContent } from './agentic-tools-content.js';
 import { selectPrimaryFormat, formatForTarget } from './agentic-tools-format.js';
 import type { InstallScope, InstallRecord } from './agentic-tools-install-tracking.js';
@@ -76,13 +76,40 @@ async function writeRegistry(registryPath: string, records: InstallRecord[], fsW
 // as before, then upserts and persists the tracking record — always AFTER
 // the content writes succeed, so a failed content write never leaves a
 // tracking record for content that was never actually written to disk.
-export async function installToTarget(
+// One in-flight install per registry path, chained through a promise per
+// path. Without it two overlapping requests both read the registry, both
+// compute a next state from their own stale copy, and the second write
+// drops the first tool's record. An in-process chain is the whole fix
+// here: one server process owns the registry, and the project ships no
+// runtime dependency to reach for a file lock with.
+const registryChains = new Map<string, Promise<unknown>>();
+
+function withRegistryLock<T>(registryPath: string, run: () => Promise<T>): Promise<T> {
+  const previous = registryChains.get(registryPath) ?? Promise.resolve();
+  const next = previous.then(run);
+  // The stored link swallows rejection; the returned promise does not. A
+  // failed install must reject its own caller without failing every
+  // install queued behind it.
+  registryChains.set(registryPath, next.catch(() => undefined));
+  return next;
+}
+
+export function installToTarget(
   target: InstallTarget,
   content: InstallContent,
   registryPath: string,
   deps: { fsWrite: FsWriteAccess },
 ): Promise<InstallResult> {
-  const format = selectPrimaryFormat(target.tool);
+  return withRegistryLock(registryPath, () => installToTargetLocked(target, content, registryPath, deps));
+}
+
+async function installToTargetLocked(
+  target: InstallTarget,
+  content: InstallContent,
+  registryPath: string,
+  deps: { fsWrite: FsWriteAccess },
+): Promise<InstallResult> {
+  const format = selectPrimaryFormat(target.tool, target.scope.kind);
   if (format === null) {
     return { toolId: target.tool.id, status: 'skipped-no-format', resolvedPath: null };
   }
@@ -109,11 +136,27 @@ export async function installToTarget(
     return { toolId: target.tool.id, status: 'up-to-date', resolvedPath: existing.resolvedPath };
   }
 
+  // An update REPLACES the previous install rather than layering on top of
+  // it. Without this, a machine carrying the pre-rename prx-* suite keeps
+  // all eight of those directories alongside the eight fc-* ones, and the
+  // tool loads two generations of the same skills. Reached only when a
+  // record exists and its contentHash did not match, because the matching
+  // branch above returns early.
+  if (existing !== undefined) {
+    for (const stale of recordedInstallPaths(existing)) {
+      await deps.fsWrite.remove(stale);
+    }
+  }
+
   const writes = formatForTarget(format, content);
 
-  let resolvedPath: string | null = null;
+  const writtenPaths: string[] = [];
   for (const write of writes) {
-    const fullPath = `${target.basePath}/${write.relativePath}`;
+    // path.join, not a hardcoded '/': a Windows configDir expands with
+    // backslashes, and joining it to a forward-slash template produced a
+    // mixed-separator path that the directory derivation below then
+    // mis-split. path.dirname applies the host's own separator rules.
+    const fullPath = path.join(target.basePath, write.relativePath);
     // Containment gate in front of the write: resolve both sides with the
     // host's own rules and compare on a separator boundary, so a sibling
     // directory whose name merely begins with the base's name is refused.
@@ -122,16 +165,21 @@ export async function installToTarget(
     if (!resolvedFull.startsWith(resolvedBase + path.sep)) {
       throw new Error(`Refusing to write outside the install target: ${write.relativePath}`);
     }
-    const dir = fullPath.replace(/\/[^/]+$/, '');
+    const dir = path.dirname(fullPath);
     await deps.fsWrite.mkdir(dir);
     await deps.fsWrite.writeTextFileAtomic(fullPath, write.content);
-    if (resolvedPath === null) resolvedPath = fullPath;
+    writtenPaths.push(fullPath);
   }
 
+  // One install of the canonical suite writes one SKILL.md per skill plus
+  // one file per bundled reference file. Recording only the first of them
+  // is what left removal deleting a fraction of the install.
+  const resolvedPath = writtenPaths.length === 0 ? null : writtenPaths[0];
   const now = new Date().toISOString();
   const record: InstallRecord = {
     toolId: target.tool.id,
     resolvedPath: resolvedPath ?? '',
+    resolvedPaths: writtenPaths,
     format: format.kind,
     scope: target.scope,
     installedAt: existing?.installedAt ?? now,
@@ -149,40 +197,19 @@ export async function installToTarget(
   return { toolId: target.tool.id, status: existing === undefined ? 'installed' : 'updated', resolvedPath };
 }
 
-// Runs installToTarget for every catalogue tool at global scope, resolving
-// each tool's basePath via the caller-supplied resolveGlobalBasePath and its
-// InstallContent via the caller-supplied getInstallContent (the still-
-// placeholder Gap 1 port) — one getInstallContent call per target per run, no
-// caching layer, per plan Assumption 6. Each tool is isolated in its own
-// try/catch: a tool whose selectPrimaryFormat resolves to null already
-// returns 'skipped-no-format' from installToTarget without throwing, but a
-// tool whose primary format is a kind formatForTarget does not implement
-// (e.g. OpenCode's real catalogue entry resolves to a structured-config-file
-// format, out of scope for this workstream) throws instead — caught here and
-// folded into the same 'skipped-no-format' result, so one tool's failure
-// never aborts the batch for the remaining tools.
-export async function installAllGlobal(
-  catalogue: ToolDefinition[],
-  resolveGlobalBasePath: (tool: ToolDefinition) => string,
-  registryPath: string,
-  deps: { fsWrite: FsWriteAccess; getInstallContent: GetInstallContent },
-): Promise<InstallResult[]> {
-  const results: InstallResult[] = [];
-  for (const tool of catalogue) {
-    try {
-      const basePath = resolveGlobalBasePath(tool);
-      const content = await deps.getInstallContent(tool.id);
-      const target: InstallTarget = { tool, basePath, scope: { kind: 'global' } };
-      const result = await installToTarget(target, content, registryPath, { fsWrite: deps.fsWrite });
-      results.push(result);
-    } catch {
-      results.push({ toolId: tool.id, status: 'skipped-no-format', resolvedPath: null });
-    }
-  }
-  return results;
+// Every path a record says its install wrote. A record written before
+// resolvedPaths existed carries the single resolvedPath alone, so it falls
+// back to that one path and keeps exactly the behaviour it had. Exported
+// because the HTTP remove route must validate exactly the list this
+// module deletes, never a list of its own derivation. Empty entries are
+// dropped: an install that produced no writes stores an empty
+// resolvedPath, and nothing on disk answers to it, so neither removal nor
+// the update cleanup should hand '' to fsWrite.remove at all.
+export function recordedInstallPaths(record: InstallRecord): string[] {
+  return (record.resolvedPaths ?? [record.resolvedPath]).filter((p) => p !== '');
 }
 
-// Deletes the tracked file/directory at the record's resolvedPath (if any),
+// Deletes every tracked file/directory the record says the install wrote,
 // then removes the record and persists the registry. No-op (does not throw)
 // if no record exists for the (toolId, scope) pair, matching the port's
 // documented idempotent-remove contract.
@@ -196,7 +223,9 @@ export async function removeInstallation(
   const existing = findInstallRecord(records, toolId, scope);
   if (existing === undefined) return;
 
-  await deps.fsWrite.remove(existing.resolvedPath);
+  for (const target of recordedInstallPaths(existing)) {
+    await deps.fsWrite.remove(target);
+  }
   const nextRecords = removeInstallRecord(records, toolId, scope);
   await writeRegistry(registryPath, nextRecords, deps.fsWrite);
 }

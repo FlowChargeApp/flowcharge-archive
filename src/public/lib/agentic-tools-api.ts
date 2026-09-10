@@ -41,6 +41,7 @@ export interface InstallResult {
 export interface InstallRecord {
   toolId: string;
   resolvedPath: string;
+  resolvedPaths?: string[];
   format: string;
   scope: InstallScope;
   installedAt: string;

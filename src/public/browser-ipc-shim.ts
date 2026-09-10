@@ -1,7 +1,8 @@
 // Plain-browser-tab fallback for window.praxisAPI. electron/preload.cts injects
 // window.praxisAPI via contextBridge only inside an Electron BrowserWindow; a
 // plain browser tab loading index.html/board.html over src/server.ts's HTTP
-// server has no such global. This file defines the same six-method surface,
+// server has no such global. This file defines seven of that eight-member
+// surface's methods — all but the optional, Electron-only pickProjectFolder —
 // backed by fetch() against the existing /api/* routes, but installs itself
 // only when window.praxisAPI is not already present — checked once here at
 // script-load time, never per-call. In Electron, preload.cts's

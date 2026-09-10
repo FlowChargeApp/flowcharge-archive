@@ -12,10 +12,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
-import type { ToolDefinition } from '../../lib/agentic-tools-catalogue.js';
-import type { GetInstallContent, InstallContent } from '../../lib/agentic-tools-content.js';
+import type { InstallContent } from '../../lib/agentic-tools-content.js';
 import type { FsWriteAccess, InstallTarget } from '../../lib/agentic-tools-install.js';
-import { installAllGlobal, installToTarget, removeInstallation } from '../../lib/agentic-tools-install.js';
+import { installToTarget, removeInstallation } from '../../lib/agentic-tools-install.js';
 
 const REGISTRY_PATH = '/home/fakeuser/.praxis-installs.json';
 
@@ -153,7 +152,7 @@ test('installToTarget returns skipped-no-format rather than throwing when no non
     displayName: 'MCP Only Tool',
     category: 'cli' as const,
     configDir: {},
-    integrationFormats: [{ kind: 'mcp-json' as const, pathTemplate: '.mcp.json' }],
+    integrationFormats: [{ kind: 'mcp-json' as const, pathTemplate: '.mcp.json', scopes: ['global' as const] }],
   };
   const target: InstallTarget = { tool: noFormatTool, basePath: '/home/fakeuser/.mcp-only', scope: { kind: 'global' } };
 
@@ -164,28 +163,43 @@ test('installToTarget returns skipped-no-format rather than throwing when no non
   assert.equal(fsWrite.calls.filter((c) => c.fn === 'writeTextFileAtomic').length, 0);
 });
 
-test('installToTarget writes exactly the expected rule-directory files for Cursor at global scope', async () => {
+test('installToTarget writes exactly the expected rule-directory files for Cursor at project scope', async () => {
   const fsWrite = fakeFsWriteAccess();
-  const target: InstallTarget = { tool: cursor(), basePath: '/home/fakeuser/.cursor', scope: { kind: 'global' } };
+  const target: InstallTarget = {
+    tool: cursor(),
+    basePath: '/home/fakeuser/repo',
+    scope: { kind: 'project', projectPath: '/home/fakeuser/repo' },
+  };
 
   const result = await installToTarget(target, twoSkillContent, REGISTRY_PATH, { fsWrite });
 
   assert.equal(result.status, 'installed');
   assert.equal(result.toolId, 'cursor');
-  // Cursor's real catalogue rule-directory format resolves to a rules entry,
-  // never the mcp-json entry that sits alongside it.
-  assert.equal(result.resolvedPath, '/home/fakeuser/.cursor/.cursor/rules/prx-alpha.mdc');
+  // The path Cursor actually reads: .cursor/rules/*.mdc under a PROJECT
+  // root, never that template appended to the ~/.cursor configDir.
+  assert.equal(result.resolvedPath, '/home/fakeuser/repo/.cursor/rules/prx-alpha.mdc');
 
   const writeCalls = contentWriteCalls(fsWrite);
   assert.deepEqual(
     writeCalls.map((c) => c.path),
     [
-      '/home/fakeuser/.cursor/.cursor/rules/prx-alpha.mdc',
-      '/home/fakeuser/.cursor/.cursor/rules/prx-beta.mdc',
+      '/home/fakeuser/repo/.cursor/rules/prx-alpha.mdc',
+      '/home/fakeuser/repo/.cursor/rules/prx-beta.mdc',
     ],
   );
   assert.equal(writeCalls[0]?.content, 'alpha body');
   assert.equal(writeCalls[1]?.content, 'beta body');
+});
+
+test('installToTarget writes nothing for Cursor at global scope, because Cursor reads no user-level rules directory', async () => {
+  const fsWrite = fakeFsWriteAccess();
+  const target: InstallTarget = { tool: cursor(), basePath: '/home/fakeuser/.cursor', scope: { kind: 'global' } };
+
+  const result = await installToTarget(target, twoSkillContent, REGISTRY_PATH, { fsWrite });
+
+  assert.equal(result.status, 'skipped-no-format');
+  assert.equal(result.resolvedPath, null);
+  assert.equal(contentWriteCalls(fsWrite).length, 0);
 });
 
 test('installToTarget install/no-op/update lifecycle against Claude Code (acceptance criteria 4, 5)', async () => {
@@ -299,7 +313,7 @@ test('installToTarget backfills a changed version on an up-to-date install, writ
   assert.equal(record!.version, 'v1.5.0');
 });
 
-test('removeInstallation deletes the tracked file and the record for that (toolId, scope) pair (acceptance criterion 6)', async () => {
+test('removeInstallation deletes every file the install wrote and the record for that (toolId, scope) pair (acceptance criterion 6)', async () => {
   const fsWrite = fakeFsWriteAccess();
   const target: InstallTarget = { tool: claudeCode(), basePath: '/home/fakeuser/.claude', scope: { kind: 'global' } };
 
@@ -308,8 +322,15 @@ test('removeInstallation deletes the tracked file and the record for that (toolI
 
   await removeInstallation('claude-code', { kind: 'global' }, REGISTRY_PATH, { fsWrite });
 
+  // twoSkillContent writes three files — one SKILL.md per skill plus
+  // prx-alpha's bundled reference file — so removal must delete three,
+  // not just the first one the record used to carry.
   const removeCalls = fsWrite.calls.filter((c) => c.fn === 'remove');
-  assert.deepEqual(removeCalls.map((c) => c.path), [installed.resolvedPath]);
+  assert.deepEqual(removeCalls.map((c) => c.path), [
+    '/home/fakeuser/.claude/skills/prx-alpha/SKILL.md',
+    '/home/fakeuser/.claude/skills/prx-alpha/reference.md',
+    '/home/fakeuser/.claude/skills/prx-beta/SKILL.md',
+  ]);
 
   const registryRaw = await fsWrite.readTextFile(REGISTRY_PATH);
   assert.ok(registryRaw);
@@ -323,40 +344,4 @@ test('removeInstallation against a nonexistent (toolId, scope) pair does not thr
     removeInstallation('claude-code', { kind: 'global' }, REGISTRY_PATH, { fsWrite }),
   );
   assert.equal(fsWrite.calls.filter((c) => c.fn === 'remove').length, 0);
-});
-
-test('installAllGlobal runs across the real four-tool TOOL_CATALOGUE with no write ever reaching mcp-json', async () => {
-  const fsWrite = fakeFsWriteAccess();
-  const resolveGlobalBasePath = (tool: ToolDefinition) => `/home/fakeuser/.${tool.id}`;
-  const getInstallContent: GetInstallContent = async () => twoSkillContent;
-
-  const results = await installAllGlobal(TOOL_CATALOGUE, resolveGlobalBasePath, REGISTRY_PATH, {
-    fsWrite,
-    getInstallContent,
-  });
-
-  // One InstallResult per catalogue entry, in catalogue order.
-  assert.equal(results.length, 4);
-  assert.deepEqual(results.map((r) => r.toolId), TOOL_CATALOGUE.map((t) => t.id));
-
-  // Claude Code, Cursor, Windsurf, and OpenCode all resolve to a real,
-  // implemented format and install successfully. (installAllGlobal's
-  // try/catch around each per-tool install remains defensive for any future
-  // catalogue entry that resolves to an unimplemented format — it just isn't
-  // exercised by any of these four tools today.)
-  for (const toolId of ['claude-code', 'cursor', 'windsurf', 'opencode']) {
-    const result = results.find((r) => r.toolId === toolId);
-    assert.ok(result, `missing InstallResult for ${toolId}`);
-    assert.equal(result!.status, 'installed', `expected ${toolId} to install`);
-  }
-
-  // No recorded write ever targets an mcp-json path — mcp-json is excluded
-  // by selectPrimaryFormat and guarded independently inside formatForTarget,
-  // so it should never be reachable from installAllGlobal for any tool.
-  const writeCalls = contentWriteCalls(fsWrite);
-  assert.ok(writeCalls.length > 0);
-  for (const call of writeCalls) {
-    assert.ok(!call.path.endsWith('.cursor/mcp.json'), `unexpected mcp-json write: ${call.path}`);
-    assert.ok(!call.path.endsWith('mcp_config.json'), `unexpected mcp-json write: ${call.path}`);
-  }
 });

@@ -35,19 +35,24 @@ function fakeFsAccess(existingPaths: Iterable<string>): FsAccess {
   };
 }
 
+// Every fixture here is exercised through checkSkillPresence, which
+// selects at 'global', so each one declares that scope.
 const skillDirectoryFormat: IntegrationFormat = {
   kind: 'skill-directory',
   pathTemplate: 'skills/<name>/SKILL.md',
+  scopes: ['global'],
 };
 
 const singleRuleFileFormat: IntegrationFormat = {
   kind: 'single-rule-file',
   pathTemplate: '.windsurfrules',
+  scopes: ['global'],
 };
 
 const mcpJsonFormat: IntegrationFormat = {
   kind: 'mcp-json',
   pathTemplate: '.mcp.json',
+  scopes: ['global'],
 };
 
 function skillDirectoryTool() {

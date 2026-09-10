@@ -22,10 +22,18 @@ export interface FileWrite {
 const UNIMPLEMENTED_KINDS = new Set<IntegrationFormat['kind']>(['mcp-json', 'structured-config-file']);
 
 // Returns the first integrationFormats entry whose kind formatForTarget
-// actually implements (i.e. skips every kind in UNIMPLEMENTED_KINDS), or
-// null if the tool has no such format at all.
-export function selectPrimaryFormat(tool: ToolDefinition): IntegrationFormat | null {
-  return tool.integrationFormats.find((f) => !UNIMPLEMENTED_KINDS.has(f.kind)) ?? null;
+// actually implements (i.e. skips every kind in UNIMPLEMENTED_KINDS) AND
+// that declares itself valid at the requested scope, or null if the tool
+// has no such format at all. The scope filter is what stops a
+// project-relative pathTemplate being joined to a configDir base, and a
+// configDir-relative one being joined to a project root.
+export function selectPrimaryFormat(
+  tool: ToolDefinition,
+  scopeKind: 'global' | 'project',
+): IntegrationFormat | null {
+  return tool.integrationFormats.find(
+    (f) => !UNIMPLEMENTED_KINDS.has(f.kind) && f.scopes.includes(scopeKind),
+  ) ?? null;
 }
 
 function skillDirectoryWrites(format: IntegrationFormat, content: InstallContent): FileWrite[] {

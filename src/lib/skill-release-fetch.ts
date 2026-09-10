@@ -21,6 +21,12 @@ export interface SkillReleaseSummary {
 // response, not a tuning value.
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
+// Ceiling on the whole release-list request, headers and body. Without it a
+// host that accepts the connection and never answers leaves the request
+// hanging forever. Same value as src/lib/update-check.ts uses for its own
+// release-metadata call.
+const DEFAULT_TIMEOUT_MS = 10000;
+
 // The base URL is the repository's own web URL
 // (e.g. http://host:8110/owner/repo). The API route is a different shape
 // entirely — it hangs off the origin, not off the repository path — which is
@@ -143,6 +149,7 @@ export async function fetchReleases(baseUrl: string): Promise<SkillReleaseSummar
     const res = await fetch(releasesApiUrl(baseUrl), {
       // No token, no credential, no cookie.
       headers: { Accept: 'application/json', 'User-Agent': 'FlowCharge' },
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
     });
 
     if (!res.ok) return [];

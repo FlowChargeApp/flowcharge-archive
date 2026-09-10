@@ -71,6 +71,12 @@ export const PRAXIS_REPO_BASE_URL = 'http://100.87.185.97:8110/akoukoullis/Praxi
 // zip-read.ts, where the decoding actually happens.
 const MAX_ARCHIVE_BYTES = 64 * 1024 * 1024; // compressed bytes, as received
 
+// Ceiling on the whole asset download, headers and body. The signal stays
+// armed while the body streams, so this budgets the entire transfer rather
+// than only the response headers — which is why it is longer than the
+// metadata-only call in src/lib/update-check.ts uses.
+const DEFAULT_TIMEOUT_MS = 30000;
+
 // Same three exclusion rules applied while vendoring, re-applied here as a
 // defensive second pass rather than trusted to have already been fully
 // enforced upstream. The segment-shape rules exist for a second reason: these
@@ -286,7 +292,7 @@ export async function getInstallContent(
 
     // --- DOWNLOAD -----------------------------------------------------------
     const assetUrl = buildAssetDownloadUrl(PRAXIS_REPO_BASE_URL, latest.tag, latest.assetName);
-    const res = await fetch(assetUrl);
+    const res = await fetch(assetUrl, { signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS) });
     if (!res.ok) {
       throw new Error(`Failed to fetch FlowCharge Core skill archive: ${res.status} ${res.statusText}`);
     }
@@ -323,11 +329,11 @@ export async function getInstallContent(
 
     return { version: 'fetched-from-git', releaseTag: latest.tag, skills };
   } catch (err) {
-    // One line, carrying the thrown message. This module is loaded by both the
-    // HTTP server and the Electron main process, so the single line covers
-    // both transports. The error is re-thrown untouched: the caller turns it
-    // into the failure the user actually reads.
-    console.error(`FlowCharge Core skill install failed: ${(err as Error).message}`);
+    // Nothing is logged here. This module reports no wording of its own, the
+    // same rule src/lib/tree-layout.ts, src/lib/workstream-store.ts and
+    // src/lib/git.ts state in their own headers. The error is re-thrown
+    // untouched and the route boundary that called it owns the one failure
+    // report the user reads.
     throw err;
   }
 }

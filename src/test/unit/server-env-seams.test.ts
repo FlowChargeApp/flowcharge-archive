@@ -103,7 +103,7 @@ const SEEDED_RECORD = {
   toolId: SEEDED_TOOL_ID,
   resolvedPath: '/tmp/seam-test/skill',
   format: 'folder',
-  scope: { kind: 'user' },
+  scope: { kind: 'global' },
   installedAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   contentHash: 'seamtesthash',
