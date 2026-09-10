@@ -2,8 +2,8 @@
 
 Last-issued ID per type. To claim IDs, run node <skills-dir>/flowcharge/scripts/fc-index.mjs --root <project-root> --claim <TYPE> [<count>] and use the printed id(s) verbatim.
 
-- WS: 101
+- WS: 106
 - PLN: 87
-- IL: 14
-- TL: 101
-- ISS: 27
+- IL: 17
+- TL: 103
+- ISS: 47
