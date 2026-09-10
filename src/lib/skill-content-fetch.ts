@@ -329,11 +329,11 @@ export async function getInstallContent(
 
     return { version: 'fetched-from-git', releaseTag: latest.tag, skills };
   } catch (err) {
-    // One line, carrying the thrown message. This module is loaded by both the
-    // HTTP server and the Electron main process, so the single line covers
-    // both transports. The error is re-thrown untouched: the caller turns it
-    // into the failure the user actually reads.
-    console.error(`FlowCharge Core skill install failed: ${(err as Error).message}`);
+    // Nothing is logged here. This module reports no wording of its own, the
+    // same rule src/lib/tree-layout.ts, src/lib/workstream-store.ts and
+    // src/lib/git.ts state in their own headers. The error is re-thrown
+    // untouched and the route boundary that called it owns the one failure
+    // report the user reads.
     throw err;
   }
 }

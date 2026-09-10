@@ -229,7 +229,7 @@ down.
       failures: []
     ```
 
-- [ ] 3. Remove the one `console.*` call under `src/lib/` (ISS-30-a05gs5)
+- [x] 3. Remove the one `console.*` call under `src/lib/` (ISS-30-a05gs5)
   ```yaml
   description: "Delete the console.error line in getInstallContent's catch, keep the re-throw, and let the route boundary own the single failure report."
   author: Anthony Koukoullis
@@ -271,7 +271,7 @@ down.
     - "Is the try/catch frame intact, with the function body indentation unchanged?"
     - "Does the Node type-check still exit 0?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
