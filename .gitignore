@@ -4,6 +4,8 @@ node_modules/
 dist/
 .praxis-projects.json
 .praxis-update.json
+.praxis-installs.json
+.praxis-telemetry.json
 # Praxis-managed — do not hand-edit (see prx-index.mjs)
 prxwork/prxindex.md
 prxwork/prxkanban.md

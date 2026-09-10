@@ -36,7 +36,7 @@ Every task carries one literal SEARCH/REPLACE block, copied from the file as rea
 `f0b0a8c`. Each `verify` count below was measured at `f0b0a8c` before it was written
 down.
 
-- [ ] 1. Add the two missing state files to `.gitignore` (ISS-28-uphhhu)
+- [x] 1. Add the two missing state files to `.gitignore` (ISS-28-uphhhu)
   ```yaml
   description: "List .praxis-installs.json and .praxis-telemetry.json in .gitignore, beside the two entries already there."
   author: Anthony Koukoullis
@@ -66,7 +66,7 @@ down.
     - "Does `git check-ignore` report both new files as ignored?"
     - "Did no file other than .gitignore change?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
