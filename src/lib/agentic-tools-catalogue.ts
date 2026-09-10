@@ -57,22 +57,35 @@ export const TOOL_CATALOGUE: ToolDefinition[] = [
       {
         kind: 'skill-directory',
         pathTemplate: 'skills/<name>/SKILL.md',
-        notes: 'Relative to configDir (user-level) or .claude/ at the project root (project-level).',
+        scopes: ['global'],
+        notes: 'Relative to configDir, at user level.',
+      },
+      {
+        // The project-level counterpart of the entry above. The note on
+        // that entry stated this .claude/ prefix in prose; it is a
+        // separate, scope-tagged entry now so the selector can reach it.
+        kind: 'skill-directory',
+        pathTemplate: '.claude/skills/<name>/SKILL.md',
+        scopes: ['project'],
+        notes: 'Relative to the project root; Claude Code reads project skills from <projectRoot>/.claude/skills/.',
       },
       {
         kind: 'markdown-context-file',
         pathTemplate: 'CLAUDE.md',
-        notes: 'Read from the project root; a user-level copy may also live under configDir.',
+        scopes: ['project'],
+        notes: 'Read from the project root; a user-level copy may also live under configDir. Never selected, because the skill-directory entries above it are implemented and win at both scopes.',
       },
       {
         kind: 'mcp-json',
         pathTemplate: '.mcp.json',
+        scopes: ['project'],
         notes: 'Project-root MCP server config; user-level MCP config lives in configDir.',
       },
       {
         kind: 'structured-config-file',
         pathTemplate: 'settings.json',
-        notes: 'Relative to configDir (user-level) or .claude/ at the project root (project-level).',
+        scopes: ['global'],
+        notes: 'Relative to configDir, at user level.',
       },
     ],
   },
@@ -210,22 +223,35 @@ export const TOOL_CATALOGUE: ToolDefinition[] = [
       {
         kind: 'structured-config-file',
         pathTemplate: 'opencode.json',
+        scopes: ['global'],
         notes: 'Runtime config, relative to configDir; opencode.jsonc is an accepted alternate extension.',
       },
       {
         kind: 'structured-config-file',
         pathTemplate: 'tui.json',
+        scopes: ['global'],
         notes: 'TUI settings, relative to configDir.',
       },
       {
         kind: 'skill-directory',
         pathTemplate: 'skills/<name>/SKILL.md',
-        notes: 'Relative to configDir, alongside sibling agents/, commands/, modes/, plugins/, tools/, and themes/ subdirectories.',
+        scopes: ['global'],
+        notes: 'Relative to configDir, at user level, alongside sibling agents/, commands/, modes/, plugins/, tools/, and themes/ subdirectories.',
+      },
+      {
+        // The project-level counterpart of the entry above, the same
+        // shape Claude Code has: OpenCode reads project skills from
+        // <projectRoot>/.opencode/skills/ (https://opencode.ai/docs/skills/).
+        kind: 'skill-directory',
+        pathTemplate: '.opencode/skills/<name>/SKILL.md',
+        scopes: ['project'],
+        notes: 'Relative to the project root; OpenCode reads project skills from <projectRoot>/.opencode/skills/.',
       },
       {
         kind: 'markdown-context-file',
         pathTemplate: 'AGENTS.md',
-        notes: 'Read from the project root automatically; a global copy also lives at AGENTS.md under configDir.',
+        scopes: ['global'],
+        notes: 'A global copy lives at AGENTS.md under configDir. The project-root AGENTS.md OpenCode also reads is a user-authored file, never a skill install target, so it is not declared at project scope.',
       },
     ],
   },

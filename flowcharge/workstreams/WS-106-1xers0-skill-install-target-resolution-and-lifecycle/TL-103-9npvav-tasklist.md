@@ -649,13 +649,13 @@ returns no lines.
       failures: []
     ```
 
-- [ ] 2. Give Claude Code and OpenCode their project-scope targets (ISS-34-mpy9n0)
+- [x] 2. Give Claude Code and OpenCode their project-scope targets (ISS-34-mpy9n0)
 
   ```yaml
   description: "Annotate the Claude Code and OpenCode catalogue entries, adding the .claude/ and .opencode/ prefixed project-scope skill directories each tool actually reads, so a project install stops writing a top-level skills/ directory no tool reads."
   ```
 
-  - [ ] 2.1 Annotate the Claude Code integration formats and add its project-scope skill directory
+  - [x] 2.1 Annotate the Claude Code integration formats and add its project-scope skill directory
     ```yaml
     description: "Claude Code reads project skills from <projectRoot>/.claude/skills/, which exists today only in a free-text note."
     author: Anthony Koukoullis
@@ -735,11 +735,11 @@ returns no lines.
       - "Both skill-directory entries precede markdown-context-file."
       - "Every entry carries scopes."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.2 Annotate the OpenCode integration formats and add its project-scope skill directory
+  - [x] 2.2 Annotate the OpenCode integration formats and add its project-scope skill directory
     ```yaml
     description: "OpenCode reads project skills from <projectRoot>/.opencode/skills/<name>/SKILL.md (https://opencode.ai/docs/skills/, checked 2026-09-10), which the catalogue names nowhere today, so project scope resolved to the configDir-relative template instead."
     author: Anthony Koukoullis
@@ -841,7 +841,7 @@ returns no lines.
       - "The eight-pair probe prints exactly the eight lines above."
       - "The project-scope entry's pathTemplate starts with .opencode/ and sits above AGENTS.md."
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
