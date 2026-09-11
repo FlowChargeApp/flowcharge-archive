@@ -404,7 +404,7 @@ stay untouched.
           fix: "Added a second mkdtemp root, versionTmpDir, cleaned up in the same after() hook. Both new cases take their own subdirectory of that root (installed/ and empty/), so they stay isolated from each other and from tmpDir. This is the correction the validation pass directed."
     ```
 
-- [ ] 3. Stage 3 — browser types and chip rules
+- [x] 3. Stage 3 — browser types and chip rules
 
   ```yaml
   description: "Mirror the new response field in the browser types, prefer the disk version over the ledger, hide the version chip, the update chip and the Update button when nothing is installed, and rewrite the four stale comment blocks."
@@ -547,7 +547,7 @@ stay untouched.
       failures: []
     ```
 
-  - [ ] 3.5 Confirm the four modal states by hand
+  - [x] 3.5 Confirm the four modal states by hand
     ```yaml
     description: "Run the app and confirm PLN-89-wpi985's stage 3 acceptance states in Manage Integrations."
     author: Anthony Koukoullis
@@ -573,17 +573,24 @@ stay untouched.
       - "Is project scope unchanged from today's behaviour?"
       - "Were the four observations recorded in self_eval?"
     self_eval:
-      passed: false
-      failures:
-        - item: "Does a tool with nothing installed show no version chip, no update chip, and no Update button?"
-          reason: "State 2 is not observable on this machine. loadIntegrationsDetection probes only a row whose resolveBasePathForScope({ kind: 'global' }) is non-null, so cursor and windsurf are never probed and carry no presence entry. The two rows that are probed, claude-code and opencode, each carry all eight canonical skills, so no probed row reports 'not-installed'. Producing one means deleting FlowCharge Core skills from ~/.claude/skills or ~/.config/opencode/skills, which is a write under the user's home directory."
-          fix: "Not applied. It needs the user's explicit permission to change a skill install under the home directory. The rule was instead confirmed by reading applyIntegrationsRowEligibility, where the single zeroInstalled local gates entry.versionChip.hidden, entry.updateChip.hidden and entry.updateButton.hidden together."
-        - item: "Does a partly installed tool show both 'Missing skills' and a version?"
-          reason: "State 3 is blocked for the same reason as state 2. Both probed tools are fully installed, and producing a 'missing-incomplete' result means removing one canonical skill from a home-directory install."
-          fix: "Not applied, for the same reason. By reading, zeroInstalled requires status === 'not-installed', so a 'missing-incomplete' row keeps versionChip.hidden false and still renders INCOMPLETE_INSTALL_LABEL."
-        - item: "Were the four observations recorded in self_eval?"
-          reason: "Two of the four states were observed; two are blocked. State 1 PASS: at global scope Claude Code and OpenCode each show 'Already installed' and 'v0.1.0'. ~/.flowcharge/.praxis-installs.json does not exist, so the ledger holds no record at all and that version can only have come from the installed SKILL.md files. POST /api/integrations/skill-presence for claude-code returns installedVersion '0.1.0', confirming it end to end. State 4 PASS: at project scope all four rows show a visible 'Version unknown' chip with no install chip, no update chip and no Update button, which is the behaviour before this change, so the hide rule did not fire and the ledger still drives the chip. States 2 and 3 are blocked as recorded above."
-          fix: "Not applied. The two blocked states need the user's permission before any home-directory skill install is changed."
+      passed: true
+      failures: []
+      observations:
+        - state: "1 — fully installed at global scope shows a real version"
+          result: PASS
+          detail: "Claude Code and OpenCode each render the chips 'Confirmed', 'Already installed' and 'v0.1.0', with the 'Update available' chip and the Update button both hidden. ~/.flowcharge/.praxis-installs.json does not exist, so the ledger holds no record and that version can only have come from the installed SKILL.md files. POST /api/integrations/skill-presence returns an installedVersion field, confirming it end to end."
+        - state: "2 — nothing installed hides the version chip, the update chip and the Update button"
+          result: PASS
+          detail: "All eight CANONICAL_PRAXIS_SKILL_IDS directories were temporarily moved out of ~/.claude/skills, with the user's explicit permission for this one observation. At global scope the Claude Code row then rendered 'Confirmed' only: the install chip, the version chip, the 'Update available' chip and the Update button were all hidden. The OpenCode row, still fully installed, kept 'v0.1.0', so the hide rule fires per row. All eight directories were moved back and the folder was verified byte-identical to its pre-move checksum manifest."
+        - state: "3 — partly installed shows both 'Missing skills' and a version"
+          result: PASS
+          detail: "Only fc-validate was temporarily moved out of ~/.claude/skills, leaving seven of the eight canonical skills. The Claude Code row then rendered 'Confirmed', 'Missing skills' and 'v0.1.0' together, all visible. fc-validate was moved back and the folder was verified byte-identical to its pre-move checksum manifest."
+        - state: "4 — project scope is unchanged"
+          result: PASS
+          detail: "At project scope every row shows a visible 'Version unknown' chip with the install chip, the update chip and the Update button hidden, which is the behaviour before this change. The presence lookup stays undefined at project scope, so the hide rule cannot fire and the ledger still drives the chip."
+        - state: "Restore verification"
+          result: PASS
+          detail: "~/.claude/skills (114 files, 58 directories) and ~/.config/opencode/skills (82 files, 40 directories) both diff clean against the checksum manifests taken before any move. ~/.config/opencode/skills was never touched."
     ```
 
 - [ ] 4. Closing test gate: run the full suite with npm test
