@@ -15,6 +15,7 @@ import path from 'node:path';
 
 import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
 import { CANONICAL_PRAXIS_SKILL_IDS } from '../../lib/agentic-tools-canonical-skills.js';
+import { EXPECTED_CANONICAL_SKILL_IDS } from '../expected-skill-ids.js';
 
 // Set BEFORE the server module is imported: it reads both at evaluation time,
 // so assigning them afterwards would be too late. PORT 0 asks the OS for an
@@ -53,6 +54,50 @@ function postJson(route: string, body: unknown): Promise<Response> {
 
 const firstTool = TOOL_CATALOGUE[0];
 if (firstTool === undefined) throw new Error('expected at least one entry in TOOL_CATALOGUE');
+
+// The version every fixture SKILL.md below carries. Deliberately not '9.9.9',
+// so a presence case cannot pass on the version the older case above writes.
+const FIXTURE_VERSION = '3.4.5';
+
+// Lays skill files out under <versionTmpDir>/<name>/skills/<id>/SKILL.md and
+// answers that base path. The relative layout is written here as a literal and
+// is NOT derived from formatForTarget or from the catalogue pathTemplate: a
+// fixture built by the code under test would agree with whatever path that
+// code produced and would assert nothing. Each caller passes its own name, so
+// no case can see another case's fixture, and nothing is written under tmpDir,
+// which an existing case asserts stays empty. The body carries a nested
+// metadata.version, matching the fixture the installedVersion case above
+// writes, so one fixture serves both the presence assertions and the
+// installedVersion assertion.
+function writeSkillFixture(name: string, skillIds: string[]): string {
+  const baseDir = path.join(versionTmpDir, name);
+  for (const skillId of skillIds) {
+    const skillDir = path.join(baseDir, 'skills', skillId);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      `---\nname: ${skillId}\nmetadata:\n  version: "${FIXTURE_VERSION}"\n---\nBody text.\n`,
+      'utf8',
+    );
+  }
+  return baseDir;
+}
+
+// The one id the partial-install fixture leaves out, named literally rather
+// than picked by index from EXPECTED_CANONICAL_SKILL_IDS, so the expectation
+// cannot silently follow a reordering of that golden list.
+const PARTIAL_OMITTED_SKILL_ID = 'fc-git';
+const PARTIAL_INSTALL_SKILL_IDS = EXPECTED_CANONICAL_SKILL_IDS.filter(
+  (id) => id !== PARTIAL_OMITTED_SKILL_ID,
+);
+
+type PresenceBody = {
+  checkKind: string;
+  status: string;
+  presentSkillIds: string[];
+  missingSkillIds: string[];
+  installedVersion: string | null;
+};
 
 test('GET /api/integrations/tools answers one row per catalogue tool', async () => {
   const res = await fetch(`${base}/api/integrations/tools`);
@@ -137,6 +182,78 @@ test('POST /api/integrations/skill-presence answers a null installedVersion for 
   assert.equal(res.status, 200);
   const body = (await res.json()) as { installedVersion: string | null };
   assert.equal(body.installedVersion, null);
+});
+
+test('POST /api/integrations/skill-presence answers fully-installed when every canonical skill is on disk', async () => {
+  // firstTool is claude-code, whose global format is skill-directory with
+  // pathTemplate 'skills/<name>/SKILL.md'. The fixture writes files only; no
+  // case here installs anything, because getInstallContent is a live network
+  // call.
+  const baseDir = writeSkillFixture('full-install', EXPECTED_CANONICAL_SKILL_IDS);
+
+  const res = await postJson('/api/integrations/skill-presence', {
+    toolId: firstTool.id,
+    basePath: baseDir,
+    scope: { kind: 'global' },
+  });
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as PresenceBody;
+  assert.equal(body.checkKind, 'per-skill');
+  assert.equal(body.status, 'fully-installed');
+  assert.deepEqual(body.missingSkillIds, []);
+  // presentSkillIds arrives in the canonical list's declaration order, so the
+  // comparison sorts a copy rather than the response array's own order.
+  assert.deepEqual([...body.presentSkillIds].sort(), EXPECTED_CANONICAL_SKILL_IDS);
+});
+
+test('POST /api/integrations/skill-presence answers missing-incomplete and names the one absent skill', async () => {
+  const baseDir = writeSkillFixture('partial-install', PARTIAL_INSTALL_SKILL_IDS);
+
+  const res = await postJson('/api/integrations/skill-presence', {
+    toolId: firstTool.id,
+    basePath: baseDir,
+    scope: { kind: 'global' },
+  });
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as PresenceBody;
+  assert.equal(body.checkKind, 'per-skill');
+  assert.equal(body.status, 'missing-incomplete');
+  assert.deepEqual(body.missingSkillIds, [PARTIAL_OMITTED_SKILL_ID]);
+});
+
+test('POST /api/integrations/skill-presence answers a version for a partial install', async () => {
+  // The same fixture the missing-incomplete case above drives. Rebuilding it
+  // here is idempotent and keeps this case independent of test ordering.
+  const baseDir = writeSkillFixture('partial-install', PARTIAL_INSTALL_SKILL_IDS);
+
+  const res = await postJson('/api/integrations/skill-presence', {
+    toolId: firstTool.id,
+    basePath: baseDir,
+    scope: { kind: 'global' },
+  });
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as PresenceBody;
+  assert.equal(body.installedVersion, FIXTURE_VERSION);
+});
+
+test('POST /api/integrations/skill-presence answers not-installed for an empty base path', async () => {
+  // Its own subdirectory, not the empty-directory case's, so neither case
+  // depends on the other's setup. No SKILL.md is written into it: the route
+  // answers 'not-installed' only when presentSkillIds is empty.
+  const baseDir = path.join(versionTmpDir, 'presence-empty');
+  fs.mkdirSync(baseDir, { recursive: true });
+
+  const res = await postJson('/api/integrations/skill-presence', {
+    toolId: firstTool.id,
+    basePath: baseDir,
+    scope: { kind: 'global' },
+  });
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as PresenceBody;
+  assert.equal(body.checkKind, 'per-skill');
+  assert.equal(body.status, 'not-installed');
+  assert.deepEqual(body.presentSkillIds, []);
+  assert.deepEqual([...body.missingSkillIds].sort(), EXPECTED_CANONICAL_SKILL_IDS);
 });
 
 test('POST /api/integrations/installs refuses a basePath outside the permitted root', async () => {

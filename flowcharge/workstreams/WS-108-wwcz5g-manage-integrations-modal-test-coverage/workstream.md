@@ -4,7 +4,7 @@ type: workstream
 workstream: WS-108-wwcz5g
 slug: manage-integrations-modal-test-coverage
 title: "Manage Integrations modal has no test coverage"
-status: ready
+status: done
 tags: [testing, agentic-tools, feature]
 created: 2026-09-11
 updated: 2026-09-11

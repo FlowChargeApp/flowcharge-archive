@@ -19,8 +19,10 @@ import './update-banner';
 import './theme-toggle';
 import { unwrapIpc } from './ipc-adapter';
 import type { PraxisIpcResult } from './ipc-adapter';
-import { resolveBasePathForScope, isEligibleAtScope } from './lib/agentic-tools-scope';
+import { resolveBasePathForScope } from './lib/agentic-tools-scope';
 import type { InstallScope } from './lib/agentic-tools-scope';
+import { deriveIntegrationsRowDecision } from '../lib/agentic-tools-chip-rules';
+import type { IntegrationsRowRuleInput } from '../lib/agentic-tools-chip-rules';
 import type {
   DetectionConfidence,
   InstallRecord,
@@ -412,44 +414,21 @@ import type {
   // but not all canonical skills are present on disk for this tool.
   var INCOMPLETE_INSTALL_LABEL = 'Missing skills';
 
-  // Version-chip labels. The version comes from the installed skill files first and
-  // the install record second. No version at either source, or a version the semver
-  // rule below cannot read, shows UNKNOWN_VERSION_LABEL and never an empty chip.
+  // Version-chip labels. The rule that picks the version now lives in
+  // src/lib/agentic-tools-chip-rules.ts — installed skill files first, install record
+  // second — together with the semver reader it used to need from this file. That
+  // module answers { kind: 'unknown' } when neither source holds a version it can read.
+  // This file owns only the words: an unknown version reads UNKNOWN_VERSION_LABEL and
+  // never an empty chip.
   var VERSION_LABEL_PREFIX = 'v';
   var UNKNOWN_VERSION_LABEL = 'Version unknown';
 
-  // Rides on that same resolved version: shown only when the newest published release
-  // is STRICTLY newer than it. An equal tag shows the version chip and no update chip,
-  // and an unreadable or absent version shows neither. A row with nothing installed
-  // hides this chip outright, along with the version chip and the Update button.
+  // Rides on that same resolved version, and the same module owns the comparison:
+  // offered only when the newest published release is STRICTLY newer than it. An equal
+  // tag shows the version chip and no update chip, and an unreadable or absent version
+  // shows neither. A row with nothing installed hides this chip outright, along with the
+  // version chip and the Update button.
   var UPDATE_AVAILABLE_LABEL = 'Update available';
-
-  // Accepts `v?MAJOR.MINOR.PATCH` and ignores whatever follows the patch number,
-  // matching src/lib/update-check.ts's rule exactly. Re-authored here rather than
-  // imported: that module uses the Node-only Buffer global and is excluded from this
-  // page's type-check and bundle (see task list Divergence 2).
-  var SEMVER_RE = /^v?(\d+)\.(\d+)\.(\d+)/;
-
-  function parseSemver(raw: string): { major: number; minor: number; patch: number } | null {
-    if (typeof raw !== 'string') return null;
-    var m = raw.trim().match(SEMVER_RE);
-    if (m === null) return null;
-    return { major: Number(m[1]), minor: Number(m[2]), patch: Number(m[3]) };
-  }
-
-  // True only when candidate is strictly greater than running, comparing major,
-  // then minor, then patch. An unreadable version on either side returns false: a
-  // version we cannot read must never prompt an update. Same semantics as
-  // src/lib/update-check.ts's isNewer, re-authored here for the same reason
-  // parseSemver above is (see task list Divergence 2).
-  function isNewer(candidate: string, running: string): boolean {
-    var a = parseSemver(candidate);
-    var b = parseSemver(running);
-    if (a === null || b === null) return false;
-    if (a.major !== b.major) return a.major > b.major;
-    if (a.minor !== b.minor) return a.minor > b.minor;
-    return a.patch > b.patch;
-  }
 
   type IntegrationsRowEntry = {
     row: ToolDetectionRow;
@@ -480,8 +459,8 @@ import type {
   // installed skill files, so this map drives the version chip as well as the install
   // chip. A scope toggle re-derives chip visibility from this map client-side; it never
   // triggers a new checkInstalledSkills() call. Only ever populated at Global scope —
-  // see applyIntegrationsRowEligibility's currentIntegrationsScope.kind === 'global'
-  // gate, and task list Divergence 2.
+  // see the project-scope gate in src/lib/agentic-tools-chip-rules.ts, which ignores
+  // this map's entry at Project scope, and task list Divergence 2.
   var integrationsSkillPresence: Record<string, SkillPresenceResponse> = {};
 
   // The newest published release, or null when none was found. Always the FIRST entry
@@ -576,92 +555,81 @@ import type {
 
   // Visible text only, never a hover-only title — both the ineligibility label and
   // the unverified-path note must be readable without hovering.
+  //
+  // This function decides nothing. src/lib/agentic-tools-chip-rules.ts owns every rule
+  // it used to hold: eligibility from the resolved base path, the Global-scope gate on
+  // the presence result, the disk-first / ledger-second version, the strict update
+  // comparison, the note order, and the 'unchanged' answer that protects a live install
+  // result. deriveIntegrationsRowDecision is called once below; the rest of this
+  // function paints that decision and supplies the words, which stay here because the
+  // rules module holds no user-facing string.
   function applyIntegrationsRowEligibility(entry: IntegrationsRowEntry) {
-    var eligible = isEligibleAtScope(currentIntegrationsScope, entry.row.detection);
-    entry.checkbox.disabled = !eligible;
-    entry.notes.innerHTML = '';
-
-    // checkInstalledSkills is only ever fetched at Global scope (loadIntegrationsDetection,
-    // below) — showing its result under Project scope would be a stale, wrong-scope
-    // result mislabelled as current. Hide the install chip outright at Project scope
-    // instead (a deliberate, bounded scope limit — see task list Divergence 2 — not a
-    // bug), and leave the ledger driving the version chip there.
-    var presence = currentIntegrationsScope.kind === 'global'
-      ? integrationsSkillPresence[entry.row.toolId]
-      : undefined;
-
-    // Version chip, re-derived on every scope toggle. The version is read disk-first
-    // and ledger-second: presence.installedVersion, the version the route read off the
-    // installed skill files, wins; the once-fetched record map supplies it only when
-    // the presence response carries none. No version at either source, and a version
-    // the semver rule cannot read, both read 'Version unknown'.
-    //
-    // A row with zero skills installed hides all three of the version chip, the update
-    // chip and the Update button: there is no installation to carry a version.
-    // PLN-89-wpi985 Assumption 6: a failed or pending presence probe leaves no entry in
-    // the map, so zeroInstalled stays false there and the chip stays visible reading
-    // 'Version unknown'.
-    var zeroInstalled = presence !== undefined
-      && presence.checkKind === 'per-skill'
-      && presence.status === 'not-installed';
     var recordKey = installRecordKey(entry.row.toolId, currentIntegrationsScope);
     var record = integrationsInstallRecords[recordKey];
-    var recordedVersion = record === undefined ? undefined : record.version;
-    var diskVersion = presence !== undefined
-      && typeof presence.installedVersion === 'string'
-      && presence.installedVersion !== ''
-      ? presence.installedVersion
-      : undefined;
-    var effectiveVersion = diskVersion === undefined ? recordedVersion : diskVersion;
-    var parsed = effectiveVersion === undefined ? null : parseSemver(effectiveVersion);
-    entry.versionChip.textContent = parsed === null
-      ? UNKNOWN_VERSION_LABEL
-      : VERSION_LABEL_PREFIX + parsed.major + '.' + parsed.minor + '.' + parsed.patch;
-    entry.versionChip.hidden = zeroInstalled;
+    // Passed unconditionally. The Global-scope gate — showing a checkInstalledSkills
+    // result under Project scope would be a stale, wrong-scope result mislabelled as
+    // current — is the rules module's now, and applying it here as well would apply it
+    // twice.
+    var presence: SkillPresenceResponse | undefined = integrationsSkillPresence[entry.row.toolId];
+    var ruleInput: IntegrationsRowRuleInput = {
+      scopeKind: currentIntegrationsScope.kind,
+      basePath: resolveBasePathForScope(currentIntegrationsScope, entry.row.detection),
+      needsManualVerification: entry.row.detection.needsManualVerification,
+      hasLiveResult: entry.hasLiveResult,
+      presence: presence,
+      installedVersion: presence === undefined ? undefined : presence.installedVersion,
+      ledgerVersion: record === undefined ? undefined : record.version,
+      latestReleaseTag: latestRelease === null ? null : latestRelease.tag
+    };
+    var decision = deriveIntegrationsRowDecision(ruleInput);
 
-    // Update chip. Hidden outright when the row has nothing installed. Otherwise
-    // strict comparison only: an equal tag shows no chip, and an absent version or a
-    // version either side cannot read shows no chip either — isNewer returns false for
-    // every unreadable input, so an unparseable tag can never prompt an update.
-    var updateAvailable = !zeroInstalled
-      && effectiveVersion !== undefined
-      && latestRelease !== null
-      && isNewer(latestRelease.tag, effectiveVersion);
-    entry.updateChip.hidden = !updateAvailable;
+    entry.checkbox.disabled = !decision.eligible;
+
+    // Version chip, re-derived on every scope toggle. A row with zero skills installed
+    // hides all three of the version chip, the update chip and the Update button: there
+    // is no installation to carry a version.
+    if (decision.versionChip.kind === 'hidden') {
+      entry.versionChip.hidden = true;
+    } else {
+      entry.versionChip.textContent = decision.versionChip.kind === 'unknown'
+        ? UNKNOWN_VERSION_LABEL
+        : VERSION_LABEL_PREFIX + decision.versionChip.major + '.'
+          + decision.versionChip.minor + '.' + decision.versionChip.patch;
+      entry.versionChip.hidden = false;
+    }
+
+    entry.updateChip.hidden = !decision.updateOffered;
     // The button rides on the chip's condition, and expresses ineligibility the
     // way the checkbox does — disabled, not hidden. A row with no resolvable base
     // path at this scope has no installable target, so clicking it would only
     // produce a refused install from the transport.
-    entry.updateButton.hidden = !updateAvailable;
-    entry.updateButton.disabled = !eligible;
+    entry.updateButton.hidden = !decision.updateOffered;
+    entry.updateButton.disabled = !decision.eligible;
 
-    if (!eligible) {
+    // 'unchanged' is a no-op on both textContent and hidden, and must stay one: a live
+    // installSelected() result already reflects real, current install state, and writing
+    // either property would clobber it with the fs-presence check, which is fetched once
+    // at dialog open and cannot see an install that happened afterward.
+    if (decision.installChip === 'already-installed') {
+      entry.installChip.textContent = ALREADY_INSTALLED_LABEL;
+      entry.installChip.hidden = false;
+    } else if (decision.installChip === 'missing-skills') {
+      entry.installChip.textContent = INCOMPLETE_INSTALL_LABEL;
+      entry.installChip.hidden = false;
+    } else if (decision.installChip === 'hidden') {
+      entry.installChip.hidden = true;
+    }
+
+    // One span per note, in the order the rules module returns them. The module names
+    // the note; this file writes the sentence, including the scope word.
+    entry.notes.innerHTML = '';
+    decision.notes.forEach(function (note) {
       var scopeLabel = currentIntegrationsScope.kind === 'project' ? 'project scope' : 'global scope';
-      entry.notes.appendChild(el('span', 'integrations-row-note', 'Not supported at ' + scopeLabel));
-    }
-    if (entry.row.detection.needsManualVerification) {
-      entry.notes.appendChild(el('span', 'integrations-row-note', 'Path unverified for your OS'));
-    }
-    // A live installSelected() result already reflects real, current install state —
-    // never overwrite it with the fs-presence check below, which is fetched once at
-    // dialog open and cannot see a live install that happened afterward.
-    if (!entry.hasLiveResult) {
-      var fullyPresent = presence !== undefined && (
-        (presence.checkKind === 'per-skill' && presence.status === 'fully-installed') ||
-        (presence.checkKind === 'shared-file' && presence.exists)
-      );
-      var incompletePresent = presence !== undefined
-        && presence.checkKind === 'per-skill' && presence.status === 'missing-incomplete';
-      if (fullyPresent) {
-        entry.installChip.textContent = ALREADY_INSTALLED_LABEL;
-        entry.installChip.hidden = false;
-      } else if (incompletePresent) {
-        entry.installChip.textContent = INCOMPLETE_INSTALL_LABEL;
-        entry.installChip.hidden = false;
-      } else {
-        entry.installChip.hidden = true;
-      }
-    }
+      var text = note === 'not-supported-at-scope'
+        ? 'Not supported at ' + scopeLabel
+        : 'Path unverified for your OS';
+      entry.notes.appendChild(el('span', 'integrations-row-note', text));
+    });
   }
 
   function refreshIntegrationsEligibility() {
@@ -858,8 +826,9 @@ import type {
     if (!entries.length) return;
 
     var targets = entries.map(function (entry) {
-      // Non-null: every entry here passed isEligibleAtScope (checkbox not disabled),
-      // which is defined as resolveBasePathForScope(...) !== null.
+      // Non-null: every entry here is eligible (checkbox not disabled), and
+      // src/lib/agentic-tools-chip-rules.ts defines eligibility as
+      // resolveBasePathForScope(...) !== null.
       var basePath = resolveBasePathForScope(currentIntegrationsScope, entry.row.detection)!;
       return { toolId: entry.row.toolId, basePath: basePath, scope: currentIntegrationsScope };
     });

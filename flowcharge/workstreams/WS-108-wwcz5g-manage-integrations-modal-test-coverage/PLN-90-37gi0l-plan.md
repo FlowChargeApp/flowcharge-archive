@@ -4,7 +4,7 @@ type: plan
 workstream: WS-108-wwcz5g
 slug: manage-integrations-modal-test-coverage
 title: "Pin the canonical skill ids and cover the chips' data source, before the modal's own render rules"
-status: ready
+status: done
 created: 2026-09-11
 updated: 2026-09-11
 depends_on: []
