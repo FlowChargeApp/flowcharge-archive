@@ -6,7 +6,7 @@ slug: skill-install-target-resolution-and-lifecycle
 title: "Skill install target resolution and lifecycle defects"
 status: ready
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 depends_on: []
 links: []
 ---
@@ -225,11 +225,11 @@ links: []
   notes: "The lost-update path is the primary defect. The temp-file interleave is a narrower race with the same root. Any correction must add no runtime dependency, so serialization uses an in-process queue or a unique temp suffix from Node built-ins."
   ```
 
-- [ ] ISS-42-q1t9bh. Skill presence is checked against a hand-maintained id list, not against what was installed
+- [x] ISS-42-q1t9bh. Skill presence is checked against a hand-maintained id list, not against what was installed
 
   ```yaml
   id: ISS-42-q1t9bh
-  status: ready
+  status: done
   severity: medium
   author: Anthony Koukoullis
   description: "src/http/routes-integrations.ts passes CANONICAL_PRAXIS_SKILL_IDS to checkSkillPresence, and the ledger record of what the install actually wrote is never consulted. The header of src/lib/agentic-tools-canonical-skills.ts calls the array a provisional, hand-maintained duplicate of the canonical FlowCharge Core skill suite, and names WS-44-h5cpzp as the workstream meant to replace it. Nothing detects drift between that array and the published release."
@@ -242,8 +242,8 @@ links: []
   actual: "checkSkillPresence resolves expected paths from the hardcoded list. A correctly and completely installed tool reports Missing skills for a skill the release no longer ships, or reports Already installed while a newly added skill is absent. The chip is wrong in both directions and nothing detects the drift."
   affected: "src/lib/agentic-tools-canonical-skills.ts (CANONICAL_PRAXIS_SKILL_IDS); src/http/routes-integrations.ts (the checkSkillPresence call); src/lib/agentic-tools-skill-presence.ts (checkSkillPresence)"
   environment: "Every host that serves the integrations routes. Node >=20.14."
-  tasks: []
-  notes: "checkSkillPresence running only at global scope is a documented, bounded scope limit and is not part of this issue. Any correction must add no runtime dependency."
+  tasks: [TL-105-ds7369.1]
+  notes: "checkSkillPresence running only at global scope is a documented, bounded scope limit and is not part of this issue. Any correction must add no runtime dependency. Confirmed by the user on 2026-09-11: the skill suite's file names and frontmatter shape are final and not expected to change again, so the immediate correction is a direct, hand update of the comparison list to today's 8 real ids (flowcharge, fc-git, fc-issue-list, fc-dev-principles, fc-plan-feature, fc-task-list, fc-plain-text-kanban, fc-validate) — this alone fixes the chip today and needs no published release. PLN-88-tpbc8f (this workstream) instead designed a release-derived source to guard against future drift; that release-derived design is a separate hardening step, not required to close this issue, and it found the one published release (Gitea and its GitHub mirror alike) is itself stale against today's real suite — see ISS-50-92mh3i. Closed 2026-09-11: TL-105-ds7369 task 1 updated CANONICAL_PRAXIS_SKILL_IDS to the 8 real ids; the real-symptom presence probe now reports fully-installed for Claude Code and OpenCode at global scope, and the closing npm test gate passed 338/338."
   ```
 
 - [x] ISS-43-xszeei. installAllGlobal is exported and tested but no caller reaches it
@@ -327,4 +327,23 @@ links: []
   environment: "Any machine whose ledger record predates the record-shape change. Node >=20.14."
   tasks: []
   notes: "Recorded in TL-103-9npvav as a divergence from ISS-36-vl2cpx. Deriving the unrecorded paths, for example by deleting a whole skills directory, was refused there because it could delete files this app never wrote. This issue names no direction and recommends none. Any correction must add no runtime dependency."
+  ```
+
+- [ ] ISS-50-92mh3i. The skill-release fetch is pinned to a temporary local Gitea address, not the public FlowCharge Core origin
+
+  ```yaml
+  id: ISS-50-92mh3i
+  status: ready
+  severity: high
+  author: Anthony Koukoullis
+  description: "src/lib/skill-content-fetch.ts:63 hardcodes PRAXIS_REPO_BASE_URL = 'http://100.87.185.97:8110/akoukoullis/Praxis', a private LAN address for a temporary local Gitea instance. The real, public origin is https://github.com/FlowChargeApp/flowcharge-core. A workstream on 2026-08-20 (WS-48-hsf9yl) deliberately templated this constant so a later host swap to github.com would be a one-line change, but no later workstream made that change."
+  steps_to_reproduce:
+    - "On any machine that is not on the developer's own LAN and cannot reach 100.87.185.97, open Manage integrations and use Install selected, or trigger the skill-presence/update check that reads from the same constant."
+    - "Watch the fetch to http://100.87.185.97:8110/... time out or fail to connect."
+  expected: "Skill install, update-check and presence machinery fetch release content from the public FlowCharge Core origin, reachable by every user."
+  actual: "Every fetch is pinned to a private LAN address unreachable outside the developer's own network, so install/update from a release fails for every other user."
+  affected: "src/lib/skill-content-fetch.ts:63 (PRAXIS_REPO_BASE_URL)"
+  environment: "Every machine that is not on the developer's own LAN. Node >=20.14."
+  tasks: []
+  notes: "The public origin (https://github.com/FlowChargeApp/flowcharge-core) is live and does carry a v0.1.0 release, verified directly on 2026-09-11. That release's own content is stale against the currently installed skill suite (see ISS-42-q1t9bh) — repointing this constant corrects the address only, not the release content. Any correction must add no runtime dependency."
   ```
