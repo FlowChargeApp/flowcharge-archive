@@ -236,7 +236,7 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
         - "npm test initially reported 387 total (equal to the f0d4e2f baseline, so this task's assertion went inside the existing case and raised no count) with 1 fail — the same tier (c) live-network test named in task 3.1's self_eval. This file's own run reported 12 tests, 12 pass, 0 fail throughout. After the approved EXPECTED_IDS fix (task 3.3's self_eval), npm test reports 387/387."
     ```
 
-- [ ] 4. Correct the release host named in PLN-88's Open question 1
+- [x] 4. Correct the release host named in PLN-88's Open question 1
 
   ```yaml
   description: "Reconcile PLN-88-tpbc8f-plan.md's Open question 1 to name the confirmed release host, https://github.com/FlowChargeApp/flowcharge-core. Documentation only; no source file is edited."
@@ -263,8 +263,14 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
     - "Are open questions 2 and 3, and the plan's frontmatter, unchanged?"
     - "Was no source file edited and no checkbox line introduced?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
+    evidence:
+      - "`grep -c \"FlowChargeApp/flowcharge-core\" ...PLN-88-tpbc8f-plan.md` returned 0 before the edit and returns 1 after it."
+      - "`grep -n \"leave the constant alone\" ...PLN-88-tpbc8f-plan.md` matched line 199 and line 200 before the edit and now returns no match (exit 1)."
+      - "`git diff --stat f0d4e2f -- ...PLN-88-tpbc8f-plan.md` reports 1 file changed, 12 insertions, 8 deletions. The full diff shows one hunk at `@@ -192,14 +192,18 @@`, inside Open question 1 only."
+      - "`sed -n '190,222p' ...PLN-88-tpbc8f-plan.md` shows open questions 2 and 3 byte-identical to the base, and the diff touches no frontmatter line."
+      - "`git diff f0d4e2f -- ...PLN-88-tpbc8f-plan.md | grep -c \"^+.*- \\[ \\]\"` returns 0, so no checkbox line was introduced. No source file was edited."
   ```
 
 - [ ] 5. Test gate
