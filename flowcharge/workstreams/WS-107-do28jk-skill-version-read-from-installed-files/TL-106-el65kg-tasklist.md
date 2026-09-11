@@ -410,7 +410,7 @@ stay untouched.
   description: "Mirror the new response field in the browser types, prefer the disk version over the ledger, hide the version chip, the update chip and the Update button when nothing is installed, and rewrite the four stale comment blocks."
   ```
 
-  - [ ] 3.1 Add the `SkillPresenceResponse` mirror type
+  - [x] 3.1 Add the `SkillPresenceResponse` mirror type
     ```yaml
     description: "Add the response mirror to src/public/lib/agentic-tools-api.ts and retype checkInstalledSkills."
     author: Anthony Koukoullis
@@ -449,11 +449,11 @@ stay untouched.
       - "Does checkInstalledSkills now resolve to PraxisIpcResult<SkillPresenceResponse>?"
       - "Does the browser type-check pass with no edit to src/public/browser-ipc-shim.ts?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.2 Retype the presence map and refresh its two neighbouring comment blocks
+  - [x] 3.2 Retype the presence map and refresh its two neighbouring comment blocks
     ```yaml
     description: "In src/public/home.ts, type integrationsSkillPresence as SkillPresenceResponse and rewrite the comment blocks at lines 475-482 and 489-498."
     author: Anthony Koukoullis
@@ -478,11 +478,11 @@ stay untouched.
       - "Does that comment still warn that the 'Already installed' chip must not read the ledger map?"
       - "Was no behaviour changed in this task?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.3 Rewrite the chip derivation in `applyIntegrationsRowEligibility`
+  - [x] 3.3 Rewrite the chip derivation in `applyIntegrationsRowEligibility`
     ```yaml
     description: "In src/public/home.ts, prefer the disk version, hide the version chip, update chip and Update button when nothing is installed, and rewrite the comment block at lines 578-604."
     author: Anthony Koukoullis
@@ -515,11 +515,11 @@ stay untouched.
       - "Does the comment block state the disk-first order, the hide rule, and Assumption 6?"
       - "Were changes confined to applyIntegrationsRowEligibility?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 3.4 Refresh the version-chip label comment block
+  - [x] 3.4 Refresh the version-chip label comment block
     ```yaml
     description: "In src/public/home.ts, rewrite the comment block at lines 415-424 that still attributes the version to a ledger record."
     author: Anthony Koukoullis
@@ -543,7 +543,7 @@ stay untouched.
       - "Are all four comment blocks the plan lists now rewritten?"
       - "Were VERSION_LABEL_PREFIX, UNKNOWN_VERSION_LABEL and UPDATE_AVAILABLE_LABEL left at their existing values?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
@@ -574,8 +574,83 @@ stay untouched.
       - "Were the four observations recorded in self_eval?"
     self_eval:
       passed: false
-      failures: []
+      failures:
+        - item: "Does a tool with nothing installed show no version chip, no update chip, and no Update button?"
+          reason: "State 2 is not observable on this machine. loadIntegrationsDetection probes only a row whose resolveBasePathForScope({ kind: 'global' }) is non-null, so cursor and windsurf are never probed and carry no presence entry. The two rows that are probed, claude-code and opencode, each carry all eight canonical skills, so no probed row reports 'not-installed'. Producing one means deleting FlowCharge Core skills from ~/.claude/skills or ~/.config/opencode/skills, which is a write under the user's home directory."
+          fix: "Not applied. It needs the user's explicit permission to change a skill install under the home directory. The rule was instead confirmed by reading applyIntegrationsRowEligibility, where the single zeroInstalled local gates entry.versionChip.hidden, entry.updateChip.hidden and entry.updateButton.hidden together."
+        - item: "Does a partly installed tool show both 'Missing skills' and a version?"
+          reason: "State 3 is blocked for the same reason as state 2. Both probed tools are fully installed, and producing a 'missing-incomplete' result means removing one canonical skill from a home-directory install."
+          fix: "Not applied, for the same reason. By reading, zeroInstalled requires status === 'not-installed', so a 'missing-incomplete' row keeps versionChip.hidden false and still renders INCOMPLETE_INSTALL_LABEL."
+        - item: "Were the four observations recorded in self_eval?"
+          reason: "Two of the four states were observed; two are blocked. State 1 PASS: at global scope Claude Code and OpenCode each show 'Already installed' and 'v0.1.0'. ~/.flowcharge/.praxis-installs.json does not exist, so the ledger holds no record at all and that version can only have come from the installed SKILL.md files. POST /api/integrations/skill-presence for claude-code returns installedVersion '0.1.0', confirming it end to end. State 4 PASS: at project scope all four rows show a visible 'Version unknown' chip with no install chip, no update chip and no Update button, which is the behaviour before this change, so the hide rule did not fire and the ledger still drives the chip. States 2 and 3 are blocked as recorded above."
+          fix: "Not applied. The two blocked states need the user's permission before any home-directory skill install is changed."
     ```
+
+- [ ] 4. Closing test gate: run the full suite with npm test
+  ```yaml
+  description: "Closing task 1 of 2, required by CLAUDE.md \"Closing a task list\", and traced to no issue. Running the full suite IS this task. Run it on this branch after task 3. Pass only when the suite reports zero failures."
+  author: Anthony Koukoullis
+  issues: []
+  implement:
+    - "From the project root, run `npm test`. Running the suite is the work of this task, not a side check. This project's execute-task template otherwise limits verify steps to lint, typecheck and inspection — that default is overridden for this one task, per CLAUDE.md \"Closing a task list\"."
+    - "`pretest` runs `npm run build` first, so the suite runs against freshly compiled dist/. Do not substitute a partial, filtered or single-file run."
+    - "If the suite reports zero failures, mark this task complete."
+    - "If any test fails, fix nothing inside this task. Leave the task unchecked, copy every failing test's name and failure message verbatim into self_eval.failures, and stop. Then follow CLAUDE.md: record every failure in a new issue list in WS-107-do28jk, author spec tasks for those issues, execute them on this same branch, and run this gate again. Repeat until the suite is green. No fix goes in unrecorded."
+    - "The suite includes skill-content-fetch, which reaches the release host hardcoded at src/lib/skill-content-fetch.ts:63. That host is a private LAN address, recorded as ISS-50-92mh3i (now in WS-109-skrkxj). A failure there because the host is unreachable is environmental. Record it in self_eval.failures with that label, not as a code defect."
+  pattern: "The whole repository. This task edits no file."
+  imports: "None."
+  compatibility: "`npm test` is `node --test --test-force-exit \"dist/**/*.test.js\" \".github/scripts/**/*.test.mjs\"`, and `pretest` is `npm run build`. Tests run compiled output, so a failing path names a dist/ file. Map it back to its src/ original before you report it."
+  gotcha: "Do not edit a test or a source file to turn the gate green. Do not re-run only the failing file to hide a flaky failure; record a flaky failure verbatim too. A build failure inside `pretest` is a gate failure — record its compiler output verbatim. This is a gate over the whole branch, not a check on task 3."
+  verify:
+    - "npm test — the final summary line `ℹ fail` must read 0. This is a whole-branch gate, and by CLAUDE.md it is a gate rather than a change detector, so it is not expected to fail at 1de6b38."
+  checklist:
+    - "npm test ran in full, with its pretest build, over the whole suite."
+    - "The run reported zero failures, or every failure is recorded verbatim in self_eval.failures."
+    - "Any skill-content-fetch failure caused by an unreachable release host is labelled environmental."
+    - "This task edited no source, test or configuration file."
+  self_eval:
+    passed: false
+    failures: []
+  ```
+
+- [ ] 5. Closing ARCHITECTURE.md review against this task list's changes
+  ```yaml
+  description: "Closing task 2 of 2, required by CLAUDE.md \"Closing a task list\", and traced to no issue. Review every section of ARCHITECTURE.md against this branch's real diff, and update what no longer matches the code."
+  author: Anthony Koukoullis
+  issues: []
+  implement:
+    - "Run `git diff 1de6b38..HEAD` and read it in full. That diff, not this task, is the authority on what changed. This task names no section and forecasts no edit."
+    - "Read ARCHITECTURE.md one `## N.` section at a time, never in full — the file is about 2,160 lines. Compare each section against the diff."
+    - "Update every statement that no longer matches the code at HEAD. Keep every statement that is still true, verbatim. Make targeted edits. Do not regenerate whole sections and do not rewrite prose that is still correct."
+    - "If a section needs no change, change nothing in it. A review that ends with no edit is a valid outcome."
+    - "Keep the eleven `## N.` headings in their existing order and numbering, and keep the file's no-metadata-header format."
+  pattern: "ARCHITECTURE.md only."
+  imports: "None."
+  compatibility: "Use the owner's fixed 11-section format with inline Mermaid. Three cross-section rules must hold after the review: every Section 3 component is named in Section 4, every Section 8 Data/Contract type is a Section 5 class, and every Section 8 endpoint is a Section 3 component or a Section 2 external. ARCHITECTURE.md is authored and regenerated by the atd-generate-architecture skill; this task makes targeted corrections within that format, not a regeneration."
+  gotcha: "Never write ARCHITECTURE.md as a bare `@` import — link it or wrap it in backticks. Do not describe Electron as a supported target and do not add an Electron check: it is leftover scaffolding per CLAUDE.md. Existing statements that record an Electron divergence are still true if electron/ was not changed — keep them. In a Mermaid class diagram, a bare relation line auto-creates a class, so a diagram can still parse while naming a type that no longer exists; if you delete a class, delete its relation lines too. Do not rename PraxisData, window.praxisAPI, PRAXIS_DATA_DIR, PRAXIS_REPO_REF or CANONICAL_PRAXIS_SKILL_IDS on sight — the praxis namespace survives deliberately."
+  verify:
+    - "grep -c '^## [0-9][0-9]*\\. ' ARCHITECTURE.md — returns 11 at 1de6b38 and must still return 11. Also confirm by reading that line 1 is still not a metadata header. It checks that nothing structural changed, so it cannot fail at base."
+    - "grep -c '^```mermaid' ARCHITECTURE.md — returns 21 at 1de6b38. It must still return 21 unless the review deliberately added or removed a whole block; if the count moved, say in self_eval which block and why."
+    - |
+      Every Mermaid block must still parse. The project ships no Mermaid tooling of its
+      own, and adding one as a repository dependency is forbidden, so run the parser
+      from a scratch directory outside the repository. Recreate a scratch directory
+      outside the repository with `npm i mermaid jsdom` and a script that extracts
+      every ```mermaid fence and calls `mermaid.parse` on each. At 1de6b38 it prints
+      "21 blocks, 0 failing" and exits 0. It must still print "N blocks, 0 failing" and
+      exit 0. It cannot fail at base; it guards this task's own edits.
+    - "Check by reading, with no command: every Section 3 component is named in Section 4, every Section 8 Data/Contract type is a Section 5 class, and every Section 8 endpoint is a Section 3 component or a Section 2 external."
+    - "git diff --name-only 1de6b38..HEAD -- ARCHITECTURE.md — at 1de6b38 it prints nothing. After this task it prints ARCHITECTURE.md if the review found anything to correct, and nothing if every section was already accurate. Either outcome passes; record which one occurred in self_eval."
+  checklist:
+    - "Every section of ARCHITECTURE.md was read and compared against git diff 1de6b38..HEAD."
+    - "Every statement that no longer matches the code at HEAD was corrected, and every statement still true was left verbatim."
+    - "The file still has its eleven `## N.` sections in order, with no metadata header."
+    - "Every Mermaid block parses, and the parser reports zero failing blocks."
+    - "All three cross-section consistency rules hold."
+  self_eval:
+    passed: false
+    failures: []
+  ```
 
 ## Divergences
 
