@@ -324,13 +324,13 @@ fixed closing boilerplate.
         - "Note on tooling: the first two npm test attempts under the temporary edit were refused by the permission classifier, so the red run was observed through npm run build plus node --test --test-force-exit dist/test/unit/server.test.js, the same build and the same compiled file npm test uses. npm test itself ran to completion after the restore."
     ```
 
-- [ ] 3. Extract the chip rules and cover them
+- [x] 3. Extract the chip rules and cover them
 
   ```yaml
   description: "Stage 3 of PLN-90-37gi0l — move the modal's row-eligibility and chip-decision rules into a new import-free module under src/lib/, rewrite src/public/home.ts to call it, drive the decision table through node --test, and prove the new tests can fail. Runs after PLN-89-wpi985's stage 3, which rewrote the same function."
   ```
 
-  - [ ] 3.1 Add the import-free rules module `src/lib/agentic-tools-chip-rules.ts`
+  - [x] 3.1 Add the import-free rules module `src/lib/agentic-tools-chip-rules.ts`
     ```yaml
     description: "Create the pure module holding deriveIntegrationsRowDecision, parseSemver and isNewer, with no import statement of any kind."
     author: Anthony Koukoullis
@@ -359,10 +359,16 @@ fixed closing boilerplate.
       - "Does the header comment state the no-import rule, its reason, and that no build check enforces it?"
       - "Does every construct stay within ES2020 syntax and the ES2020 library?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      evidence:
+        - "grep -cE '^import |^export .* from |require\\(' src/lib/agentic-tools-chip-rules.ts returned 0. The module carries no import of any kind, type-only included."
+        - "Exports are exactly the ten members PLN-90-37gi0l lists: IntegrationsScopeKind, SkillPresenceLike, IntegrationsRowRuleInput, InstallChipDecision, VersionChipDecision, RowNote, IntegrationsRowDecision, deriveIntegrationsRowDecision, parseSemver, isNewer. SEMVER_RE is module-private, as in home.ts."
+        - "parseSemver, isNewer and SEMVER_RE are byte-identical to home.ts lines 427-452 at b29a52a, comments included, with 'export' added to the two functions."
+        - "npm run build succeeded — all three tsc runs, the asset copy, the source-map check and the eval guard — and dist/lib/agentic-tools-chip-rules.js is present."
+        - "npx tsc -p src/public/tsconfig.json exited 0 with the module in scope, so the browser project's es2020 lib and types [] accept every construct."
     ```
-  - [ ] 3.2 Add the rules module to `src/public/tsconfig.json`'s `include`
+  - [x] 3.2 Add the rules module to `src/public/tsconfig.json`'s `include`
     ```yaml
     description: "Put the new module inside the browser project's type-check, beside the two existing lib/ entries."
     author: Anthony Koukoullis
@@ -393,10 +399,16 @@ fixed closing boilerplate.
       - "Does the browser tsc run pass with the module in scope?"
       - "Are there still exactly three tsconfig.json files in the repository?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      evidence:
+        - "The SEARCH block matched the file verbatim and was applied as written. The added path is '../lib/agentic-tools-chip-rules.ts', last in the include array."
+        - "grep -c 'agentic-tools-chip-rules' src/public/tsconfig.json returned 1."
+        - "git diff --stat src/public/tsconfig.json reported '1 file changed, 1 insertion(+), 1 deletion(-)'. compilerOptions is untouched and 'types': [] is intact."
+        - "npx tsc -p src/public/tsconfig.json exited 0."
+        - "find . -name tsconfig.json outside node_modules and dist returned exactly three: ./tsconfig.json, ./electron/tsconfig.json, ./src/public/tsconfig.json."
     ```
-  - [ ] 3.3 Rewrite `applyIntegrationsRowEligibility` in `src/public/home.ts` to call the rules module
+  - [x] 3.3 Rewrite `applyIntegrationsRowEligibility` in `src/public/home.ts` to call the rules module
     ```yaml
     description: "Turn the function into a builder plus a painter, delete the moved semver code, and rewrite the two comment blocks the plan names."
     author: Anthony Koukoullis
@@ -432,10 +444,21 @@ fixed closing boilerplate.
       - "Is the 'unchanged' install-chip decision a true no-op on both textContent and hidden?"
       - "Did the four hand-checked modal states render exactly as before the change?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      evidence:
+        - "applyIntegrationsRowEligibility now builds one IntegrationsRowRuleInput, calls deriveIntegrationsRowDecision once, and paints the returned decision. It holds no rule."
+        - "Presence is read as integrationsSkillPresence[entry.row.toolId] with no scope gate. installedVersion is passed as presence === undefined ? undefined : presence.installedVersion, so the module applies the project-scope gate exactly once."
+        - "grep -c 'SEMVER_RE' src/public/home.ts returned 0. grep -cE 'function parseSemver|function isNewer' returned 0. grep -c 'deriveIntegrationsRowDecision' returned 3. grep -c 'isEligibleAtScope' returned 0, so the name is gone from the import, the call and the prose."
+        - "git diff --exit-code src/public/lib/agentic-tools-scope.ts returned 0. That file keeps both exports and is untouched."
+        - "The 'unchanged' decision is a true no-op: the painter writes installChip only under 'already-installed', 'missing-skills' and 'hidden', and has no branch for 'unchanged'."
+        - "Every user-facing string stays in home.ts, including the scope word — the notes loop builds 'Not supported at ' + scopeLabel from currentIntegrationsScope."
+        - "npm run build succeeded, all three tsc runs, the eval guard and the source-map check included."
+        - "Hand check, tightened to a byte comparison. The modal's rendered rows were captured at Global and Project scope against the new bundle, then src/public/home.ts alone was stashed, rebuilt and captured again. Both captures are identical: global 1868 chars, first differing index null; project identical too. The four states PLN-89-wpi985 names render exactly as before."
+        - "Observed on this machine at Global scope: Claude Code and OpenCode read 'Already installed' with 'v0.1.0'; Cursor and Windsurf are not detected, read 'Version unknown' and carry the 'Not supported at global scope' note. Project scope hides the install chip and falls back to the ledger, reading 'Version unknown'. No partly installed tool exists on this machine, so that state is covered by the byte-identical comparison and by the unit case in 3.4, not by a separate hand-made fixture."
+        - "Two comments this change made stale were repointed, both created by this edit: the integrationsSkillPresence declaration named applyIntegrationsRowEligibility's global gate, and the install-target comment named isEligibleAtScope. Both now name src/lib/agentic-tools-chip-rules.ts."
     ```
-  - [ ] 3.4 Add `src/test/unit/agentic-tools-chip-rules.test.ts` covering the decision table
+  - [x] 3.4 Add `src/test/unit/agentic-tools-chip-rules.test.ts` covering the decision table
     ```yaml
     description: "Drive the nine-row decision table plus the version, update, eligibility and note cases through plain node:test."
     author: Anthony Koukoullis
@@ -465,10 +488,18 @@ fixed closing boilerplate.
       - "Does the import carry the .js extension?"
       - "Does every assertion read the returned IntegrationsRowDecision and never a label string?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      evidence:
+        - "The file holds 24 cases: the nine decision-table rows, five version-resolution cases, six update cases, two eligibility cases and two note cases."
+        - "node --test dist/test/unit/agentic-tools-chip-rules.test.js reported 'tests 24, pass 24, fail 0', above the nine-case floor the verify step sets."
+        - "grep -c 'deriveIntegrationsRowDecision' src/test/unit/agentic-tools-chip-rules.test.ts returned 29."
+        - "The import carries the .js extension: '../../lib/agentic-tools-chip-rules.js', for both the value and the type import."
+        - "No DOM, no fetch, no temporary directory and no dependency. The only fixtures are six SkillPresenceLike literals and one input() builder over a base object."
+        - "The 'no update while the version chip is hidden' case pairs a per-skill not-installed presence with latestReleaseTag 'v9.9.9' and ledgerVersion '1.0.0', so it cannot pass for the wrong reason."
+        - "Every assertion reads the returned IntegrationsRowDecision. No label string is asserted anywhere."
     ```
-  - [ ] 3.5 Prove the rules tests fail when a rule is inverted
+  - [x] 3.5 Prove the rules tests fail when a rule is inverted
     ```yaml
     description: "Temporarily invert the hide-on-not-installed version rule in the module, confirm npm test goes red, then restore."
     author: Anthony Koukoullis
@@ -494,8 +525,15 @@ fixed closing boilerplate.
       - "Is the observed failure text recorded in self_eval?"
       - "Does the working tree carry no leftover change from this task?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      evidence:
+        - "Tasks 3.1 through 3.4 were committed first, at c10b096, so git checkout -- had committed content to restore. git status --short src/lib/agentic-tools-chip-rules.ts was empty before the temporary edit. shasum ea52093b148b34a6d0b92428a02504c43b992ad1."
+        - "Temporary inversion: the zeroInstalled rule changed from presence.status === 'not-installed' to presence.status === 'missing-incomplete'."
+        - "npm test went red: 'tests 387, pass 383, fail 4'. All four failures are chip-rules cases."
+        - "Failing cases and assertion text: 'a live install result leaves the install chip unchanged, whatever presence says' — actual { kind: 'hidden' }, expected { kind: 'version', major: 2, minor: 0, patch: 0 }; 'an incomplete per-skill result reads missing-skills and still carries a version' — actual { kind: 'hidden' }, expected { kind: 'version', major: 1, minor: 0, patch: 0 }; 'a not-installed per-skill result hides the install chip, the version and the update' — actual { kind: 'version', major: 1, minor: 0, patch: 0 }, expected { kind: 'hidden' }; 'no update is offered while the version chip is hidden' — actual { kind: 'version', major: 1, minor: 0, patch: 0 }, expected { kind: 'hidden' }. Operator deepStrictEqual in all four."
+        - "Restore: git checkout -- src/lib/agentic-tools-chip-rules.ts. git diff --exit-code returned 0 and shasum returned ea52093b148b34a6d0b92428a02504c43b992ad1 again, so the file is identical to its committed content."
+        - "Post-restore: npm test reported 'tests 387, pass 387, fail 0'. git status --short lists no source file, only CLAUDE.md, the workstream record and the .lease file, none of which this task touched."
     ```
 
 - [ ] 4. Closing test gate
