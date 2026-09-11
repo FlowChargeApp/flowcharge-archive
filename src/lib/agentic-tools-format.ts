@@ -49,23 +49,56 @@ function skillDirectoryWrites(format: IntegrationFormat, content: InstallContent
   return writes;
 }
 
+// The directory part of a resolved path, including its trailing '/', or the
+// empty string when the path has no directory part (e.g. 'AGENTS.md'). Used
+// to place bundled reference files beside the document they belong to without
+// ever producing a leading-slash path.
+function directoryPrefix(resolvedPath: string): string {
+  const lastSlash = resolvedPath.lastIndexOf('/');
+  return lastSlash === -1 ? '' : resolvedPath.slice(0, lastSlash + 1);
+}
+
 // rule-directory pathTemplates in the real WS-41 catalogue use a '*' glob
 // token (e.g. Cursor's '.cursor/rules/*.mdc'), not the '<name>' token
 // skill-directory pathTemplates use — '*' is substituted with skill.id so
 // each skill resolves to its own distinct file under the rules directory.
+// Each skill emits its own rule file first, then one FileWrite per bundled
+// reference file in skill.files. Those land in a directory named for the
+// skill, beside the rule file, so two skills shipping the same
+// files[].relativePath cannot overwrite each other.
 function ruleDirectoryWrites(format: IntegrationFormat, content: InstallContent): FileWrite[] {
-  return content.skills.map((skill) => ({
-    relativePath: format.pathTemplate.replace('*', skill.id),
-    content: skill.body,
-  }));
+  const writes: FileWrite[] = [];
+  for (const skill of content.skills) {
+    const resolvedPath = format.pathTemplate.replace('*', skill.id);
+    const filesDir = `${directoryPrefix(resolvedPath)}${skill.id}`;
+    writes.push({ relativePath: resolvedPath, content: skill.body });
+    for (const file of skill.files ?? []) {
+      writes.push({ relativePath: `${filesDir}/${file.relativePath}`, content: file.content });
+    }
+  }
+  return writes;
 }
 
-// single-rule-file and markdown-context-file both resolve to exactly one
-// FileWrite: every skill concatenated under one document, at the format's
-// literal pathTemplate (no per-skill token to substitute).
+// single-rule-file and markdown-context-file both concatenate every skill
+// under one document, at the format's literal pathTemplate (no per-skill
+// token to substitute). That combined document is the first FileWrite; one
+// further FileWrite follows per bundled reference file in each skill's
+// skill.files. Those land in a directory named for the skill, beside the
+// combined document, so two skills shipping the same files[].relativePath
+// cannot overwrite each other.
 function singleDocumentWrite(format: IntegrationFormat, content: InstallContent): FileWrite[] {
   const combined = content.skills.map((skill) => skill.body).join('\n\n');
-  return [{ relativePath: format.pathTemplate, content: combined }];
+  const writes: FileWrite[] = [{ relativePath: format.pathTemplate, content: combined }];
+  const filesBase = directoryPrefix(format.pathTemplate);
+  for (const skill of content.skills) {
+    for (const file of skill.files ?? []) {
+      writes.push({
+        relativePath: `${filesBase}${skill.id}/${file.relativePath}`,
+        content: file.content,
+      });
+    }
+  }
+  return writes;
 }
 
 // Turns InstallContent into the concrete FileWrite list a given

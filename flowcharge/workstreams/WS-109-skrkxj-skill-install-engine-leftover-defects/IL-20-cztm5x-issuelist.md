@@ -39,7 +39,7 @@ links: [WS-106-1xers0]
 
   ```yaml
   id: ISS-38-gv3p2x
-  status: ready
+  status: in-progress
   severity: medium
   author: Anthony Koukoullis
   description: "ruleDirectoryWrites at src/lib/agentic-tools-format.ts:48-53 and singleDocumentWrite at :58-61 read only skill.body. skillDirectoryWrites at :31-42 is the only writer that emits skill.files. mapEntriesToSkills in src/lib/skill-content-fetch.ts collects reference material shipped beside a SKILL.md in the release archive into skill.files, so that content exists on the install path and is then discarded for three of the four implemented format kinds."
@@ -52,7 +52,7 @@ links: [WS-106-1xers0]
   actual: "The skill-directory install writes the reference files. The rule-directory install writes the SKILL.md body alone and discards the rest, with no warning and no result field indicating a partial install. singleDocumentWrite loses the files the same way and serves both single-rule-file and markdown-context-file, which makes three affected kinds out of the four implemented. Neither of those two kinds is selected by any tool today, because selectPrimaryFormat returns the first implemented format in each tool's integrationFormats list and every TOOL_CATALOGUE entry resolves to skill-directory or rule-directory, so they are paths that would drop the files if a tool ever selected them. A skill whose behaviour depends on a reference file is installed in a broken state."
   affected: "src/lib/agentic-tools-format.ts:48-53 (ruleDirectoryWrites), :58-61 (singleDocumentWrite), :31-42 (skillDirectoryWrites); src/lib/skill-content-fetch.ts (mapEntriesToSkills)"
   environment: "Every host that serves the integrations routes. Node >=20.14."
-  tasks: []
+  tasks: [TL-108-4pwnq9.1]
   notes: "Shares the IntegrationFormat model gap with ISS-33-6bxf6h and ISS-34-mpy9n0 (both done, in WS-106-1xers0). Any correction must add no runtime dependency. Relocated from IL-16-78bnrq-issuelist.md (WS-106-1xers0) on 2026-09-11; content unchanged."
   ```
 
@@ -81,7 +81,7 @@ links: [WS-106-1xers0]
 
   ```yaml
   id: ISS-47-yug5gc
-  status: ready
+  status: in-progress
   severity: low
   author: Anthony Koukoullis
   description: "checkSkillPresence in src/lib/agentic-tools-skill-presence.ts resolves exactly one expected path per skill and tests only that path. It takes the format from `const format = selectPrimaryFormat(tool)` at :35, derives the paths from `formatForTarget(format, stubContent)` at :44, then builds fullPath as `${basePath}/${writes[i].relativePath}` at :53 and calls `fsAccess.pathExists(fullPath)` at :54. For OpenCode that format is the skill-directory entry in src/lib/agentic-tools-catalogue.ts:207-211, with `pathTemplate: 'skills/<name>/SKILL.md'`, which is the plural path FlowCharge itself writes. The check never looks at the singular `skill/` folder. OpenCode 1.18.27 loads skills from both spellings. Its binary contains the discovery constant `SA=\"{skill,skills}/**/SKILL.md\"`, which it applies to each of its own configuration directories: `~/.config/opencode/` globally, and every `.opencode/` found walking up from the working directory. Its bundled reference text lists global skills as `~/.config/opencode/skill(s)/<name>/SKILL.md`. The singular form is a legacy spelling left by OpenCode's migration from singular to plural folder names. The same migration renamed `agent/` to `agents/`, and `~/.config/opencode/agent/` on the measuring machine is still singular."
@@ -95,7 +95,7 @@ links: [WS-106-1xers0]
   actual: "Measured with the compiled dist/lib/ at f0b0a8c. All 8 skills under `skill/` give status=not-installed, present=0, missing=8. All 8 skills under `skills/` give status=fully-installed, present=8, missing=0. A user whose FlowCharge Core skills for OpenCode sit in `~/.config/opencode/skill/`, from a manual install or one made before OpenCode's rename, has a suite that OpenCode loads. The integrations modal reports it as not installed and shows no \"Already installed\" chip. The user trusts that and installs again. FlowCharge writes a second copy into `~/.config/opencode/skills/`, and OpenCode then finds two copies of every skill under the same names, one in each folder."
   affected: "src/lib/agentic-tools-skill-presence.ts:35 (selectPrimaryFormat call), :44 (formatForTarget call), :53-54 (the single-path join and pathExists call); src/lib/agentic-tools-catalogue.ts:207-211 (OpenCode skill-directory entry, pathTemplate 'skills/<name>/SKILL.md' at :209)"
   environment: "macOS. OpenCode 1.18.27, installed at ~/.local/share/fnm/node-versions/v24.12.0/installation/lib/node_modules/opencode-ai/bin/opencode.exe. The presence results were measured by running the compiled dist/lib/ modules at f0b0a8c against a scratch directory, not inferred from reading."
-  tasks: []
+  tasks: [TL-108-4pwnq9.2]
   notes: "Confidence is high on the code path and on the measurement. On OpenCode's behaviour, confidence is high for version 1.18.27. It comes from the binary's own discovery constant and bundled reference text, not from OpenCode's public docs, which are known to lag. Scope of today's impact: the presence check runs at global scope only, which src/public/home.ts documents as a deliberate, bounded limit and which is not a defect, so the live case is `~/.config/opencode/skill/`. OpenCode also reads the project-scope equivalent, `.opencode/skill/`, but the presence check cannot reach it until that scope limit changes. Severity is low because FlowCharge never writes the singular folder, so the defect needs a manual or older install, but its consequence is a duplicate install. This is a different defect from ISS-42-q1t9bh (WS-106-1xers0, done), which concerns the same function comparing against a hand-maintained id list. The defect survives TL-103-9npvav unchanged, because TL-103-9npvav still resolves one plural path per skill. This issue concerns OpenCode's own two folder spellings only. OpenCode also reads skill folders that belong to other tools, `.claude/skills/` and `.agents/skills/`, but the maintainer treats every coding tool as separate, so those folders must not count towards OpenCode's presence, and one tool's install never satisfies another's. Context, not a separate defect and not a proposed direction: IntegrationFormat already declares an optional deprecatedFallback field at src/lib/agentic-tools-catalogue.ts:21, and Cursor (:111) and Windsurf (:154) set it. No code outside the catalogue reads it. OpenCode's skill-directory entry does not set it. Nothing here needs a runtime dependency, and none may be added silently. Relocated from IL-17-1xu0n0-issuelist.md (WS-106-1xers0) on 2026-09-11; content unchanged."
   ```
 
@@ -103,7 +103,7 @@ links: [WS-106-1xers0]
 
   ```yaml
   id: ISS-50-92mh3i
-  status: ready
+  status: in-progress
   severity: high
   author: Anthony Koukoullis
   description: "src/lib/skill-content-fetch.ts:63 hardcodes PRAXIS_REPO_BASE_URL = 'http://100.87.185.97:8110/akoukoullis/Praxis', a private LAN address for a temporary local Gitea instance. The real, public origin is https://github.com/FlowChargeApp/flowcharge-core. A workstream on 2026-08-20 (WS-48-hsf9yl) deliberately templated this constant so a later host swap to github.com would be a one-line change, but no later workstream made that change."
@@ -114,7 +114,7 @@ links: [WS-106-1xers0]
   actual: "Every fetch is pinned to a private LAN address unreachable outside the developer's own network, so install/update from a release fails for every other user."
   affected: "src/lib/skill-content-fetch.ts:63 (PRAXIS_REPO_BASE_URL)"
   environment: "Every machine that is not on the developer's own LAN. Node >=20.14."
-  tasks: []
+  tasks: [TL-108-4pwnq9.3.1, TL-108-4pwnq9.3.2, TL-108-4pwnq9.3.3, TL-108-4pwnq9.3.4]
   notes: "The public origin (https://github.com/FlowChargeApp/flowcharge-core) is live and does carry a v0.1.0 release. Correction, 2026-09-11: an earlier note here claimed that release's content was stale and pending a republish. That was wrong. It came from querying the app's own hardcoded PRAXIS_REPO_BASE_URL (this issue's own defect), which resolves to the developer's private Gitea mirror, not from checking github.com/FlowChargeApp/flowcharge-core directly. The user confirmed by checking the real GitHub release: it already carries the renamed flowcharge skill correctly, with fc-orchestrate remaining only in CHANGELOG.md's historical entries, which is deliberate. The Gitea mirror is the user's own personal backup, pushed to infrequently and not authoritative; it was offline for part of this investigation and is live again now, but neither state bears on what this issue is about. Repointing this constant corrects the address only. Any correction must add no runtime dependency. Relocated from IL-16-78bnrq-issuelist.md (WS-106-1xers0) on 2026-09-11; content unchanged except this note, corrected 2026-09-11 as above."
   ```
 
@@ -122,7 +122,7 @@ links: [WS-106-1xers0]
 
   ```yaml
   id: ISS-51-kc70n7
-  status: ready
+  status: in-progress
   severity: medium
   author: Anthony Koukoullis
   description: "Two artefacts in workstream WS-106-1xers0 disagree about the release host that FlowCharge Core must fetch the published skill list from. Open question 1 of PLN-88-tpbc8f-plan.md (about lines 195-202) names akoukoullis/Praxis, renamed flowcharge-core-archive, and recommends leaving that constant alone. Issue ISS-50-92mh3i (about line 348 of its original file, relocated alongside this issue) names https://github.com/FlowChargeApp/flowcharge-core and records that this host was verified live on 2026-09-11, the day the issue was filed. PLN-88's release-derived approach to rebuilding the canonical skill-id list depends on the host it names being the correct one."
@@ -134,6 +134,6 @@ links: [WS-106-1xers0]
   actual: "PLN-88 names akoukoullis/Praxis (renamed flowcharge-core-archive) and ISS-50-92mh3i names https://github.com/FlowChargeApp/flowcharge-core. An executor following PLN-88 fetches from a host that a more recently verified issue states is not the real one, so the rebuilt canonical skill list is stale, wrong, or the fetch fails outright."
   affected: "flowcharge/workstreams/WS-106-1xers0-skill-install-target-resolution-and-lifecycle/PLN-88-tpbc8f-plan.md (Open question 1); ISS-50-92mh3i in this issue list"
   environment: ""
-  tasks: []
+  tasks: [TL-108-4pwnq9.4]
   notes: "This does not block the Missing-skills chip fix already closed as ISS-42-q1t9bh (WS-106-1xers0, done). It blocks PLN-88's own release-derived design if that design is executed later, and PLN-88 stays parked in WS-106-1xers0, not moved here, because it is a plan artefact tied to that workstream's own history. Confidence is high: both host values are quoted from the two named artefacts, and ISS-50-92mh3i states its host was verified live. Resolving this issue means reconciling the two artefacts to one host, not changing any source code. Correction, 2026-09-11: the host named by ISS-50-92mh3i, https://github.com/FlowChargeApp/flowcharge-core, is now confirmed correct and current — its release already carries the renamed flowcharge skill, so it was never stale. PLN-88's Open question 1 names the wrong host (an old archive repo, akoukoullis/Praxis / flowcharge-core-archive). Reconciling PLN-88 to name the confirmed host would resolve this issue; that edit has not been made yet. Relocated from IL-19-f2xpx5-issuelist.md (WS-106-1xers0) on 2026-09-11; content unchanged except this note, corrected 2026-09-11 as above."
   ```
