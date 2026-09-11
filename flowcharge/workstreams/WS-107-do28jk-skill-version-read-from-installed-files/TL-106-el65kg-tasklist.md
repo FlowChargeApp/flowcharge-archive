@@ -593,7 +593,7 @@ stay untouched.
           detail: "~/.claude/skills (114 files, 58 directories) and ~/.config/opencode/skills (82 files, 40 directories) both diff clean against the checksum manifests taken before any move. ~/.config/opencode/skills was never touched."
     ```
 
-- [ ] 4. Closing test gate: run the full suite with npm test
+- [x] 4. Closing test gate: run the full suite with npm test
   ```yaml
   description: "Closing task 1 of 2, required by CLAUDE.md \"Closing a task list\", and traced to no issue. Running the full suite IS this task. Run it on this branch after task 3. Pass only when the suite reports zero failures."
   author: Anthony Koukoullis
@@ -616,7 +616,7 @@ stay untouched.
     - "Any skill-content-fetch failure caused by an unreachable release host is labelled environmental."
     - "This task edited no source, test or configuration file."
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
