@@ -172,13 +172,13 @@ full suite reports `tests 387, pass 387, fail 0`;
           reason: "This step is a real install into a real tool config by definition, so it was not run. `git diff ff3e805 -- src/public/home.ts` shows installIntegrationsSelected and its Install selected call site are byte-for-byte unchanged."
     ```
 
-- [ ] 2. The two secondary states (plan stage 2)
+- [x] 2. The two secondary states (plan stage 2)
 
   ```yaml
   description: "Add the home.ts dialog-session state that feeds the already-complete ledgerLoaded and installedThisSession inputs, reset both on dialog close, and cover them with unit cases. Adds no field and changes no signature."
   ```
 
-  - [ ] 2.1 Track whether the install-ledger fetch resolved in this dialog session
+  - [x] 2.1 Track whether the install-ledger fetch resolved in this dialog session
 
     ```yaml
     description: "Add integrationsInstallRecordsLoaded to src/public/home.ts, set it in loadIntegrationsInstallRecords' two branches, reset it on dialog close, and pass it as ledgerLoaded in place of the literal."
@@ -209,11 +209,16 @@ full suite reports `tests 387, pass 387, fail 0`;
       - "Does a failed ledger fetch make Update show the confirmation?"
       - "Was UpdateOverwriteWarningInput left unchanged, with no field added and no signature moved?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      skipped_verify:
+        - item: "Manual browser check: with the install-ledger fetch failing, Update shows the confirmation."
+          reason: "Forcing the getInstallStatus fetch to fail and then clicking Update runs a real install into the real ~/.claude skill folders on the confirm path, and no disposable tool target exists in this environment. Code inspection stands in its place: the .catch sets integrationsInstallRecordsLoaded = false, and updateOverwriteWarningNeeded answers true for ledgerLoaded: false, which the new unit case in task 2.3 asserts."
+        - item: "Manual browser check: with the ledger fetch succeeding, a row that has a record installs with no confirmation."
+          reason: "This step is a real install into a real tool config by definition, so it was not run. The success branch sets the flag true and the guard reads the record at installRecordKey, so the rule answers false; the task 1.2 unit case asserts that combination."
     ```
 
-  - [ ] 2.2 Record the tools FlowCharge installed in this dialog session
+  - [x] 2.2 Record the tools FlowCharge installed in this dialog session
 
     ```yaml
     description: "Add integrationsLiveInstallKeys to src/public/home.ts, populate it in installIntegrationsSelected' success branch, clear it on dialog close, and pass it as installedThisSession in place of the literal."
@@ -248,11 +253,18 @@ full suite reports `tests 387, pass 387, fail 0`;
       - "Does the Install selected button still install with no confirmation for every row?"
       - "Was UpdateOverwriteWarningInput left unchanged, with no field added and no signature moved?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      skipped_verify:
+        - item: "Manual browser check: a second Update on the same row shows no second confirmation."
+          reason: "Every step of this check performs a real install into the real ~/.claude skill folders, and no disposable tool target exists in this environment. Code inspection stands in its place: the success branch writes integrationsLiveInstallKeys[installRecordKey(...)] = true, and the guard reads that same key as installedThisSession, which the rule answers false for."
+        - item: "Manual browser check: after close and reopen, the confirmation appears again."
+          reason: "Same missing precondition, and the same real install on the confirm path. resetIntegrationsModalState sets integrationsLiveInstallKeys back to {}, beside the other cleared dialog-session state."
+        - item: "Manual browser check: Install selected installs a ledger-less row with no confirmation."
+          reason: "This step is a real install into a real tool config by definition, so it was not run. `git diff a4489b0 -- src/public/home.ts` shows the only change inside installIntegrationsSelected is the new key write, and the Install selected click handler is unchanged."
     ```
 
-  - [ ] 2.3 Add the unloaded-ledger and installed-this-session unit cases
+  - [x] 2.3 Add the unloaded-ledger and installed-this-session unit cases
 
     ```yaml
     description: "Extend src/test/unit/agentic-tools-chip-rules.test.ts with the two stage-2 cases: an unloaded ledger answers true, and installedThisSession answers false whatever the other two inputs are."
@@ -277,7 +289,7 @@ full suite reports `tests 387, pass 387, fail 0`;
       - "Does the file still report 0 fail, with every pre-existing case intact?"
       - "Was any new import, harness or fixture avoided?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 

@@ -341,3 +341,29 @@ test('a loaded ledger holding a record needs no warning', () => {
 test('a loaded ledger holding no record needs the warning', () => {
   assert.equal(updateOverwriteWarningNeeded(warningInput({ hasLedgerRecord: false })), true);
 });
+
+test('an unloaded ledger needs the warning, record or no record', () => {
+  assert.equal(
+    updateOverwriteWarningNeeded(warningInput({ ledgerLoaded: false, hasLedgerRecord: false })),
+    true
+  );
+  // The record's presence must not carry the assertion above: an unloaded ledger's
+  // record map is empty either way, so it says nothing about the files on disk.
+  assert.equal(
+    updateOverwriteWarningNeeded(warningInput({ ledgerLoaded: false, hasLedgerRecord: true })),
+    true
+  );
+});
+
+test('an install by FlowCharge in this session needs no warning', () => {
+  assert.equal(
+    updateOverwriteWarningNeeded(warningInput({ installedThisSession: true })),
+    false
+  );
+  assert.equal(
+    updateOverwriteWarningNeeded(
+      warningInput({ ledgerLoaded: false, hasLedgerRecord: false, installedThisSession: true })
+    ),
+    false
+  );
+});

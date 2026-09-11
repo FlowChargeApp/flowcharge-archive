@@ -497,6 +497,16 @@ import type {
   // restore it.
   var integrationsInstallRecords: Record<string, InstallRecord> = {};
 
+  // Records whether the getInstallStatus fetch resolved in this dialog session. The map
+  // above is emptied both by a failed fetch and by an absent surface, so an empty map
+  // alone cannot tell 'no records' from 'never loaded'.
+  var integrationsInstallRecordsLoaded: boolean = false;
+
+  // The tool-and-scope keys FlowCharge itself installed or updated in this dialog
+  // session. Keyed with installRecordKey, so a global install and a project install of
+  // the same tool stay separate.
+  var integrationsLiveInstallKeys: Record<string, true> = {};
+
   // The map key. A project-scoped record carries its project path, so two projects'
   // records for the same tool never overwrite one another.
   function installRecordKey(toolId: string, scope: InstallScope): string {
@@ -568,12 +578,9 @@ import type {
     updateButton.addEventListener('click', function () {
       var recordKey = installRecordKey(entry.row.toolId, currentIntegrationsScope);
       var warn = updateOverwriteWarningNeeded({
-        // Literals for now: task 2.1 replaces ledgerLoaded with
-        // integrationsInstallRecordsLoaded, and task 2.2 replaces installedThisSession
-        // with a read of integrationsLiveInstallKeys. The input shape is already final.
-        ledgerLoaded: true,
+        ledgerLoaded: integrationsInstallRecordsLoaded,
         hasLedgerRecord: integrationsInstallRecords[recordKey] !== undefined,
-        installedThisSession: false
+        installedThisSession: integrationsLiveInstallKeys[recordKey] === true
       });
       if (warn && !window.confirm(updateOverwriteWarningMessage(entry.row.displayName))) return;
       installIntegrationsSelected([entry]);
@@ -770,10 +777,12 @@ import type {
         next[installRecordKey(record.toolId, record.scope)] = record;
       });
       integrationsInstallRecords = next;
+      integrationsInstallRecordsLoaded = true;
       refreshIntegrationsEligibility();
     })
       .catch(function () {
         integrationsInstallRecords = {};
+        integrationsInstallRecordsLoaded = false;
       });
   }
 
@@ -872,6 +881,14 @@ import type {
           entry.installChip.textContent = INSTALL_STATUS_LABEL[result.status];
           entry.installChip.hidden = false;
           entry.hasLiveResult = true;
+          // A successful install makes the files FlowCharge's, whether or not a release
+          // tag is known — so this sits OUTSIDE the latestRelease condition below. A
+          // 'skipped-no-format' result installed nothing, so it records no key.
+          if (result.status !== 'skipped-no-format') {
+            integrationsLiveInstallKeys[
+              installRecordKey(entry.row.toolId, currentIntegrationsScope)
+            ] = true;
+          }
           // A successful install always installs the newest release, so that
           // release's tag is this row's version from here on. Only the SUCCESS
           // branch reaches this point — a rejected install leaves the map
@@ -912,6 +929,8 @@ import type {
     latestRelease = null;
     byId('integrations-release').textContent = '';
     integrationsInstallRecords = {};
+    integrationsInstallRecordsLoaded = false;
+    integrationsLiveInstallKeys = {};
     integrationsList.innerHTML = '';
     integrationsInstallSelectedButton.disabled = true;
   }
