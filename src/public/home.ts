@@ -26,7 +26,7 @@ import type {
   InstallRecord,
   InstallResult,
   PraxisSkillInstallAPI,
-  SkillPresenceResult,
+  SkillPresenceResponse,
   SkillReleaseSummary,
   ToolDetectionRow
 } from './lib/agentic-tools-api';
@@ -412,15 +412,16 @@ import type {
   // but not all canonical skills are present on disk for this tool.
   var INCOMPLETE_INSTALL_LABEL = 'Missing skills';
 
-  // Version-chip labels. A record with no version, or a version the semver rule
-  // below cannot read, shows UNKNOWN_VERSION_LABEL and never an empty chip — that is
-  // the normal state for every record written before this feature existed.
+  // Version-chip labels. The version comes from the installed skill files first and
+  // the install record second. No version at either source, or a version the semver
+  // rule below cannot read, shows UNKNOWN_VERSION_LABEL and never an empty chip.
   var VERSION_LABEL_PREFIX = 'v';
   var UNKNOWN_VERSION_LABEL = 'Version unknown';
 
-  // Shown only when the newest published release is STRICTLY newer than the
-  // version recorded for that row. An equal tag shows the version chip and no
-  // update chip, and an unreadable or absent version shows neither.
+  // Rides on that same resolved version: shown only when the newest published release
+  // is STRICTLY newer than it. An equal tag shows the version chip and no update chip,
+  // and an unreadable or absent version shows neither. A row with nothing installed
+  // hides this chip outright, along with the version chip and the Update button.
   var UPDATE_AVAILABLE_LABEL = 'Update available';
 
   // Accepts `v?MAJOR.MINOR.PATCH` and ignores whatever follows the patch number,
@@ -475,11 +476,13 @@ import type {
   // Real filesystem presence results (checkInstalledSkills), keyed by toolId, fetched
   // once at dialog open at Global scope only (loadIntegrationsDetection, below) —
   // fetched-once / cleared-on-close, same lifecycle as integrationsRowEntries above.
-  // A scope toggle re-derives chip visibility from this map client-side; it never
+  // Each entry also carries installedVersion, the version the route read off the
+  // installed skill files, so this map drives the version chip as well as the install
+  // chip. A scope toggle re-derives chip visibility from this map client-side; it never
   // triggers a new checkInstalledSkills() call. Only ever populated at Global scope —
   // see applyIntegrationsRowEligibility's currentIntegrationsScope.kind === 'global'
   // gate, and task list Divergence 2.
-  var integrationsSkillPresence: Record<string, SkillPresenceResult> = {};
+  var integrationsSkillPresence: Record<string, SkillPresenceResponse> = {};
 
   // The newest published release, or null when none was found. Always the FIRST entry
   // of the list listSkillReleases() returns: parseReleases already sorted that list
@@ -492,9 +495,12 @@ import type {
   // scope toggle re-derive the version chip client-side with no second call, and is
   // what stops two projects' records from colliding.
   //
-  // This is a VERSION join only. The 'Already installed' chip deliberately does NOT
-  // read this map — ISS-12-yngl4x replaced that ledger join with the strictly more
-  // accurate filesystem presence check above, and this must not restore it.
+  // This is the FALLBACK version source, read only when the presence response above
+  // carries no installedVersion — at project scope, and for a global row whose
+  // installed files hold no readable version. The 'Already installed' chip
+  // deliberately does NOT read this map — ISS-12-yngl4x replaced that ledger join with
+  // the strictly more accurate filesystem presence check above, and this must not
+  // restore it.
   var integrationsInstallRecords: Record<string, InstallRecord> = {};
 
   // The map key. A project-scoped record carries its project path, so two projects'
@@ -575,26 +581,52 @@ import type {
     entry.checkbox.disabled = !eligible;
     entry.notes.innerHTML = '';
 
-    // Version chip, re-derived on every scope toggle from the once-fetched record map.
-    // The chip is always visible and never empty: no record at all, a record with no
-    // version, and a version the semver rule cannot read all read 'Version unknown'.
-    // That is the normal state for every record written before this feature existed.
+    // checkInstalledSkills is only ever fetched at Global scope (loadIntegrationsDetection,
+    // below) — showing its result under Project scope would be a stale, wrong-scope
+    // result mislabelled as current. Hide the install chip outright at Project scope
+    // instead (a deliberate, bounded scope limit — see task list Divergence 2 — not a
+    // bug), and leave the ledger driving the version chip there.
+    var presence = currentIntegrationsScope.kind === 'global'
+      ? integrationsSkillPresence[entry.row.toolId]
+      : undefined;
+
+    // Version chip, re-derived on every scope toggle. The version is read disk-first
+    // and ledger-second: presence.installedVersion, the version the route read off the
+    // installed skill files, wins; the once-fetched record map supplies it only when
+    // the presence response carries none. No version at either source, and a version
+    // the semver rule cannot read, both read 'Version unknown'.
+    //
+    // A row with zero skills installed hides all three of the version chip, the update
+    // chip and the Update button: there is no installation to carry a version.
+    // PLN-89-wpi985 Assumption 6: a failed or pending presence probe leaves no entry in
+    // the map, so zeroInstalled stays false there and the chip stays visible reading
+    // 'Version unknown'.
+    var zeroInstalled = presence !== undefined
+      && presence.checkKind === 'per-skill'
+      && presence.status === 'not-installed';
     var recordKey = installRecordKey(entry.row.toolId, currentIntegrationsScope);
     var record = integrationsInstallRecords[recordKey];
     var recordedVersion = record === undefined ? undefined : record.version;
-    var parsed = recordedVersion === undefined ? null : parseSemver(recordedVersion);
+    var diskVersion = presence !== undefined
+      && typeof presence.installedVersion === 'string'
+      && presence.installedVersion !== ''
+      ? presence.installedVersion
+      : undefined;
+    var effectiveVersion = diskVersion === undefined ? recordedVersion : diskVersion;
+    var parsed = effectiveVersion === undefined ? null : parseSemver(effectiveVersion);
     entry.versionChip.textContent = parsed === null
       ? UNKNOWN_VERSION_LABEL
       : VERSION_LABEL_PREFIX + parsed.major + '.' + parsed.minor + '.' + parsed.patch;
-    entry.versionChip.hidden = false;
+    entry.versionChip.hidden = zeroInstalled;
 
-    // Update chip. Strict comparison only: an equal tag shows no chip, and an
-    // absent record, an absent version, or a version either side cannot read
-    // shows no chip either — isNewer returns false for every unreadable input,
-    // so an unparseable tag can never prompt an update.
-    var updateAvailable = recordedVersion !== undefined
+    // Update chip. Hidden outright when the row has nothing installed. Otherwise
+    // strict comparison only: an equal tag shows no chip, and an absent version or a
+    // version either side cannot read shows no chip either — isNewer returns false for
+    // every unreadable input, so an unparseable tag can never prompt an update.
+    var updateAvailable = !zeroInstalled
+      && effectiveVersion !== undefined
       && latestRelease !== null
-      && isNewer(latestRelease.tag, recordedVersion);
+      && isNewer(latestRelease.tag, effectiveVersion);
     entry.updateChip.hidden = !updateAvailable;
     // The button rides on the chip's condition, and expresses ineligibility the
     // way the checkbox does — disabled, not hidden. A row with no resolvable base
@@ -614,13 +646,6 @@ import type {
     // never overwrite it with the fs-presence check below, which is fetched once at
     // dialog open and cannot see a live install that happened afterward.
     if (!entry.hasLiveResult) {
-      // checkInstalledSkills is only ever fetched at Global scope (loadIntegrationsDetection,
-      // below) — showing its result under Project scope would be a stale, wrong-scope
-      // result mislabelled as current. Hide the chip outright at Project scope instead
-      // (a deliberate, bounded scope limit — see task list Divergence 2 — not a bug).
-      var presence = currentIntegrationsScope.kind === 'global'
-        ? integrationsSkillPresence[entry.row.toolId]
-        : undefined;
       var fullyPresent = presence !== undefined && (
         (presence.checkKind === 'per-skill' && presence.status === 'fully-installed') ||
         (presence.checkKind === 'shared-file' && presence.exists)

@@ -19,6 +19,7 @@ import type { ProjectRegistry } from '../ports/project-registry.js';
 
 import { detectAllTools } from '../lib/agentic-tools-detect.js';
 import { checkSkillPresence } from '../lib/agentic-tools-skill-presence.js';
+import { readInstalledSkillVersion } from '../lib/agentic-tools-skill-version.js';
 import { installToTarget, removeInstallation, recordedInstallPaths } from '../lib/agentic-tools-install.js';
 import { parseInstallRegistry, findInstallRecord } from '../lib/agentic-tools-install-tracking.js';
 import { TOOL_CATALOGUE } from '../lib/agentic-tools-catalogue.js';
@@ -202,8 +203,16 @@ function handleIntegrationsSkillPresence(
         sendJson(res, 404, { error: `Unknown toolId: ${body.toolId}` });
         return;
       }
-      const result = await checkSkillPresence(tool, body.basePath, CANONICAL_PRAXIS_SKILL_IDS, deps.createFsAccess());
-      sendJson(res, 200, result);
+      // One adapter instance, shared by both library calls below.
+      const fsAccess = deps.createFsAccess();
+      const result = await checkSkillPresence(tool, body.basePath, CANONICAL_PRAXIS_SKILL_IDS, fsAccess);
+      // installedVersion is null for a shared-file result, for no-format, for an
+      // empty presentSkillIds, and for a present file with no readable version.
+      const installedVersion =
+        result.checkKind === 'per-skill' && result.presentSkillIds.length > 0
+          ? await readInstalledSkillVersion(tool, body.basePath, result.presentSkillIds, fsAccess)
+          : null;
+      sendJson(res, 200, { ...result, installedVersion });
     } catch (err) {
       sendJson(res, 500, { error: errorMessage(err) });
     }

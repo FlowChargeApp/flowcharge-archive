@@ -32,6 +32,7 @@ function fakeFsAccess(opts: { binaryOnPath?: boolean; configDirExists?: boolean 
     async isDirectory() {
       return true;
     },
+    readTextFile: async () => { throw new Error('readTextFile: unused stub'); },
     async resolveBinaryOnPath(name: string) {
       return opts.binaryOnPath && name === 'faketool' ? '/usr/local/bin/faketool' : null;
     },

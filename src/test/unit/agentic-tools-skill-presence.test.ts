@@ -28,6 +28,7 @@ function fakeFsAccess(existingPaths: Iterable<string>): FsAccess {
     isDirectory: async () => {
       throw new Error('isDirectory: unused stub');
     },
+    readTextFile: async () => { throw new Error('readTextFile: unused stub'); },
     resolveBinaryOnPath: async () => {
       throw new Error('resolveBinaryOnPath: unused stub');
     },

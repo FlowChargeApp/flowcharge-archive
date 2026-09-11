@@ -71,6 +71,15 @@ export type SkillPresenceResult =
   | { checkKind: 'shared-file'; exists: boolean }
   | { checkKind: 'no-format' };
 
+// The 200 body of POST /api/integrations/skill-presence: the presence union
+// above plus the version the route read off the installed skill files. Null
+// for a shared-file or no-format result, for nothing installed, and for a
+// present file carrying no readable version. SkillPresenceResult itself is
+// left alone so the hand-kept mirror of the library union cannot drift.
+export type SkillPresenceResponse = SkillPresenceResult & {
+  installedVersion: string | null;
+};
+
 // Mirrors electron/agentic-tools-ipc-handlers.cts:223-227.
 export interface InstallTargetRequest {
   toolId: string;
@@ -84,7 +93,7 @@ export interface PraxisSkillInstallAPI {
   getInstallStatus(): Promise<PraxisIpcResult<InstallRecord[]>>;
   listSkillReleases(): Promise<PraxisIpcResult<SkillReleaseSummary[]>>;
   removeInstallation(toolId: string, scope: InstallScope): Promise<PraxisIpcResult<null>>;
-  checkInstalledSkills(target: InstallTargetRequest): Promise<PraxisIpcResult<SkillPresenceResult>>;
+  checkInstalledSkills(target: InstallTargetRequest): Promise<PraxisIpcResult<SkillPresenceResponse>>;
 }
 
 declare global {

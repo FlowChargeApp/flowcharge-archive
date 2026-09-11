@@ -142,6 +142,21 @@ test('createNodeFsAccess: isDirectory returns true for a real directory and fals
   assert.equal(await fsAccess.isDirectory(path.join(tmpDir, 'does-not-exist-dir')), false);
 });
 
+test('createNodeFsAccess: readTextFile returns a real file\'s exact contents', async () => {
+  const fsAccess = createNodeFsAccess();
+  const target = path.join(tmpDir, 'read-textfile.txt');
+  const contents = '---\nmetadata:\n  version: 1.2.3\n---\nBody line.\n';
+  await fs.writeFile(target, contents, 'utf8');
+
+  assert.equal(await fsAccess.readTextFile(target), contents);
+});
+
+test('createNodeFsAccess: readTextFile returns null for a missing path', async () => {
+  const fsAccess = createNodeFsAccess();
+
+  assert.equal(await fsAccess.readTextFile(path.join(tmpDir, 'read-textfile-missing.txt')), null);
+});
+
 test('createNodeFsAccess: resolveBinaryOnPath finds an executable fixture on PATH and rejects a non-executable one', async () => {
   const fsAccess = createNodeFsAccess();
   const binDir = path.join(tmpDir, 'fixture-bin');

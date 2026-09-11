@@ -22,6 +22,7 @@ function fakeFsAccess(opts: { binaryOnPath?: boolean; configDirExists?: boolean 
     async isDirectory() {
       return true;
     },
+    readTextFile: async () => { throw new Error('readTextFile: unused stub'); },
     async resolveBinaryOnPath(name: string) {
       return opts.binaryOnPath && name === 'claude' ? '/usr/local/bin/claude' : null;
     },
@@ -72,6 +73,7 @@ function fakeGuiAppFsAccess(opts: { existingPaths?: string[]; binaryOnPath?: str
     async isDirectory() {
       return true;
     },
+    readTextFile: async () => { throw new Error('readTextFile: unused stub'); },
     async resolveBinaryOnPath(name: string) {
       return binaries.has(name) ? `/usr/local/bin/${name}` : null;
     },

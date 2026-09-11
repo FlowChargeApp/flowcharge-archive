@@ -4,7 +4,7 @@ type: workstream
 workstream: WS-107-do28jk
 slug: skill-version-read-from-installed-files
 title: "Read the installed skill suite's own version instead of relying on the install ledger"
-status: ready
+status: done
 tags: [agentic-tools, versioning, feature]
 created: 2026-09-11
 updated: 2026-09-11
