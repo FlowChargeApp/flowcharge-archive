@@ -192,14 +192,18 @@ of those skill directories and confirm the chip changes.
 
 ## Open questions
 
-1. **Which repository's release is the source of truth?** `PRAXIS_REPO_BASE_URL` names
-   `akoukoullis/Praxis`, a repository now renamed `flowcharge-core-archive` that answers
-   only through a 301 redirect and holds the single release `v0.1.0`. A separate
-   `akoukoullis/flowcharge-core` repository exists on the same host and publishes no
-   release at all. Options: leave the constant alone, or repoint it.
-   **Recommendation:** leave the constant alone in this change, and publish a current
-   release under the repository it already names. Repointing that constant also repoints
-   the real installer's write content, which is a larger decision with its own blast radius.
+1. **Which repository's release is the source of truth?** The confirmed release host is
+   https://github.com/FlowChargeApp/flowcharge-core. It was verified live on 2026-09-11,
+   it publishes release `v0.1.0` carrying the asset `flowcharge-skills-0.1.0.zip`, and
+   that release already holds the renamed FlowCharge skill set. `PRAXIS_REPO_BASE_URL`
+   still names `akoukoullis/Praxis`, a repository since renamed `flowcharge-core-archive`
+   that answers only through a 301 redirect. That archive is history, not the source of
+   truth. Options: leave the constant pointed at the archive, or repoint it to the
+   confirmed host.
+   **Recommendation:** repoint the constant to the confirmed host named above.
+   `ISS-50-92mh3i`, in `IL-20-cztm5x-issuelist.md` of workstream `WS-109-skrkxj`, carries
+   that correction, so this plan does not track it. Repointing that constant also repoints
+   the real installer's write content, so the change carries its own blast radius.
 2. **Does `ISS-42-q1t9bh` close on the mechanism fix alone?** Release `v0.1.0` genuinely
    ships `fc-bug-hunt` and `fc-orchestrate` and ships neither `fc-validate` nor
    `flowcharge`, so "Missing skills (6/8)" is a true statement about that release versus

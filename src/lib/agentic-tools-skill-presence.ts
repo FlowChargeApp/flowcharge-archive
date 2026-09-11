@@ -53,14 +53,28 @@ export async function checkSkillPresence(
   if (format.kind === 'skill-directory' || format.kind === 'rule-directory') {
     // skillDirectoryWrites/ruleDirectoryWrites each emit exactly one
     // FileWrite per input skill, in the same order as content.skills, so
-    // writes[i] corresponds to skillIds[i].
+    // writes[i] corresponds to skillIds[i]. For OpenCode that one write
+    // maps to a candidate set rather than to a single path: OpenCode reads
+    // both of its folder spellings, the plural skills/ this app writes and
+    // the legacy singular skill/, so an OpenCode skill may resolve to
+    // either one and either one counts as present.
     const presentSkillIds: string[] = [];
     const missingSkillIds: string[] = [];
     for (let i = 0; i < skillIds.length; i++) {
-      // path.join, not a hardcoded '/', so the probed path matches what
-      // the install engine writes on every platform.
-      const fullPath = path.join(basePath, writes[i].relativePath);
-      const exists = await fsAccess.pathExists(fullPath);
+      const candidatePaths = [writes[i].relativePath];
+      if (tool.id === 'opencode' && candidatePaths[0].startsWith('skills/')) {
+        candidatePaths.push(`skill/${candidatePaths[0].slice('skills/'.length)}`);
+      }
+      let exists = false;
+      for (const candidatePath of candidatePaths) {
+        // path.join, not a hardcoded '/', so the probed path matches what
+        // the install engine writes on every platform.
+        const fullPath = path.join(basePath, candidatePath);
+        exists = await fsAccess.pathExists(fullPath);
+        if (exists) {
+          break;
+        }
+      }
       if (exists) {
         presentSkillIds.push(skillIds[i]);
       } else {

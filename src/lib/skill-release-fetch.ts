@@ -28,12 +28,18 @@ const MAX_BODY_BYTES = 4 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 10000;
 
 // The base URL is the repository's own web URL
-// (e.g. http://host:8110/owner/repo). The API route is a different shape
-// entirely — it hangs off the origin, not off the repository path — which is
-// why this is a separate builder from buildAssetDownloadUrl below.
+// (e.g. http://host:8110/owner/repo, or https://github.com/owner/repo). The
+// API route is a different shape entirely — it hangs off an API origin, not
+// off the repository path — which is why this is a separate builder from
+// buildAssetDownloadUrl below. Two route shapes exist: GitHub serves
+// https://api.github.com/repos/<owner>/<repo>/releases, and a Gitea host
+// serves <origin>/api/v1/repos/<owner>/<repo>/releases.
 export function releasesApiUrl(baseUrl: string): string {
   const url = new URL(baseUrl);
   const repoPath = url.pathname.replace(/\/+$/, '');
+  if (url.hostname === 'github.com' || url.hostname === 'www.github.com') {
+    return `https://api.github.com/repos${repoPath}/releases`;
+  }
   return `${url.origin}/api/v1/repos${repoPath}/releases`;
 }
 

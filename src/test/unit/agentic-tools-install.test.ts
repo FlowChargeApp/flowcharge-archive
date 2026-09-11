@@ -184,11 +184,13 @@ test('installToTarget writes exactly the expected rule-directory files for Curso
     writeCalls.map((c) => c.path),
     [
       '/home/fakeuser/repo/.cursor/rules/prx-alpha.mdc',
+      '/home/fakeuser/repo/.cursor/rules/prx-alpha/reference.md',
       '/home/fakeuser/repo/.cursor/rules/prx-beta.mdc',
     ],
   );
   assert.equal(writeCalls[0]?.content, 'alpha body');
-  assert.equal(writeCalls[1]?.content, 'beta body');
+  assert.equal(writeCalls[1]?.content, 'reference content');
+  assert.equal(writeCalls[2]?.content, 'beta body');
 });
 
 test('installToTarget writes nothing for Cursor at global scope, because Cursor reads no user-level rules directory', async () => {

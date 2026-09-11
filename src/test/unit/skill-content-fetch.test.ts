@@ -69,19 +69,19 @@ test('parseSkillFrontmatter joins a folded \'>-\' multi-line description into a 
 // memory: the zip's entry names are already relative to the skills root, so
 // each name's first segment is the skill id verbatim.
 const EXPECTED_IDS = [
-  'fc-bug-hunt',
   'fc-dev-principles',
   'fc-git',
   'fc-issue-list',
-  'fc-orchestrate',
   'fc-plain-text-kanban',
   'fc-plan-feature',
   'fc-task-list',
+  'fc-validate',
+  'flowcharge',
 ];
 
 const TMP_INSTALL_DIR = path.join(os.tmpdir(), 'flowcharge-skill-install');
 
-test('getInstallContent installs the newest live release and returns the known 8 fc-* skills with fc-orchestrate\'s known nested files', async () => {
+test('getInstallContent installs the newest live release and returns the known 8 skills with flowcharge\'s known nested files', async () => {
   // The real adapter satisfies ArchiveFsAccess structurally, so it is passed
   // straight through with no wrapper.
   const content = await getInstallContent('claude-code', { fsWrite: createNodeFsWriteAccess() });
@@ -96,12 +96,12 @@ test('getInstallContent installs the newest live release and returns the known 8
     assert.ok(skill.body.length > 0, `${skill.id}: body must be non-empty`);
   }
 
-  const orchestrate = content.skills.find((s) => s.id === 'fc-orchestrate');
-  if (!orchestrate) throw new Error('fc-orchestrate missing from getInstallContent result');
+  const orchestrate = content.skills.find((s) => s.id === 'flowcharge');
+  if (!orchestrate) throw new Error('flowcharge missing from getInstallContent result');
 
   const expectedFiles = [
     'CONVENTIONS.md',
-    'prompts/bug-hunt.md',
+    'LICENSE',
     'prompts/create-issues.md',
     'prompts/create-plan.md',
     'prompts/execute-parent-task.md',
@@ -111,12 +111,15 @@ test('getInstallContent installs the newest live release and returns the known 8
     'prompts/tasks-from-issues-spec.md',
     'prompts/tasks-from-plan-diff.md',
     'prompts/tasks-from-plan-spec.md',
+    'prompts/validate-issues.md',
+    'prompts/validate-plan.md',
+    'prompts/validate-tasks.md',
     'scripts/fc-index.mjs',
     'scripts/fc-rename-artefacts.mjs',
     'scripts/test/run-tests.mjs',
   ];
 
-  assert.ok(orchestrate.files, 'fc-orchestrate must have a files array');
+  assert.ok(orchestrate.files, 'flowcharge must have a files array');
   assert.deepEqual((orchestrate.files ?? []).map((f) => f.relativePath), expectedFiles);
   for (const f of orchestrate.files ?? []) {
     assert.equal(f.relativePath.includes('\\'), false, `${f.relativePath} must use forward slashes`);
@@ -143,7 +146,7 @@ test('getInstallContent installs the newest live release and returns the known 8
 // stubbed out. The filesystem port is a fake that records every call, which
 // is what lets these tests assert the temporary zip's whole lifecycle.
 
-const RELEASES_API_MARKER = '/api/v1/repos/';
+const RELEASES_API_MARKER = '/repos/';
 const ASSET_DOWNLOAD_MARKER = '/releases/download/';
 
 interface FsCall {
