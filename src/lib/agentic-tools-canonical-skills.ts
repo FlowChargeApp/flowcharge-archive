@@ -11,9 +11,9 @@
 // this suite and is deliberately excluded, so a future editor is not
 // tempted to add it.
 export const CANONICAL_PRAXIS_SKILL_IDS: string[] = [
-  'fc-orchestrate',
+  'flowcharge',
   'fc-git',
-  'fc-bug-hunt',
+  'fc-validate',
   'fc-issue-list',
   'fc-dev-principles',
   'fc-plan-feature',
