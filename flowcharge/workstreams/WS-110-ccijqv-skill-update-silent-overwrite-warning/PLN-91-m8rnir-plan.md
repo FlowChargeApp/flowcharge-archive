@@ -4,7 +4,7 @@ type: plan
 workstream: WS-110-ccijqv
 slug: skill-update-silent-overwrite-warning
 title: "Confirm before Update overwrites skill files FlowCharge did not install"
-status: ready
+status: done
 created: 2026-09-11
 updated: 2026-09-11
 depends_on: []
