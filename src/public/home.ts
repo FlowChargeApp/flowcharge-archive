@@ -21,7 +21,10 @@ import { unwrapIpc } from './ipc-adapter';
 import type { PraxisIpcResult } from './ipc-adapter';
 import { resolveBasePathForScope } from './lib/agentic-tools-scope';
 import type { InstallScope } from './lib/agentic-tools-scope';
-import { deriveIntegrationsRowDecision } from '../lib/agentic-tools-chip-rules';
+import {
+  deriveIntegrationsRowDecision,
+  updateOverwriteWarningNeeded
+} from '../lib/agentic-tools-chip-rules';
 import type { IntegrationsRowRuleInput } from '../lib/agentic-tools-chip-rules';
 import type {
   DetectionConfidence,
@@ -430,6 +433,18 @@ import type {
   // version chip and the Update button.
   var UPDATE_AVAILABLE_LABEL = 'Update available';
 
+  // The blocking confirmation shown before an update overwrites skill files FlowCharge
+  // has no record of writing. src/lib/agentic-tools-chip-rules.ts decides whether it is
+  // needed and holds no user-facing string; this file owns the words, as it does for
+  // every other label in this modal.
+  function updateOverwriteWarningMessage(displayName: string): string {
+    return 'Update the FlowCharge Core skills for ' + displayName + '?\n\n' +
+      'FlowCharge has no record of installing these skill files, so they may hold local ' +
+      'changes. Updating overwrites every file the current release writes, and any local ' +
+      'change to those files is lost.\n\n' +
+      'Cancel leaves the files exactly as they are.';
+  }
+
   type IntegrationsRowEntry = {
     row: ToolDetectionRow;
     rowEl: HTMLElement;
@@ -481,6 +496,16 @@ import type {
   // the strictly more accurate filesystem presence check above, and this must not
   // restore it.
   var integrationsInstallRecords: Record<string, InstallRecord> = {};
+
+  // Records whether the getInstallStatus fetch resolved in this dialog session. The map
+  // above is emptied both by a failed fetch and by an absent surface, so an empty map
+  // alone cannot tell 'no records' from 'never loaded'.
+  var integrationsInstallRecordsLoaded: boolean = false;
+
+  // The tool-and-scope keys FlowCharge itself installed or updated in this dialog
+  // session. Keyed with installRecordKey, so a global install and a project install of
+  // the same tool stay separate.
+  var integrationsLiveInstallKeys: Record<string, true> = {};
 
   // The map key. A project-scoped record carries its project path, so two projects'
   // records for the same tool never overwrite one another.
@@ -546,7 +571,18 @@ import type {
 
     // One row, the same install path the Install selected button uses — so the
     // result lands on this row's own install chip and the failure alert is shared.
+    //
+    // The guard stays here rather than inside installIntegrationsSelected, which is what
+    // leaves the Install selected path structurally untouched. The record is read at the
+    // CURRENT scope, so a global and a project record for the same tool stay separate.
     updateButton.addEventListener('click', function () {
+      var recordKey = installRecordKey(entry.row.toolId, currentIntegrationsScope);
+      var warn = updateOverwriteWarningNeeded({
+        ledgerLoaded: integrationsInstallRecordsLoaded,
+        hasLedgerRecord: integrationsInstallRecords[recordKey] !== undefined,
+        installedThisSession: integrationsLiveInstallKeys[recordKey] === true
+      });
+      if (warn && !window.confirm(updateOverwriteWarningMessage(entry.row.displayName))) return;
       installIntegrationsSelected([entry]);
     });
 
@@ -741,10 +777,12 @@ import type {
         next[installRecordKey(record.toolId, record.scope)] = record;
       });
       integrationsInstallRecords = next;
+      integrationsInstallRecordsLoaded = true;
       refreshIntegrationsEligibility();
     })
       .catch(function () {
         integrationsInstallRecords = {};
+        integrationsInstallRecordsLoaded = false;
       });
   }
 
@@ -843,6 +881,14 @@ import type {
           entry.installChip.textContent = INSTALL_STATUS_LABEL[result.status];
           entry.installChip.hidden = false;
           entry.hasLiveResult = true;
+          // A successful install makes the files FlowCharge's, whether or not a release
+          // tag is known — so this sits OUTSIDE the latestRelease condition below. A
+          // 'skipped-no-format' result installed nothing, so it records no key.
+          if (result.status !== 'skipped-no-format') {
+            integrationsLiveInstallKeys[
+              installRecordKey(entry.row.toolId, currentIntegrationsScope)
+            ] = true;
+          }
           // A successful install always installs the newest release, so that
           // release's tag is this row's version from here on. Only the SUCCESS
           // branch reaches this point — a rejected install leaves the map
@@ -883,6 +929,8 @@ import type {
     latestRelease = null;
     byId('integrations-release').textContent = '';
     integrationsInstallRecords = {};
+    integrationsInstallRecordsLoaded = false;
+    integrationsLiveInstallKeys = {};
     integrationsList.innerHTML = '';
     integrationsInstallSelectedButton.disabled = true;
   }

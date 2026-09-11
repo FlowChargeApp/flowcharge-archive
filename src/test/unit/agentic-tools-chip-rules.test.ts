@@ -1,5 +1,6 @@
-// Unit tests for agentic-tools-chip-rules.ts's deriveIntegrationsRowDecision — the
-// Manage Integrations row rules lifted out of src/public/home.ts so a Node process can
+// Unit tests for agentic-tools-chip-rules.ts's deriveIntegrationsRowDecision and
+// updateOverwriteWarningNeeded — the Manage Integrations row rules lifted out of
+// src/public/home.ts so a Node process can
 // drive them. Plain node:test with object literals: no DOM, no fetch, no temporary
 // directory and no fixture beyond the literals below. Every assertion reads the returned
 // IntegrationsRowDecision; the module holds no user-facing string, so none is asserted.
@@ -10,10 +11,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { deriveIntegrationsRowDecision } from '../../lib/agentic-tools-chip-rules.js';
+import {
+  deriveIntegrationsRowDecision,
+  updateOverwriteWarningNeeded
+} from '../../lib/agentic-tools-chip-rules.js';
 import type {
   IntegrationsRowRuleInput,
-  SkillPresenceLike
+  SkillPresenceLike,
+  UpdateOverwriteWarningInput
 } from '../../lib/agentic-tools-chip-rules.js';
 
 // Each presence literal is a member of the SkillPresenceLike union. A 'per-skill' member
@@ -312,4 +317,53 @@ test('an eligible, verified row reports no note', () => {
     needsManualVerification: false
   }));
   assert.deepEqual(decision.notes, []);
+});
+
+// --- The update overwrite warning ----------------------------------------------------
+
+// A loaded ledger holding no record for this row, and no install by FlowCharge in this
+// dialog session. Every case states only the fields it is about.
+function warningInput(
+  overrides: Partial<UpdateOverwriteWarningInput>
+): UpdateOverwriteWarningInput {
+  const base: UpdateOverwriteWarningInput = {
+    ledgerLoaded: true,
+    hasLedgerRecord: false,
+    installedThisSession: false
+  };
+  return { ...base, ...overrides };
+}
+
+test('a loaded ledger holding a record needs no warning', () => {
+  assert.equal(updateOverwriteWarningNeeded(warningInput({ hasLedgerRecord: true })), false);
+});
+
+test('a loaded ledger holding no record needs the warning', () => {
+  assert.equal(updateOverwriteWarningNeeded(warningInput({ hasLedgerRecord: false })), true);
+});
+
+test('an unloaded ledger needs the warning, record or no record', () => {
+  assert.equal(
+    updateOverwriteWarningNeeded(warningInput({ ledgerLoaded: false, hasLedgerRecord: false })),
+    true
+  );
+  // The record's presence must not carry the assertion above: an unloaded ledger's
+  // record map is empty either way, so it says nothing about the files on disk.
+  assert.equal(
+    updateOverwriteWarningNeeded(warningInput({ ledgerLoaded: false, hasLedgerRecord: true })),
+    true
+  );
+});
+
+test('an install by FlowCharge in this session needs no warning', () => {
+  assert.equal(
+    updateOverwriteWarningNeeded(warningInput({ installedThisSession: true })),
+    false
+  );
+  assert.equal(
+    updateOverwriteWarningNeeded(
+      warningInput({ ledgerLoaded: false, hasLedgerRecord: false, installedThisSession: true })
+    ),
+    false
+  );
 });
