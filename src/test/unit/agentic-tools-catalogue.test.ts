@@ -23,6 +23,7 @@ function fakeFsAccess(): FsAccess {
     async isDirectory() {
       return false;
     },
+    readTextFile: async () => { throw new Error('readTextFile: unused stub'); },
     async resolveBinaryOnPath() {
       return null;
     },

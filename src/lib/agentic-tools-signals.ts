@@ -8,6 +8,10 @@ import type { OS, ToolDefinition } from './agentic-tools-catalogue.js';
 export interface FsAccess {
   pathExists(path: string): Promise<boolean>;
   isDirectory(path: string): Promise<boolean>;
+  // Answers null for a missing file and throws for every other failure,
+  // matching FsWriteAccess.readTextFile's existing contract in
+  // ./agentic-tools-install.js.
+  readTextFile(path: string): Promise<string | null>;
   resolveBinaryOnPath(name: string): Promise<string | null>;
   expandTokens(path: string): Promise<string>; // resolves '~', '%APPDATA%', '%USERPROFILE%', '%LOCALAPPDATA%'
 }

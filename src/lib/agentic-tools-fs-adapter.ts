@@ -47,6 +47,18 @@ export function createNodeFsAccess(): FsAccess {
       }
     },
 
+    // Same null-on-ENOENT / rethrow-everything-else contract as
+    // createNodeFsWriteAccess().readTextFile below — one contract, two
+    // ports, so a caller cannot be surprised by which port it holds.
+    async readTextFile(targetPath: string): Promise<string | null> {
+      try {
+        return await fs.readFile(targetPath, 'utf8');
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        throw err;
+      }
+    },
+
     // Walks process.env.PATH, appending PATHEXT extensions only on win32,
     // and returns the first candidate that exists and is executable.
     async resolveBinaryOnPath(name: string): Promise<string | null> {
