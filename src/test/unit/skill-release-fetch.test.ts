@@ -137,6 +137,10 @@ test('releasesApiUrl derives the API route from the supplied base URL', () => {
     releasesApiUrl('https://example.test:9000/owner/repo/'),
     'https://example.test:9000/api/v1/repos/owner/repo/releases',
   );
+  assert.equal(
+    releasesApiUrl('https://github.com/FlowChargeApp/flowcharge-core'),
+    'https://api.github.com/repos/FlowChargeApp/flowcharge-core/releases',
+  );
 });
 
 test('buildAssetDownloadUrl derives the asset route from the supplied base URL', () => {

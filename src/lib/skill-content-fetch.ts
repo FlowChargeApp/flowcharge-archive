@@ -1,5 +1,6 @@
 // Fetches the FlowCharge Core skill suite from the NEWEST PUBLISHED RELEASE
-// on the self-hosted Gitea instance and returns it as InstallContent. That
+// on the public origin https://github.com/FlowChargeApp/flowcharge-core and
+// returns it as InstallContent. That
 // release is the only content source: there is no branch fallback, and a
 // missing release or a release with no .zip asset is a named failure the user
 // sees, never a quiet substitution.
@@ -58,9 +59,8 @@ export interface InstallContent {
   skills: SkillContent[]; // sorted by id ascending
 }
 
-// Templated so a future host swap (e.g. github.com) is a one-line constant
-// change.
-export const PRAXIS_REPO_BASE_URL = 'http://100.87.185.97:8110/akoukoullis/Praxis';
+// Held as one constant, so a host swap stays a one-line change.
+export const PRAXIS_REPO_BASE_URL = 'https://github.com/FlowChargeApp/flowcharge-core';
 
 // Hard ceiling on the release asset download. The real asset is a zip of a
 // skills directory — a few hundred kilobytes, orders of magnitude below this

@@ -101,13 +101,13 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
     failures: []
   ```
 
-- [ ] 3. Repoint the skill-release fetch to the public FlowCharge Core origin
+- [x] 3. Repoint the skill-release fetch to the public FlowCharge Core origin
 
   ```yaml
   description: "Move PRAXIS_REPO_BASE_URL from the private LAN Gitea address to https://github.com/FlowChargeApp/flowcharge-core, and make the release API URL builder resolve correctly against GitHub. Child order keeps the suite green at every step."
   ```
 
-  - [ ] 3.1 Make the release-API marker in the content-fetch test host-agnostic
+  - [x] 3.1 Make the release-API marker in the content-fetch test host-agnostic
     ```yaml
     description: "Widen RELEASES_API_MARKER so it matches both the Gitea and the GitHub release-API route, before the host swap lands."
     author: Anthony Koukoullis
@@ -130,11 +130,13 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
       - "Is the file otherwise byte-identical, with no test converted to a live request?"
       - "Does npm test report 0 fail?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      evidence:
+        - "npm test initially reported 387 tests, 386 pass, 1 fail — the tier (c) live-network test in this same file, caused by task 3.3's host repoint exposing a stale EXPECTED_IDS fixture, not by this widened marker. The user approved fixing EXPECTED_IDS directly (see task 3.3's self_eval); after that fix, npm test reports 387/387."
     ```
 
-  - [ ] 3.2 Build GitHub's release-API route in releasesApiUrl
+  - [x] 3.2 Build GitHub's release-API route in releasesApiUrl
     ```yaml
     description: "Give releasesApiUrl a github.com branch so a github.com base URL resolves to api.github.com/repos/<owner>/<repo>/releases, while the Gitea route stays as it is."
     author: Anthony Koukoullis
@@ -162,11 +164,13 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
       - "Does the outbound request still carry only Accept and User-Agent headers?"
       - "Does npm test report 0 fail?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      evidence:
+        - "npm test initially reported 1 fail, the same tier (c) live-network test named in task 3.1's self_eval, unrelated to this branch's own change. After the approved EXPECTED_IDS fix (task 3.3's self_eval), npm test reports 387/387."
     ```
 
-  - [ ] 3.3 Repoint PRAXIS_REPO_BASE_URL to the public origin
+  - [x] 3.3 Repoint PRAXIS_REPO_BASE_URL to the public origin
     ```yaml
     description: "Replace the private LAN Gitea address in PRAXIS_REPO_BASE_URL with https://github.com/FlowChargeApp/flowcharge-core."
     author: Anthony Koukoullis
@@ -194,11 +198,14 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
       - "Does the file header now name the public origin rather than a self-hosted Gitea instance?"
       - "Does npm test report 0 fail?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      evidence:
+        - "npm test initially reported 1 fail: the tier (c) case at src/test/unit/skill-content-fetch.test.ts:84, which downloads the newest live release and compares its skill ids against EXPECTED_IDS at :71-80. The repointed host now serves the public GitHub release, which ships a different inventory than the old LAN Gitea mirror: it drops fc-bug-hunt and fc-orchestrate and adds fc-validate and flowcharge. The count is still 8. The failure confirmed the repoint reaches the real GitHub release and that EXPECTED_IDS was a stale snapshot of the old mirror."
+        - "The user was asked whether to fix EXPECTED_IDS inside this task, file it as a separate issue, or defer to the closing test gate, and chose to fix it now. Downloaded the real v0.1.0 release asset directly (flowcharge-skills-0.1.0.zip) and read its actual contents to derive the correct fixture rather than guessing: EXPECTED_IDS updated to the real 8 ids, and the 'fc-orchestrate' nested-files check in the same file (test name, variable, and the expectedFiles list) updated to target 'flowcharge' with its real bundled files (adds LICENSE, validate-issues.md, validate-plan.md, validate-tasks.md; drops the old bug-hunt.md prompt). npm test now reports 387/387."
     ```
 
-  - [ ] 3.4 Lock the GitHub release-API route into the release-fetch test
+  - [x] 3.4 Lock the GitHub release-API route into the release-fetch test
     ```yaml
     description: "Add one offline assertion proving releasesApiUrl builds GitHub's api.github.com route, so the repointed host cannot silently regress."
     author: Anthony Koukoullis
@@ -223,8 +230,10 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
       - "Was no new file created and no new import added?"
       - "Does npm test report 0 fail?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
+      evidence:
+        - "npm test initially reported 387 total (equal to the f0d4e2f baseline, so this task's assertion went inside the existing case and raised no count) with 1 fail — the same tier (c) live-network test named in task 3.1's self_eval. This file's own run reported 12 tests, 12 pass, 0 fail throughout. After the approved EXPECTED_IDS fix (task 3.3's self_eval), npm test reports 387/387."
     ```
 
 - [ ] 4. Correct the release host named in PLN-88's Open question 1
