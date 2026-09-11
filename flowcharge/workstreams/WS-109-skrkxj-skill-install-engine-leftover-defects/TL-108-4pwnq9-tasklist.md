@@ -4,7 +4,7 @@ type: tasklist
 workstream: WS-109-skrkxj
 slug: skill-install-engine-leftover-defects
 title: "Leftover skill-install-engine defect corrections"
-status: ready
+status: done
 created: 2026-09-11
 updated: 2026-09-11
 author: Anthony Koukoullis
