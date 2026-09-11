@@ -4,7 +4,7 @@ type: plan
 workstream: WS-107-do28jk
 slug: skill-version-read-from-installed-files
 title: "Read the installed skill version from disk and hide the version chip when nothing is installed"
-status: ready
+status: done
 created: 2026-09-11
 updated: 2026-09-11
 depends_on: []
