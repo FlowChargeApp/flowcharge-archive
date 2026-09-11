@@ -304,7 +304,7 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
       - "No failure occurred, so no new issue list was needed and the branch stays unmerged for the ARCHITECTURE.md review in task 6."
   ```
 
-- [ ] 6. ARCHITECTURE.md review
+- [x] 6. ARCHITECTURE.md review
 
   ```yaml
   description: "Review every section of ARCHITECTURE.md against this branch's real diff and update what no longer matches the code."
@@ -328,8 +328,18 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
     - "Does every Mermaid block still parse?"
     - "Is each component, type and endpoint name consistent across sections?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
+    notes:
+      - "`git diff f0d4e2f..HEAD` was read in full before any edit. It covers four source files and three test files: the bundled-reference-file writers in `agentic-tools-format.ts` (ISS-38), the OpenCode legacy-folder candidate in `agentic-tools-skill-presence.ts` (ISS-47), the `PRAXIS_REPO_BASE_URL` repoint in `skill-content-fetch.ts` plus the GitHub API branch in `releasesApiUrl` (ISS-50), and the plan-text correction in PLN-88 (ISS-51)."
+      - "All 11 sections were reviewed. Sections 1, 3, 4, 5, 7, 9 and 10 needed no edit: the diff added no ADR, no component, no file, no type field, no state, no dependency and no quality gate. `SkillContent.files` was already declared in Section 5, so the writer change needed no type edit."
+      - "Section 2 was edited. The `gitea` System_Ext named a self-hosted Gitea instance, which the ISS-50 repoint made false. It is now `skillHost`, describing github.com/FlowChargeApp/flowcharge-core, and its Rel now says HTTPS. The separate `github` System_Ext for the update check was left alone, because it is a different repository and a different call."
+      - "Section 6 was edited for the same rename: the participant list prose at 6's header and the `Gitea` participant and its four arrows in flow 6.5 are now `skillHost`."
+      - "Section 8 was edited in four rows. `skillReleaseFetch` now records both API route shapes and that only the repository URL is a parameter. `skillPresence` now records the OpenCode two-candidate probe and that the stub carries no `files`, so index alignment holds. `skillVersion` now records that it does NOT carry the OpenCode candidate, which the old wording implied it did. `installEngine|installFormat` now records that all four writing formats emit `SkillContent.files`."
+      - "Section 11 was edited. The constraint `skillReleaseFetch must hold no host constant` was falsified by the `api.github.com` literal `releasesApiUrl` now holds. It now reads no repository constant, and permits the one API-origin literal a known forge demands, read off the supplied URL."
+      - "Mermaid: a structural checker over all 21 blocks reported 0 failures — every block has a recognised diagram header, balanced quotes and brackets, and every alias referenced by a Rel or a sequence arrow is declared. No mermaid parser is installed and ADR-002 forbids adding one for a review, so the check is structural. It was proved non-vacuous: a deliberately broken copy with an undeclared alias failed it at line 42."
+      - "Name consistency: `grep -n \"Gitea|gitea\"` now matches one line only, Section 8's deliberate and correct statement that the non-GitHub fallback keeps the Gitea route shape. The old host `100.87.185.97` and port 8110 appear nowhere. A case-insensitive sweep for skillReleaseFetch, skillContentFetch, skillPresence, installFormat and releasesApiUrl found no variant spelling, and `releasesApiUrl` matches `src/lib/skill-release-fetch.ts:37`."
+      - "`npx tsc -p tsconfig.json --noEmit` and `npx tsc -p src/public/tsconfig.json` both exited 0. The edit touches only ARCHITECTURE.md: `git diff --stat` reports 1 file changed, 17 insertions, 14 deletions. Nothing was staged or committed."
   ```
 
 ## Skipped
