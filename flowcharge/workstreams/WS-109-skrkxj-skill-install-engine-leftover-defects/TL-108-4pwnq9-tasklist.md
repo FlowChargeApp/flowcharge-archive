@@ -68,7 +68,7 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
         fix: "Updated that one assertion in src/test/unit/agentic-tools-install.test.ts to expect '/home/fakeuser/repo/.cursor/rules/prx-alpha/reference.md' between the two .mdc paths, and re-indexed the content assertions to writeCalls[1] = 'reference content' and writeCalls[2] = 'beta body'. Re-ran npm test: 387 tests, 387 pass, 0 fail."
   ```
 
-- [ ] 2. Probe OpenCode's legacy singular skill folder in the presence check
+- [x] 2. Probe OpenCode's legacy singular skill folder in the presence check
 
   ```yaml
   description: "Make checkSkillPresence treat an OpenCode skill as present when it sits under either OpenCode's plural skills/ folder or its legacy singular skill/ folder."
@@ -97,7 +97,7 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
     - "Are src/lib/agentic-tools-catalogue.ts and src/public/lib/agentic-tools-scope.ts both unmodified?"
     - "Does npm test report 0 fail?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
