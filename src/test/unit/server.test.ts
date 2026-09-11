@@ -14,6 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { TOOL_CATALOGUE } from '../../lib/agentic-tools-catalogue.js';
+import { CANONICAL_PRAXIS_SKILL_IDS } from '../../lib/agentic-tools-canonical-skills.js';
 
 // Set BEFORE the server module is imported: it reads both at evaluation time,
 // so assigning them afterwards would be too late. PORT 0 asks the OS for an
@@ -31,8 +32,15 @@ const base = `http://127.0.0.1:${port}`;
 // is a live network call.
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-server-test-'));
 
+// The installedVersion cases need real files on disk, and one existing case
+// asserts tmpDir stays empty, so their fixtures get their own root. Each case
+// still takes its own subdirectory of that root, so the empty-directory case
+// cannot see the other case's fixture.
+const versionTmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-server-test-version-'));
+
 after(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
+  fs.rmSync(versionTmpDir, { recursive: true, force: true });
 });
 
 function postJson(route: string, body: unknown): Promise<Response> {
@@ -91,6 +99,44 @@ test('POST /api/integrations/skill-presence answers a presence result for a real
   assert.equal(res.status, 200);
   const body = (await res.json()) as { checkKind: string };
   assert.equal(typeof body.checkKind, 'string');
+});
+
+test('POST /api/integrations/skill-presence answers the version written in an installed SKILL.md', async () => {
+  const skillId = CANONICAL_PRAXIS_SKILL_IDS[0];
+  if (skillId === undefined) throw new Error('expected at least one canonical skill id');
+  // firstTool is claude-code, whose global skill-directory pathTemplate is
+  // 'skills/<name>/SKILL.md', so the fixture sits at that path under basePath.
+  const installedDir = path.join(versionTmpDir, 'installed');
+  const skillDir = path.join(installedDir, 'skills', skillId);
+  fs.mkdirSync(skillDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(skillDir, 'SKILL.md'),
+    `---\nname: ${skillId}\nmetadata:\n  version: "9.9.9"\n---\nBody text.\n`,
+    'utf8',
+  );
+
+  const res = await postJson('/api/integrations/skill-presence', {
+    toolId: firstTool.id,
+    basePath: installedDir,
+    scope: { kind: 'global' },
+  });
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { installedVersion: string | null };
+  assert.equal(body.installedVersion, '9.9.9');
+});
+
+test('POST /api/integrations/skill-presence answers a null installedVersion for an empty directory', async () => {
+  const emptyDir = path.join(versionTmpDir, 'empty');
+  fs.mkdirSync(emptyDir, { recursive: true });
+
+  const res = await postJson('/api/integrations/skill-presence', {
+    toolId: firstTool.id,
+    basePath: emptyDir,
+    scope: { kind: 'global' },
+  });
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { installedVersion: string | null };
+  assert.equal(body.installedVersion, null);
 });
 
 test('POST /api/integrations/installs refuses a basePath outside the permitted root', async () => {

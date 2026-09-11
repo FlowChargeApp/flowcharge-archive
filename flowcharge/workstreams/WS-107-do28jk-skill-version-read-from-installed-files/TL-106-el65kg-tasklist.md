@@ -335,13 +335,13 @@ stay untouched.
       failures: []
     ```
 
-- [ ] 2. Stage 2 — route composition and route tests
+- [x] 2. Stage 2 — route composition and route tests
 
   ```yaml
   description: "Compose installedVersion into the POST /api/integrations/skill-presence 200 body, and drive it over the real socket from the server test suite."
   ```
 
-  - [ ] 2.1 Compose `installedVersion` into the `skill-presence` response
+  - [x] 2.1 Compose `installedVersion` into the `skill-presence` response
     ```yaml
     description: "Extend handleIntegrationsSkillPresence in src/http/routes-integrations.ts with one additive response field."
     author: Anthony Koukoullis
@@ -368,11 +368,11 @@ stay untouched.
       - "Is SkillPresenceResult in src/lib/agentic-tools-skill-presence.ts unchanged?"
       - "Does the route still read no environment variable and reach the filesystem only through the injected adapter?"
     self_eval:
-      passed: false
+      passed: true
       failures: []
     ```
 
-  - [ ] 2.2 Add server tests for the new response field
+  - [x] 2.2 Add server tests for the new response field
     ```yaml
     description: "Extend src/test/unit/server.test.ts with a real-version case and a null case for POST /api/integrations/skill-presence."
     author: Anthony Koukoullis
@@ -397,8 +397,11 @@ stay untouched.
       - "Is the skill id taken from CANONICAL_PRAXIS_SKILL_IDS rather than hardcoded?"
       - "Is src/lib/agentic-tools-canonical-skills.ts itself unmodified?"
     self_eval:
-      passed: false
-      failures: []
+      passed: true
+      failures:
+        - item: "Do the two cases use separate subdirectories under the suite's tmpDir?"
+          reason: "The existing case 'POST /api/integrations/installs refuses a basePath outside the permitted root' asserts fs.readdirSync(tmpDir) is empty. Any fixture subdirectory under tmpDir fails that assertion."
+          fix: "Added a second mkdtemp root, versionTmpDir, cleaned up in the same after() hook. Both new cases take their own subdirectory of that root (installed/ and empty/), so they stay isolated from each other and from tmpDir. This is the correction the validation pass directed."
     ```
 
 - [ ] 3. Stage 3 — browser types and chip rules
