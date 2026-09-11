@@ -293,7 +293,7 @@ full suite reports `tests 387, pass 387, fail 0`;
       failures: []
     ```
 
-- [ ] 3. Test gate
+- [x] 3. Test gate
 
   ```yaml
   description: "Build and run the full suite. Do not merge while anything fails."
@@ -318,7 +318,7 @@ full suite reports `tests 387, pass 387, fail 0`;
     - "Is every failure, if any, recorded in a new issue list in this workstream?"
     - "Is the branch left unmerged while any failure stands?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
 
