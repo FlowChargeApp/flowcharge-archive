@@ -536,7 +536,7 @@ fixed closing boilerplate.
         - "Post-restore: npm test reported 'tests 387, pass 387, fail 0'. git status --short lists no source file, only CLAUDE.md, the workstream record and the .lease file, none of which this task touched."
     ```
 
-- [ ] 4. Closing test gate
+- [x] 4. Closing test gate
 
   ```yaml
   description: "Build and run the full suite with npm test on this task list's branch, before any merge."
@@ -560,8 +560,15 @@ fixed closing boilerplate.
     - "If anything failed, is every failure recorded verbatim in self_eval.failures and the task left unchecked?"
     - "Was no source file edited by this task?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
+    evidence:
+      - "Ran npm test at the repository root on branch feature/manage-integrations-modal-test-coverage. Exit status 0."
+      - "pretest ran npm run build first: tsc -p tsconfig.json, tsc -p src/public/tsconfig.json, tsc -p electron/tsconfig.json, node tools/copy-assets.mjs, then node tools/bundle-public.mjs. All steps succeeded."
+      - "The suite ran as one node --test --test-force-exit invocation over both globs, 'dist/**/*.test.js' and '.github/scripts/**/*.test.mjs', so a single summary covers every suite file."
+      - "Runner summary: tests 387, suites 0, pass 387, fail 0, cancelled 0, skipped 0, todo 0, duration_ms 3335.908125."
+      - "No failure marker appeared in the output: grep -c '^✖' over the captured log returned 0."
+      - "No source file was edited by this task. git status --short is byte-identical before and after the run, listing only CLAUDE.md, the workstream record and the .lease file, none of which this task touched."
   ```
 
 - [ ] 5. `ARCHITECTURE.md` review
