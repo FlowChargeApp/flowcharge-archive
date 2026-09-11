@@ -98,7 +98,7 @@ C4Component
         Component(ipcAdapter, "ipcAdapter", "TypeScript", "PraxisIpcResult, unwrapIpc and the PraxisAPI Window augmentation")
         Component(skillInstallApiTypes, "skillInstallApiTypes", "TypeScript", "Browser-side types for the skill-install surface")
         Component(scopeResolver, "scopeResolver", "TypeScript", "Resolves or rejects a base path for a global or project install scope")
-        Component(integrationsChipRules, "integrationsChipRules", "TypeScript, src/lib/, import-free", "Derives one integrations row's eligibility, install chip, version chip, update offer and notes")
+        Component(integrationsChipRules, "integrationsChipRules", "TypeScript, src/lib/, import-free", "Derives one integrations row's eligibility, install chip, version chip, update offer and notes, and whether an update needs an overwrite warning")
         Component(themeStore, "themeStore", "TypeScript", "localStorage mode, resolution to light or dark, the one DOM write")
         Component(themeToggle, "themeToggle", "TypeScript", "Wires the three-button theme control to themeStore")
         Component(appVersionFooter, "appVersionFooter", "TypeScript", "Writes the running version into both page footers")
@@ -195,7 +195,7 @@ C4Component
     Rel(homeEntry, ipcAdapter, "unwrapIpc import", "ES module")
     Rel(boardEntry, ipcAdapter, "unwrapIpc import", "ES module")
     Rel(homeEntry, scopeResolver, "resolveBasePathForScope import", "ES module")
-    Rel(homeEntry, integrationsChipRules, "deriveIntegrationsRowDecision import", "ES module")
+    Rel(homeEntry, integrationsChipRules, "deriveIntegrationsRowDecision and updateOverwriteWarningNeeded imports", "ES module")
     Rel(homeEntry, skillInstallApiTypes, "type import", "ES module")
     Rel(browserIpcShim, ipcAdapter, "type import only", "ES module")
     Rel(browserIpcShim, httpDispatcher, "GET, POST, PATCH, DELETE on /api/*", "fetch / JSON")
@@ -383,8 +383,9 @@ directories rather than as authored files.
 │   │   ├── agentic-tools-skill-presence.ts  # skillPresence — read-only presence probe
 │   │   ├── agentic-tools-skill-version.ts   # skillVersion — metadata.version out of an installed SKILL.md
 │   │   ├── agentic-tools-canonical-skills.ts # canonicalSkills — the hand-maintained skill id list
-│   │   ├── agentic-tools-chip-rules.ts      # integrationsChipRules — the integrations row decision; import-free,
-│   │   │                                    #   compiled by the Node project and by src/public/tsconfig.json
+│   │   ├── agentic-tools-chip-rules.ts      # integrationsChipRules — the integrations row decision and the
+│   │   │                                    #   update overwrite warning rule; import-free, compiled by the
+│   │   │                                    #   Node project and by src/public/tsconfig.json
 │   │   └── agentic-tools-fs-adapter.ts      # fsAdapter — FsAccess and FsWriteAccess over node:fs/promises
 │   │
 │   ├── scripts/
@@ -453,6 +454,7 @@ directories rather than as authored files.
 │           ├── agentic-tools-skill-version.test.ts    # skillVersion — parseSkillVersion and readInstalledSkillVersion
 │           ├── agentic-tools-canonical-skills.test.ts # canonicalSkills — pins the id list against expected-skill-ids.ts
 │           ├── agentic-tools-chip-rules.test.ts       # integrationsChipRules — deriveIntegrationsRowDecision's decision table
+│           │                                          #   and updateOverwriteWarningNeeded's four cases
 │           └── agentic-tools-fs-adapter.test.ts       # fsAdapter — createNodeFsWriteAccess against a real temporary directory
 │
 ├── electron/                                # Built by build:base, packaged by no shipped release path
@@ -981,6 +983,13 @@ classDiagram
         +versionChip VersionChipDecision
         +updateOffered boolean
         +notes RowNote[]
+    }
+
+    class UpdateOverwriteWarningInput {
+        <<interface>>
+        +ledgerLoaded boolean
+        +hasLedgerRecord boolean
+        +installedThisSession boolean
     }
 
     class ToolDetectionRow {
@@ -1617,6 +1626,11 @@ the current scope on every scope change, so the same tool can be selectable unde
 scope and refused under another. The page has no
 remove control: `removeInstallation` exists on the API surface and the HTTP route, but
 `homeEntry` never calls it. Install and Update share one path, `installIntegrationsSelected`.
+A blocking `window.confirm` sits in front of the Update button alone, so the Install
+selected path is unchanged: `updateOverwriteWarningNeeded` answers whether it appears, and
+`homeEntry` owns its words. Two more pieces of `homeEntry` state feed that answer and are
+reset on every teardown — whether the `getInstallStatus` fetch resolved in this dialog
+session, and the tool-and-scope keys FlowCharge itself installed in this dialog session.
 
 ```mermaid
 stateDiagram-v2
@@ -1632,7 +1646,11 @@ stateDiagram-v2
         eligible --> ineligible: the scope is switched to one that does not resolve
         eligible --> selected: the row checkbox is ticked
         selected --> eligible: the row checkbox is cleared
-        selected --> installing: Install selected is clicked, or this row's Update button
+        selected --> installing: Install selected is clicked
+        selected --> installing: this row's Update button is clicked and updateOverwriteWarningNeeded answers false
+        selected --> confirming_overwrite: this row's Update button is clicked and updateOverwriteWarningNeeded answers true
+        confirming_overwrite --> installing: the window.confirm is accepted
+        confirming_overwrite --> selected: the window.confirm is cancelled, and nothing is written
         installing --> eligible: the result lands on the row's install chip and its version chip is re-derived
         installing --> eligible: the request fails, a window.alert shows the message, and the selection stays
     }
@@ -1770,7 +1788,7 @@ names no type, the payload is a primitive or a plain filesystem path.
 | homeEntry | ipcAdapter | named import | `PraxisIpcResult` | `unwrapIpc` turns a failed result into a throw carrying the status. |
 | boardEntry | ipcAdapter | named import | `PraxisIpcResult` | Same. |
 | homeEntry | scopeResolver | named import | `InstallScope`, `DetectionResultLike` | `resolveBasePathForScope` only. `isEligibleAtScope` is still exported by `scopeResolver` but has no caller in `homeEntry`: eligibility is now `integrationsChipRules`' answer, derived from the same resolved base path. |
-| homeEntry | integrationsChipRules | named import | `IntegrationsRowRuleInput`, `IntegrationsRowDecision` | The only import path from a browser bundle into `src/lib/`, permitted by the narrowed rule in Section 11's `browser-entry-bundles`. `deriveIntegrationsRowDecision` is called once per row per repaint and owns every rule; `homeEntry` owns the DOM writes and every user-facing string. |
+| homeEntry | integrationsChipRules | named import | `IntegrationsRowRuleInput`, `IntegrationsRowDecision`, `UpdateOverwriteWarningInput` | The only import path from a browser bundle into `src/lib/`, permitted by the narrowed rule in Section 11's `browser-entry-bundles`. `deriveIntegrationsRowDecision` is called once per row per repaint and owns every rule; `updateOverwriteWarningNeeded` is called once per Update click and owns that one rule. `homeEntry` owns the DOM writes, the `window.confirm` call and every user-facing string. |
 | homeEntry | skillInstallApiTypes | type-only import | `DetectionConfidence`, `ToolDetectionRow`, `InstallResult`, `InstallRecord`, `SkillReleaseSummary`, `SkillPresenceResponse`, `PraxisSkillInstallAPI` | Types only; the module performs no fetch and touches no DOM. The presence map is keyed by `SkillPresenceResponse`, so one fetched response drives the install chip, the version chip and the update chip together. |
 | browserIpcShim | ipcAdapter | type-only import | `PraxisIpcResult` | No runtime dependency on ipcAdapter. |
 | themeInit | themeStore | named import | `ThemeMode`, `ResolvedTheme` | Reads the stored mode and applies the resolution. |
@@ -1995,6 +2013,7 @@ Every rule below is enforceable by a named mechanism that already exists in the 
 | A missing release, or a release with no `.zip` asset | A named failure the user sees. Never a quiet substitution and never a branch fallback. |
 | `removeInstallation` with no matching record | A silent, idempotent no-op answered `200 null`, not a failure. |
 | A request body over 8192 bytes | `413`, and `req.destroy()` so the client stops streaming. |
+| A failed or absent `getInstallStatus` in the integrations modal | The record map is emptied and `integrationsInstallRecordsLoaded` stays false, so `updateOverwriteWarningNeeded` answers true and the Update button warns. An unknown install history must never be read as a known one. |
 
 ### 10.5 State Management Rules
 

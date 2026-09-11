@@ -322,7 +322,7 @@ full suite reports `tests 387, pass 387, fail 0`;
     failures: []
   ```
 
-- [ ] 4. ARCHITECTURE.md review
+- [x] 4. ARCHITECTURE.md review
 
   ```yaml
   description: "Review every section of ARCHITECTURE.md against the branch's real diff and update what no longer matches the code."
@@ -346,6 +346,6 @@ full suite reports `tests 387, pass 387, fail 0`;
     - "Does every Mermaid block still parse?"
     - "Is each component, type and endpoint name consistent across sections?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
   ```
