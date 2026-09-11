@@ -620,7 +620,7 @@ stay untouched.
     failures: []
   ```
 
-- [ ] 5. Closing ARCHITECTURE.md review against this task list's changes
+- [x] 5. Closing ARCHITECTURE.md review against this task list's changes
   ```yaml
   description: "Closing task 2 of 2, required by CLAUDE.md \"Closing a task list\", and traced to no issue. Review every section of ARCHITECTURE.md against this branch's real diff, and update what no longer matches the code."
   author: Anthony Koukoullis
@@ -655,8 +655,60 @@ stay untouched.
     - "Every Mermaid block parses, and the parser reports zero failing blocks."
     - "All three cross-section consistency rules hold."
   self_eval:
-    passed: false
+    passed: true
     failures: []
+    notes: |
+      Read `git diff 1de6b38..HEAD` in full first. It covers five commits and
+      fifteen files: `FsAccess.readTextFile` on the port and its Node adapter, the
+      new `src/lib/agentic-tools-skill-version.ts` module, the `installedVersion`
+      field the skill-presence route composes, the browser's disk-first version
+      resolution and its hide-when-nothing-installed rule across `src/public/home.ts`
+      and `src/public/lib/agentic-tools-api.ts`, plus the new and amended test files.
+      Then read ARCHITECTURE.md one `## N.` section at a time and compared each
+      against that diff.
+
+      Sections edited, and why:
+      - Section 3: added the `skillVersion` component and its four `Rel` lines, so
+        the new library module is on the map and every Section 8 endpoint resolves.
+      - Section 4: added `agentic-tools-skill-version.ts` and its test file, so every
+        Section 3 component is still named in the manifest.
+      - Section 5: added `readTextFile` to the `FsAccess` class, which the port now
+        declares, and added the `SkillPresenceResponse` class plus its one relation
+        to `SkillPresenceResult`, because Section 8 now names that type.
+      - Section 7.4: extended the existing note block with the version-chip source
+        and the zero-installed hide rule. The diagram and the block count are
+        untouched.
+      - Section 8: retyped two browser rows from `SkillPresenceResult` to
+        `SkillPresenceResponse`, added four rows for `skillVersion`, and recorded on
+        the `electronToolsIpc | skillPresence` row that the IPC channel now diverges
+        from the HTTP route by carrying no `installedVersion`.
+      - Section 11: added one `node-integrations-engine` constraint for
+        `skillVersion`, parallel to the existing `skillPresence` one.
+
+      Sections confirmed unchanged, and why: 1 (no ADR is contradicted; no runtime
+      dependency was added and the CLI-only decision is untouched), 2 (no container
+      or external system changed), 6 (6.5's one line about `checkInstalledSkills`
+      and the three chips is still accurate at that altitude, and no flow statement
+      became false), 9 (no dependency added), 10 (no coding standard, quality gate,
+      performance budget, error rule or state rule changed).
+
+      Deliberately left verbatim: Section 11's `electron-scaffolding` rule that the
+      two transports must not diverge. It is a prescriptive rule, not a claim about
+      current state, and per CLAUDE.md `electron/` is not a target. The divergence
+      itself is now recorded in Section 8 instead.
+
+      Verify results. `grep -c '^## [0-9][0-9]*\. ' ARCHITECTURE.md` returns 11, and
+      line 1 is still `# ARCHITECTURE.md`, not a metadata header.
+      `grep -c '^```mermaid' ARCHITECTURE.md` returns 21, unchanged: no whole block
+      was added or removed. The Mermaid parser, run from a scratch directory outside
+      the repository with its own `npm i mermaid jsdom`, prints "21 blocks, 0
+      failing" and exits 0 against HEAD, and prints the same against the file at
+      `1de6b38`. `git diff --name-only 1de6b38..HEAD -- ARCHITECTURE.md` printed
+      nothing before this task; the review found corrections to make, so the file is
+      now modified and that command prints `ARCHITECTURE.md` once this task commits.
+      All three cross-section rules were checked and hold: every Section 3 component
+      is named in Section 4, every Section 8 Data/Contract type is a Section 5 class,
+      and every Section 8 endpoint is a Section 3 component or a Section 2 external.
   ```
 
 ## Divergences

@@ -140,6 +140,7 @@ C4Component
         Component(installEngine, "installEngine", "TypeScript", "Turns one InstallTarget plus content into filesystem writes")
         Component(installTracking, "installTracking", "TypeScript", "Pure parse, upsert, find and remove over the InstallRecord ledger")
         Component(skillPresence, "skillPresence", "TypeScript", "Read-only presence probe for the canonical skill suite")
+        Component(skillVersion, "skillVersion", "TypeScript", "Read-only reader of metadata.version out of an installed SKILL.md")
         Component(canonicalSkills, "canonicalSkills", "TypeScript, data only", "The hand-maintained canonical FlowCharge Core skill id list")
         Component(fsAdapter, "fsAdapter", "TypeScript", "Concrete FsAccess and FsWriteAccess over node:fs/promises")
 
@@ -247,6 +248,7 @@ C4Component
     Rel(routesIntegrations, installEngine, "installToTarget, removeInstallation, recordedInstallPaths", "direct import")
     Rel(routesIntegrations, installTracking, "parseInstallRegistry, findInstallRecord", "direct import")
     Rel(routesIntegrations, skillPresence, "checkSkillPresence", "direct import")
+    Rel(routesIntegrations, skillVersion, "readInstalledSkillVersion", "direct import")
     Rel(routesIntegrations, canonicalSkills, "CANONICAL_PRAXIS_SKILL_IDS", "direct import")
     Rel(routesIntegrations, skillContentFetch, "getInstallContent, listSkillReleases", "direct import")
 
@@ -271,6 +273,9 @@ C4Component
     Rel(toolSignals, toolCatalogue, "reads OsPath rows", "direct import")
     Rel(skillPresence, toolSignals, "FsAccess.pathExists", "injected interface")
     Rel(skillPresence, installFormat, "selectPrimaryFormat, formatForTarget", "direct import")
+    Rel(skillVersion, toolSignals, "FsAccess.readTextFile", "injected interface")
+    Rel(skillVersion, installFormat, "selectPrimaryFormat, formatForTarget", "direct import")
+    Rel(skillVersion, yamlBlock, "parseYamlBlock", "direct import")
     Rel(installEngine, installFormat, "selectPrimaryFormat, formatForTarget", "direct import")
     Rel(installEngine, installContent, "hashInstallContent", "direct import")
     Rel(installEngine, installTracking, "upsert, find and remove records", "direct import")
@@ -374,6 +379,7 @@ directories rather than as authored files.
 │   │   ├── agentic-tools-install.ts         # installEngine — one target plus content to filesystem writes
 │   │   ├── agentic-tools-install-tracking.ts # installTracking — pure operations over the InstallRecord ledger
 │   │   ├── agentic-tools-skill-presence.ts  # skillPresence — read-only presence probe
+│   │   ├── agentic-tools-skill-version.ts   # skillVersion — metadata.version out of an installed SKILL.md
 │   │   ├── agentic-tools-canonical-skills.ts # canonicalSkills — the hand-maintained skill id list
 │   │   └── agentic-tools-fs-adapter.ts      # fsAdapter — FsAccess and FsWriteAccess over node:fs/promises
 │   │
@@ -439,6 +445,7 @@ directories rather than as authored files.
 │           ├── agentic-tools-install.test.ts          # installEngine
 │           ├── agentic-tools-install-tracking.test.ts # installTracking
 │           ├── agentic-tools-skill-presence.test.ts   # skillPresence
+│           ├── agentic-tools-skill-version.test.ts    # skillVersion — parseSkillVersion and readInstalledSkillVersion
 │           └── agentic-tools-fs-adapter.test.ts       # fsAdapter — createNodeFsWriteAccess against a real temporary directory
 │
 ├── electron/                                # Built by build:base, packaged by no shipped release path
@@ -811,6 +818,7 @@ classDiagram
         <<interface>>
         +pathExists(path: string) Promise~boolean~
         +isDirectory(path: string) Promise~boolean~
+        +readTextFile(path: string) Promise~string nullable~
         +resolveBinaryOnPath(name: string) Promise~string nullable~
         +expandTokens(path: string) Promise~string~
     }
@@ -910,6 +918,11 @@ classDiagram
         checkKind per-skill with status, presentSkillIds and missingSkillIds, or checkKind shared-file with exists, or checkKind no-format
     }
 
+    class SkillPresenceResponse {
+        <<type>>
+        SkillPresenceResult widened with installedVersion string nullable — the 200 body of POST /api/integrations/skill-presence
+    }
+
     class ToolDetectionRow {
         <<interface>>
         +toolId string
@@ -954,6 +967,7 @@ classDiagram
     InstallRecord --> InstallScope
     InstallRecord --> FormatKind
     InstallTargetRequest --> InstallScope
+    SkillPresenceResponse --> SkillPresenceResult
     IntegrationsDeps --> FsWriteAccess
     IntegrationsDeps --> FsAccess
     IntegrationsDeps --> ProjectRegistry
@@ -1557,6 +1571,11 @@ stateDiagram-v2
     note right of rendered
         Presence chips come from checkInstalledSkills, fetched once at open
         for global scope only, and are never overwritten by a live result.
+        That same response carries installedVersion, so it drives the version
+        chip too: the disk version wins and the install ledger is the fallback.
+        A row the probe reports as not-installed hides its version chip, its
+        update chip and its Update button; a failed or pending probe leaves no
+        entry, so the version chip stays visible reading Version unknown.
     end note
 ```
 
@@ -1679,12 +1698,12 @@ names no type, the payload is a primitive or a plain filesystem path.
 | homeEntry | ipcAdapter | named import | `PraxisIpcResult` | `unwrapIpc` turns a failed result into a throw carrying the status. |
 | boardEntry | ipcAdapter | named import | `PraxisIpcResult` | Same. |
 | homeEntry | scopeResolver | named import | `InstallScope`, `DetectionResultLike` | `resolveBasePathForScope` and `isEligibleAtScope`. |
-| homeEntry | skillInstallApiTypes | type-only import | `DetectionConfidence`, `ToolDetectionRow`, `InstallResult`, `InstallRecord`, `SkillReleaseSummary`, `SkillPresenceResult`, `PraxisSkillInstallAPI` | Types only; the module performs no fetch and touches no DOM. |
+| homeEntry | skillInstallApiTypes | type-only import | `DetectionConfidence`, `ToolDetectionRow`, `InstallResult`, `InstallRecord`, `SkillReleaseSummary`, `SkillPresenceResponse`, `PraxisSkillInstallAPI` | Types only; the module performs no fetch and touches no DOM. The presence map is keyed by `SkillPresenceResponse`, so one fetched response drives the install chip, the version chip and the update chip together. |
 | browserIpcShim | ipcAdapter | type-only import | `PraxisIpcResult` | No runtime dependency on ipcAdapter. |
 | themeInit | themeStore | named import | `ThemeMode`, `ResolvedTheme` | Reads the stored mode and applies the resolution. |
 | themeToggle | themeStore | named import | `ThemeMode`, `ResolvedTheme` | `readMode` and `setMode` hit `localStorage` on every call. |
 | browserIpcShim | httpDispatcher | fetch over same-origin HTTP | `PraxisIpcResult`, `ProjectList`, `ProjectEntry`, `BoardPayload`, `PraxisWorkstreamDetail` | The shim rebuilds the result envelope from the status and body; it never rejects. `getAppVersion` reads `/api/version` and collapses a failure to null. |
-| browserIpcShim | httpDispatcher | fetch over same-origin HTTP | `ToolDetectionRow`, `InstallTargetRequest`, `InstallResult`, `InstallRecord`, `SkillReleaseSummary`, `SkillPresenceResult` | The `/api/integrations/*` half of the same shim. |
+| browserIpcShim | httpDispatcher | fetch over same-origin HTTP | `ToolDetectionRow`, `InstallTargetRequest`, `InstallResult`, `InstallRecord`, `SkillReleaseSummary`, `SkillPresenceResponse` | The `/api/integrations/*` half of the same shim. |
 | serverBootstrap | httpDispatcher | direct import, called once | `HttpServerConfig` | The composition root never binds inside `createHttpServer`. |
 | serverBootstrap | boardApi | direct import, called once | `BoardApi` | Built from the two driven adapters. |
 | serverBootstrap | projectRegistryAdapter | direct import, called once | `ProjectRegistry`, `ProjectRegistryConfig` | `dataDir`, `repoRoot` and `packaged` come from `PRAXIS_DATA_DIR`. |
@@ -1710,6 +1729,7 @@ names no type, the payload is a primitive or a plain filesystem path.
 | routesIntegrations | toolCatalogue | direct import | `ToolDefinition`, `OS` | Index alignment with the detection array is load-bearing. |
 | routesIntegrations | canonicalSkills | direct import | none | The canonical skill id list handed to the presence probe. |
 | routesIntegrations | skillPresence | direct import | `SkillPresenceResult`, `ToolDefinition`, `FsAccess` | Deliberately has no permitted-root check; the loopback gate is what bounds it. |
+| routesIntegrations | skillVersion | direct import | `ToolDefinition`, `FsAccess` | `readInstalledSkillVersion` answers a bare string or null, and runs after `checkSkillPresence` over the same one `FsAccess` instance and the `presentSkillIds` that probe returned. The route spreads the two together into the 200 body as `installedVersion`, which is null for a `shared-file` or `no-format` result, for an empty `presentSkillIds`, and for a present file with no readable version. That composed body is named only on the browser side, as `SkillPresenceResponse`. |
 | routesIntegrations | installEngine | direct import | `InstallTarget`, `InstallContent`, `InstallResult`, `InstallRecord`, `FsWriteAccess`, `InstallScope` | Every target is validated before any target is installed. The remove route checks every path `recordedInstallPaths` returns, the same list `removeInstallation` deletes, and one path outside the permitted root refuses the whole request. That check answers 400 before `removeInstallation` is called, and the remove then queues behind any install or removal on the same registry path. |
 | routesIntegrations | installTracking | direct import | `InstallRecord`, `InstallScope` | `parseInstallRegistry` and `findInstallRecord` for the read and remove routes. |
 | routesIntegrations | skillContentFetch | direct import | `InstallContent`, `SkillReleaseSummary` | `getInstallContent` is resolved once per request, not once per target. |
@@ -1732,6 +1752,9 @@ names no type, the payload is a primitive or a plain filesystem path.
 | toolSignals | toolCatalogue | direct import | `OsPath`, `SourceConfidence`, `ToolDefinition` | A `ToolDefinition` is a plain argument, never a switch target. |
 | skillPresence | toolSignals | injected port call | `FsAccess` | Uses `pathExists` only, never anything from `FsWriteAccess`. |
 | skillPresence | installFormat | direct import | `IntegrationFormat`, `FileWrite`, `InstallContent` | Derives each expected path through `selectPrimaryFormat` and `formatForTarget` over a stub `InstallContent`, never a hand-rolled path guess. |
+| skillVersion | toolSignals | injected port call | `FsAccess` | Uses `readTextFile` only, never anything from `FsWriteAccess`. |
+| skillVersion | installFormat | direct import | `IntegrationFormat`, `FileWrite`, `InstallContent` | Resolves each present skill's read path the same way `skillPresence` resolves its expected path, and answers the first version that parses. |
+| skillVersion | yamlBlock | direct import | `PraxisYamlValue` | `parseFrontmatter` in `boardExtractor` reads flat keys only, so the nested-map grammar of `parseYamlBlock` is what reaches `metadata.version`. |
 | installEngine | installFormat | direct import | `IntegrationFormat`, `FileWrite`, `InstallContent` | `selectPrimaryFormat` returns null for a tool with no usable format at the target's scope, so Cursor and Windsurf are skipped at global scope. |
 | installEngine | installContent | direct import | `InstallContent`, `SkillContent` | `hashInstallContent` is what distinguishes up-to-date from updated. |
 | installEngine | installTracking | direct import | `InstallRecord`, `InstallScope` | The engine owns reading and persisting the ledger file. |
@@ -1755,7 +1778,7 @@ names no type, the payload is a primitive or a plain filesystem path.
 | electronToolsIpc | fsAdapter | in-process call via dynamic import | `FsWriteAccess`, `FsAccess` | Builds one write adapter at registration and one read adapter per detection sweep. |
 | electronToolsIpc | toolCatalogue | in-process call via dynamic import | `ToolDefinition` | Index alignment with the detection array, exactly as in `routesIntegrations`. |
 | electronToolsIpc | toolDetect | in-process call via dynamic import | `DetectionResult`, `OS` | `detectAllTools`, once per IPC call. |
-| electronToolsIpc | skillPresence | in-process call via dynamic import | `SkillPresenceResult` | `checkSkillPresence` behind the `checkInstalledSkills` channel. |
+| electronToolsIpc | skillPresence | in-process call via dynamic import | `SkillPresenceResult` | `checkSkillPresence` behind the `checkInstalledSkills` channel. The channel answers a bare `SkillPresenceResult`, so it carries no `installedVersion` and diverges from the HTTP route, which answers a `SkillPresenceResponse`. Per ADR-001 the Electron path is not shipped, so this divergence is recorded rather than closed. |
 | electronToolsIpc | canonicalSkills | in-process call via dynamic import | none | `CANONICAL_PRAXIS_SKILL_IDS` for the presence probe. |
 | electronToolsIpc | skillContentFetch | in-process call via dynamic import | `InstallContent`, `SkillReleaseSummary` | `getInstallContent` and `listSkillReleases`. |
 | electronUpdateIpc | updateCheck | in-process call via dynamic import | `LatestRelease` | The renderer never makes the network call. |
@@ -2016,6 +2039,10 @@ already exists, named in the kebab-case, tier-prefixed convention.
   never `node:fs` or `node:fs/promises` directly.
 - `skillPresence` must call only `FsAccess.pathExists`. It checks presence and must never
   gain a write path.
+- `skillVersion` must call only `FsAccess.readTextFile`. It reads a version and must never
+  gain a write path. It must resolve every read path through `selectPrimaryFormat` and
+  `formatForTarget`, never a hand-rolled path guess, and `parseSkillVersion` must never
+  throw: a missing frontmatter block, a missing key and a non-string value are all null.
 - The remove-path boundary check must run over every path `recordedInstallPaths` returns,
   the same list `removeInstallation` deletes, before anything is deleted. Each path must
   pass `startsWith(permittedRoot + path.sep)`, equality with the root itself must be
