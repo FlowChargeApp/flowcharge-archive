@@ -5,13 +5,13 @@ workstream: WS-106-1xers0
 slug: skill-install-target-resolution-and-lifecycle
 title: "Fix the skill install subsystem: wrong target directories, partial removal, stale updates and tests that pin the defects"
 description: "Half of the tool-and-scope combinations install FlowCharge Core into a directory the target tool never reads, and report success. Cursor and Windsurf at global scope get a doubled path; Claude Code and OpenCode at project scope lose the tool's config prefix. The root cause is one structural gap: IntegrationFormat states what its pathTemplate is relative to, and which scopes it is valid for, only in free-text notes that no code reads. The same record-shape problem makes removal delete one file of eight, and an update never deletes the previous install, which is live today because the suite was renamed prx-* to fc-*. Two unit tests assert the wrong paths as correct and so pin the defects in place. Found by reading the whole subsystem after an architecture audit surfaced one symptom of it."
-status: in-progress
+status: done
 tags: [agentic-tools, bug, filesystem, hardening, testing, server, issue]
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 author: Anthony Koukoullis
 depends_on: []
-links: []
+links: [WS-109-skrkxj]
 ---
 
 Four of eight tool-and-scope combinations install FlowCharge Core where the target tool never reads, and report success; removal deletes one file of eight; updates never clean up.
@@ -103,3 +103,21 @@ stays where it was filed rather than moving.
 
 Deliberate and correctly documented, and therefore not defects: presence checking running only
 at global scope, and `mcp-json` and `structured-config-file` formats being unimplemented.
+
+## Closed 2026-09-11
+
+This workstream's most-visible symptom — the "Missing skills" and "Version unknown" chips in
+the Manage Integrations modal — is fixed and split off: the chip fix is `ISS-42-q1t9bh`
+(closed here, via `TL-105-ds7369`), and the version-read fix and the modal's test coverage
+became their own workstreams, `WS-107-do28jk` and `WS-108-wwcz5g`.
+
+What remained were five separately diagnosed, unrelated defects with no task work started —
+the missing remove-button control, two format writers that drop bundled files, a legacy ledger
+record, the private-network release-fetch address, and a release-host disagreement between two
+of this workstream's own artefacts. None of them relate to each other or to the chip fix, and
+keeping them open here was making this record hard to read. They moved as-is, unstarted, to
+`WS-109-skrkxj`, which explains each one in full. `PLN-88-tpbc8f` is marked dropped rather than
+moved: its release-derived design was superseded by the hand-fix and never executed, and it
+stays here as this workstream's own record of that attempt.
+
+Every artefact left in this workstream is now done or dropped, so this workstream closes.

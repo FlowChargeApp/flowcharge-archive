@@ -4,35 +4,14 @@ type: issuelist
 workstream: WS-106-1xers0
 slug: skill-install-target-resolution-and-lifecycle
 title: "Skill install target resolution and lifecycle defects"
-status: ready
+status: done
 created: 2026-09-10
 updated: 2026-09-11
 depends_on: []
-links: []
+links: [WS-109-skrkxj]
 ---
 
 # FlowCharge Issue List
-
-- [ ] ISS-32-3hfjhe. The install-removal capability is wired end to end but no interface control reaches it
-
-  ```yaml
-  id: ISS-32-3hfjhe
-  status: blocked
-  severity: medium
-  author: Anthony Koukoullis
-  description: "removeInstallation at src/lib/agentic-tools-install.ts:189 is wired through every layer below the page. The POST /api/integrations/installs/remove route at src/http/routes-integrations.ts:381 calls it, the fetch-backed shim method at src/public/browser-ipc-shim.ts:104 sends that request, and the typed surface at src/public/lib/agentic-tools-api.ts:85 declares it. No caller exists above that. `grep -n \"removeInstallation\" src/public/home.ts` returns nothing, and home.ts is the only module that renders the integrations modal. The modal offers detect, install and rescan controls only."
-  steps_to_reproduce:
-    - "Open the integrations modal in the app."
-    - "Select a detected tool, choose a scope, and install the skill suite into it."
-    - "Read every control the modal offers, in every row and in every scope."
-    - "Look for any control that undoes the install just performed."
-  expected: "An install performed from the integrations modal can be undone from the integrations modal, so the .praxis-installs.json ledger and the installed files stay consistent through the app alone."
-  actual: "No control in the interface reaches removeInstallation. A user who installs into the wrong tool, or under the wrong scope, cannot undo it from the app. The installed files must be deleted by hand and .praxis-installs.json must then be hand-edited to match, or the ledger and the filesystem disagree about what is installed."
-  affected: "src/lib/agentic-tools-install.ts:189 (removeInstallation); src/http/routes-integrations.ts:381 (POST /api/integrations/installs/remove); src/public/browser-ipc-shim.ts:104; src/public/lib/agentic-tools-api.ts:85; src/public/home.ts (the integrations modal, which has no caller)"
-  environment: "Every host that serves the integrations modal. The capability is reachable over HTTP and is covered by unit tests at src/test/unit/agentic-tools-install.test.ts:302 and :320."
-  tasks: []
-  notes: "The direction is UNDECIDED, and this issue is additionally blocked behind the InstallRecord record-shape change described by ISS-35-m54y06 and ISS-36-vl2cpx in this workstream, because removal must delete every path an install wrote before a control that triggers it is worth building. A maintainer must choose it before any task is authored from this issue, and this issue names no direction. Status is blocked on that decision, not on any other artefact, so depends_on stays empty. Verified twice against the working tree: once by the audit that found it, and once by an independent validation pass. File this for the src/ impact only: the Electron counterpart is leftover scaffolding per CLAUDE.md and is not in scope. ARCHITECTURE.md line 1531 already records the state: the page has no remove control, and homeEntry never calls removeInstallation."
-  ```
 
 - [x] ISS-33-6bxf6h. Global installs for Cursor and Windsurf write to a path the tool never reads
 
@@ -139,27 +118,6 @@ links: []
   environment: "Node >=20.14 test runner. The CI test job runs this suite."
   tasks: []
   notes: "The workstream record requires these two assertions to be corrected in the same change that fixes ISS-33-6bxf6h and ISS-35-m54y06, or they will block that change."
-  ```
-
-- [ ] ISS-38-gv3p2x. Two format writers silently drop every bundled reference file
-
-  ```yaml
-  id: ISS-38-gv3p2x
-  status: ready
-  severity: medium
-  author: Anthony Koukoullis
-  description: "ruleDirectoryWrites at src/lib/agentic-tools-format.ts:48-53 and singleDocumentWrite at :58-61 read only skill.body. skillDirectoryWrites at :31-42 is the only writer that emits skill.files. mapEntriesToSkills in src/lib/skill-content-fetch.ts collects reference material shipped beside a SKILL.md in the release archive into skill.files, so that content exists on the install path and is then discarded for three of the four implemented format kinds."
-  steps_to_reproduce:
-    - "Use a release archive in which at least one skill ships a reference file beside its SKILL.md."
-    - "Install that content into Claude Code or OpenCode, which use the skill-directory format, and list the skill directory."
-    - "Install the same content into Cursor or Windsurf, which use the rule-directory format, and list the target directory."
-    - "Compare the two file sets, and read the install result for any indication of a partial write."
-  expected: "Either every format writes the bundled reference files, or the install result reports that the write was partial so the user can see it."
-  actual: "The skill-directory install writes the reference files. The rule-directory install writes the SKILL.md body alone and discards the rest, with no warning and no result field indicating a partial install. singleDocumentWrite loses the files the same way and serves both single-rule-file and markdown-context-file, which makes three affected kinds out of the four implemented. Neither of those two kinds is selected by any tool today, because selectPrimaryFormat returns the first implemented format in each tool's integrationFormats list and every TOOL_CATALOGUE entry resolves to skill-directory or rule-directory, so they are paths that would drop the files if a tool ever selected them. A skill whose behaviour depends on a reference file is installed in a broken state."
-  affected: "src/lib/agentic-tools-format.ts:48-53 (ruleDirectoryWrites), :58-61 (singleDocumentWrite), :31-42 (skillDirectoryWrites); src/lib/skill-content-fetch.ts (mapEntriesToSkills)"
-  environment: "Every host that serves the integrations routes. Node >=20.14."
-  tasks: []
-  notes: "Shares the IntegrationFormat model gap with ISS-33-6bxf6h and ISS-34-mpy9n0, and the workstream record groups all three behind that one change. Any correction must add no runtime dependency."
   ```
 
 - [x] ISS-39-mu5wkq. installAllGlobal reports every thrown failure as skipped-no-format
@@ -308,42 +266,3 @@ links: []
   notes: "The code is read directly. The Windows impact is reasoned, not executed. node:path is a built-in, so any correction adds no runtime dependency."
   ```
 
-- [ ] ISS-46-j993sr. A ledger record written before resolvedPaths names one path, so a cleanup driven by it cannot find the rest
-
-  ```yaml
-  id: ISS-46-j993sr
-  status: ready
-  severity: medium
-  author: Anthony Koukoullis
-  description: "InstallRecord at src/lib/agentic-tools-install-tracking.ts:16 carries a single resolvedPath, and every other path an install wrote is named nowhere. Recording the full set in a resolvedPaths field, and driving removal and update cleanup from it, is the ISS-35-m54y06 and ISS-36-vl2cpx correction. That correction covers only records written after the shape change. A record already on disk in .praxis-installs.json in the single-path shape keeps naming one path, so a cleanup driven by it reaches that one path and no other. On a machine that installed the pre-rename prx-* suite, the record names one of the eight prx-* skill directories, and the other seven, with every bundled reference file beside them, are named by no record at all."
-  steps_to_reproduce:
-    - "Start from a machine carrying a pre-rename install, so .praxis-installs.json holds a record in the single-resolvedPath shape and eight prx-* skill directories exist under the tool config directory."
-    - "Apply the record-shape correction behind ISS-35-m54y06 and ISS-36-vl2cpx, so removal and update cleanup read every recorded path."
-    - "Open the Manage integrations modal and install again, or call the removal capability for that tool and scope."
-    - "List the tool skill directory and read .praxis-installs.json."
-  expected: "The cleanup accounts for every file the previous install wrote, whatever shape the record describing that install was written in."
-  actual: "The legacy record names one path, so the cleanup reaches that one path. Seven prx-* skill directories and their bundled reference files stay on disk. The record written after the cleanup names the current files only, so nothing in the ledger names the survivors and nothing in the app can find them again. The coding tool keeps loading them."
-  affected: "src/lib/agentic-tools-install-tracking.ts:16 (InstallRecord.resolvedPath); src/lib/agentic-tools-install.ts:112-129 (the installToTarget update branch), :199 (removeInstallation); every .praxis-installs.json record written before the shape change"
-  environment: "Any machine whose ledger record predates the record-shape change. Node >=20.14."
-  tasks: []
-  notes: "Recorded in TL-103-9npvav as a divergence from ISS-36-vl2cpx. Deriving the unrecorded paths, for example by deleting a whole skills directory, was refused there because it could delete files this app never wrote. This issue names no direction and recommends none. Any correction must add no runtime dependency."
-  ```
-
-- [ ] ISS-50-92mh3i. The skill-release fetch is pinned to a temporary local Gitea address, not the public FlowCharge Core origin
-
-  ```yaml
-  id: ISS-50-92mh3i
-  status: ready
-  severity: high
-  author: Anthony Koukoullis
-  description: "src/lib/skill-content-fetch.ts:63 hardcodes PRAXIS_REPO_BASE_URL = 'http://100.87.185.97:8110/akoukoullis/Praxis', a private LAN address for a temporary local Gitea instance. The real, public origin is https://github.com/FlowChargeApp/flowcharge-core. A workstream on 2026-08-20 (WS-48-hsf9yl) deliberately templated this constant so a later host swap to github.com would be a one-line change, but no later workstream made that change."
-  steps_to_reproduce:
-    - "On any machine that is not on the developer's own LAN and cannot reach 100.87.185.97, open Manage integrations and use Install selected, or trigger the skill-presence/update check that reads from the same constant."
-    - "Watch the fetch to http://100.87.185.97:8110/... time out or fail to connect."
-  expected: "Skill install, update-check and presence machinery fetch release content from the public FlowCharge Core origin, reachable by every user."
-  actual: "Every fetch is pinned to a private LAN address unreachable outside the developer's own network, so install/update from a release fails for every other user."
-  affected: "src/lib/skill-content-fetch.ts:63 (PRAXIS_REPO_BASE_URL)"
-  environment: "Every machine that is not on the developer's own LAN. Node >=20.14."
-  tasks: []
-  notes: "The public origin (https://github.com/FlowChargeApp/flowcharge-core) is live and does carry a v0.1.0 release, verified directly on 2026-09-11. That release's own content is stale against the currently installed skill suite (see ISS-42-q1t9bh) — repointing this constant corrects the address only, not the release content. Any correction must add no runtime dependency."
-  ```

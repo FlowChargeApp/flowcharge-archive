@@ -4,11 +4,11 @@ type: plan
 workstream: WS-106-1xers0
 slug: skill-install-target-resolution-and-lifecycle
 title: "Check skill presence against the published release, not a hand-kept id list"
-status: ready
+status: dropped
 created: 2026-09-11
 updated: 2026-09-11
 depends_on: []
-links: [ISS-42-q1t9bh]
+links: [ISS-42-q1t9bh, WS-109-skrkxj]
 ---
 
 # Check skill presence against the published release, not a hand-kept id list
@@ -240,3 +240,16 @@ new one ships; a read path gains a live network dependency, so an unreachable ho
 every chip; and the Electron mirror keeps a dangling reference. Three open questions need
 an answer: which repository's release is authoritative, whether `ISS-42-q1t9bh` closes on
 the mechanism fix alone, and whether the Electron mirror may be updated here.
+
+## Dropped
+
+2026-09-11: `ISS-42-q1t9bh` is closed by the direct hand-update of the eight skill ids
+instead, which needed no release and is recorded on the issue itself. This plan's release-
+derived design was never executed. Its open question 1 (which repository's release is
+authoritative) is unresolved, and the issue that found the two candidate hosts disagreeing,
+`ISS-51-kc70n7`, has moved to `WS-109-skrkxj` along with `ISS-50-92mh3i`, the release-fetch
+address defect this plan's design would also depend on. This plan stays here, in
+`WS-106-1xers0`, rather than moving with them, because it is this workstream's own record of
+a design that was tried and superseded — dropped, not deleted, so the reasoning and the
+rejected alternatives stay readable. If a release-derived presence check is wanted later, a
+fresh plan in `WS-109-skrkxj` should read this one first rather than starting over.
