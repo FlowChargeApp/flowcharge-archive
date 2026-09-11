@@ -98,6 +98,7 @@ C4Component
         Component(ipcAdapter, "ipcAdapter", "TypeScript", "PraxisIpcResult, unwrapIpc and the PraxisAPI Window augmentation")
         Component(skillInstallApiTypes, "skillInstallApiTypes", "TypeScript", "Browser-side types for the skill-install surface")
         Component(scopeResolver, "scopeResolver", "TypeScript", "Resolves or rejects a base path for a global or project install scope")
+        Component(integrationsChipRules, "integrationsChipRules", "TypeScript, src/lib/, import-free", "Derives one integrations row's eligibility, install chip, version chip, update offer and notes")
         Component(themeStore, "themeStore", "TypeScript", "localStorage mode, resolution to light or dark, the one DOM write")
         Component(themeToggle, "themeToggle", "TypeScript", "Wires the three-button theme control to themeStore")
         Component(appVersionFooter, "appVersionFooter", "TypeScript", "Writes the running version into both page footers")
@@ -194,6 +195,7 @@ C4Component
     Rel(homeEntry, ipcAdapter, "unwrapIpc import", "ES module")
     Rel(boardEntry, ipcAdapter, "unwrapIpc import", "ES module")
     Rel(homeEntry, scopeResolver, "resolveBasePathForScope import", "ES module")
+    Rel(homeEntry, integrationsChipRules, "deriveIntegrationsRowDecision import", "ES module")
     Rel(homeEntry, skillInstallApiTypes, "type import", "ES module")
     Rel(browserIpcShim, ipcAdapter, "type import only", "ES module")
     Rel(browserIpcShim, httpDispatcher, "GET, POST, PATCH, DELETE on /api/*", "fetch / JSON")
@@ -381,6 +383,8 @@ directories rather than as authored files.
 │   │   ├── agentic-tools-skill-presence.ts  # skillPresence — read-only presence probe
 │   │   ├── agentic-tools-skill-version.ts   # skillVersion — metadata.version out of an installed SKILL.md
 │   │   ├── agentic-tools-canonical-skills.ts # canonicalSkills — the hand-maintained skill id list
+│   │   ├── agentic-tools-chip-rules.ts      # integrationsChipRules — the integrations row decision; import-free,
+│   │   │                                    #   compiled by the Node project and by src/public/tsconfig.json
 │   │   └── agentic-tools-fs-adapter.ts      # fsAdapter — FsAccess and FsWriteAccess over node:fs/promises
 │   │
 │   ├── scripts/
@@ -416,6 +420,7 @@ directories rather than as authored files.
 │   │
 │   └── test/
 │       ├── fixture-project.ts               # Shared workstream-tree fixture builder; carries no .test. segment
+│       ├── expected-skill-ids.ts            # Golden canonical skill id literal; carries no .test. segment
 │       ├── boundary/
 │       │   ├── server-harness.ts            # Starts the compiled server on an ephemeral port in a temp data dir
 │       │   ├── server-board.test.ts         # Board and detail routes over real HTTP
@@ -446,6 +451,8 @@ directories rather than as authored files.
 │           ├── agentic-tools-install-tracking.test.ts # installTracking
 │           ├── agentic-tools-skill-presence.test.ts   # skillPresence
 │           ├── agentic-tools-skill-version.test.ts    # skillVersion — parseSkillVersion and readInstalledSkillVersion
+│           ├── agentic-tools-canonical-skills.test.ts # canonicalSkills — pins the id list against expected-skill-ids.ts
+│           ├── agentic-tools-chip-rules.test.ts       # integrationsChipRules — deriveIntegrationsRowDecision's decision table
 │           └── agentic-tools-fs-adapter.test.ts       # fsAdapter — createNodeFsWriteAccess against a real temporary directory
 │
 ├── electron/                                # Built by build:base, packaged by no shipped release path
@@ -491,12 +498,14 @@ under `src/public/img/`; they are design working files, neither tracked nor buil
 
 These diagrams together are the authoritative type contract. They are split by subject
 only, for legibility; every type the application defines appears in exactly one of them,
-and every type named in Section 8's Data/Contract column is defined here. Three files
+and every type named in Section 8's Data/Contract column is defined here. Four files
 carry hand-maintained structural mirrors of types declared elsewhere rather than
 imports — `skillContentFetch` mirrors `SkillContent` and `InstallContent`,
 `skillInstallApiTypes` mirrors the detection, install-record, release-summary and
-presence shapes for the browser, and the Electron IPC handlers mirror everything they
-use — and each mirror is drawn once here, under the module that owns the original.
+presence shapes for the browser, `integrationsChipRules` mirrors `SkillPresenceResult`
+as `SkillPresenceLike` and the scope kind as `IntegrationsScopeKind` because it may
+carry no import at all, and the Electron IPC handlers mirror everything they use — and
+each mirror is drawn once here, under the module that owns the original.
 
 ### 5.1 Board domain payload and ports
 
@@ -923,6 +932,57 @@ classDiagram
         SkillPresenceResult widened with installedVersion string nullable — the 200 body of POST /api/integrations/skill-presence
     }
 
+    class IntegrationsScopeKind {
+        <<enumeration>>
+        global
+        project
+    }
+
+    class SkillPresenceLike {
+        <<type>>
+        integrationsChipRules' import-free structural mirror of SkillPresenceResult
+    }
+
+    class IntegrationsRowRuleInput {
+        <<interface>>
+        +scopeKind IntegrationsScopeKind
+        +basePath string nullable
+        +needsManualVerification boolean
+        +hasLiveResult boolean
+        +presence SkillPresenceLike optional
+        +installedVersion string nullable optional
+        +ledgerVersion string optional
+        +latestReleaseTag string nullable
+    }
+
+    class InstallChipDecision {
+        <<enumeration>>
+        hidden
+        already-installed
+        missing-skills
+        unchanged
+    }
+
+    class VersionChipDecision {
+        <<type>>
+        kind hidden, or kind unknown, or kind version carrying major, minor and patch
+    }
+
+    class RowNote {
+        <<enumeration>>
+        not-supported-at-scope
+        path-unverified
+    }
+
+    class IntegrationsRowDecision {
+        <<interface>>
+        +eligible boolean
+        +installChip InstallChipDecision
+        +versionChip VersionChipDecision
+        +updateOffered boolean
+        +notes RowNote[]
+    }
+
     class ToolDetectionRow {
         <<interface>>
         +toolId string
@@ -968,6 +1028,13 @@ classDiagram
     InstallRecord --> FormatKind
     InstallTargetRequest --> InstallScope
     SkillPresenceResponse --> SkillPresenceResult
+    SkillPresenceResult --> SkillPresenceLike
+    IntegrationsRowRuleInput --> IntegrationsScopeKind
+    IntegrationsRowRuleInput --> SkillPresenceLike
+    IntegrationsRowRuleInput --> IntegrationsRowDecision
+    IntegrationsRowDecision --> InstallChipDecision
+    IntegrationsRowDecision --> VersionChipDecision
+    IntegrationsRowDecision --> RowNote
     IntegrationsDeps --> FsWriteAccess
     IntegrationsDeps --> FsAccess
     IntegrationsDeps --> ProjectRegistry
@@ -1286,6 +1353,7 @@ sequenceDiagram
     participant indexPage
     participant homeEntry
     participant scopeResolver
+    participant integrationsChipRules
     participant browserIpcShim
     participant httpDispatcher
     participant routesIntegrations
@@ -1319,7 +1387,9 @@ sequenceDiagram
     homeEntry->>scopeResolver: resolveBasePathForScope(scope, detection)
     scopeResolver-->>homeEntry: the base path, or null when ineligible
     homeEntry->>browserIpcShim: checkInstalledSkills per row with a global base path, getInstallStatus, listSkillReleases
-    homeEntry->>indexPage: renders one row per tool into #integrations-list, with presence, version and update chips
+    homeEntry->>integrationsChipRules: deriveIntegrationsRowDecision(base path, scope kind, presence, versions, latest tag)
+    integrationsChipRules-->>homeEntry: IntegrationsRowDecision — eligibility, the three chip answers and the notes
+    homeEntry->>indexPage: renders one row per tool into #integrations-list, supplying the words for that decision
     Developer->>indexPage: selects tools and clicks Install selected
     homeEntry->>browserIpcShim: installSelected(InstallTargetRequest[])
     browserIpcShim->>httpDispatcher: POST /api/integrations/installs
@@ -1540,9 +1610,11 @@ stateDiagram-v2
 
 ### 7.4 Integrations row — one per catalogued tool
 
-Owned by `homeEntry`. Detection runs once per modal open and once per Re-scan; eligibility
-is recomputed from the current scope by `scopeResolver` on every scope change, so the
-same tool can be selectable under one scope and refused under another. The page has no
+Owned by `homeEntry`, which paints each row but decides nothing: `integrationsChipRules`
+answers every transition condition below from the base path `scopeResolver` resolves.
+Detection runs once per modal open and once per Re-scan; eligibility is recomputed from
+the current scope on every scope change, so the same tool can be selectable under one
+scope and refused under another. The page has no
 remove control: `removeInstallation` exists on the API surface and the HTTP route, but
 `homeEntry` never calls it. Install and Update share one path, `installIntegrationsSelected`.
 
@@ -1697,7 +1769,8 @@ names no type, the payload is a primitive or a plain filesystem path.
 | boardEntry | themeToggle | side-effect import | none | Same. |
 | homeEntry | ipcAdapter | named import | `PraxisIpcResult` | `unwrapIpc` turns a failed result into a throw carrying the status. |
 | boardEntry | ipcAdapter | named import | `PraxisIpcResult` | Same. |
-| homeEntry | scopeResolver | named import | `InstallScope`, `DetectionResultLike` | `resolveBasePathForScope` and `isEligibleAtScope`. |
+| homeEntry | scopeResolver | named import | `InstallScope`, `DetectionResultLike` | `resolveBasePathForScope` only. `isEligibleAtScope` is still exported by `scopeResolver` but has no caller in `homeEntry`: eligibility is now `integrationsChipRules`' answer, derived from the same resolved base path. |
+| homeEntry | integrationsChipRules | named import | `IntegrationsRowRuleInput`, `IntegrationsRowDecision` | The only import path from a browser bundle into `src/lib/`, permitted by the narrowed rule in Section 11's `browser-entry-bundles`. `deriveIntegrationsRowDecision` is called once per row per repaint and owns every rule; `homeEntry` owns the DOM writes and every user-facing string. |
 | homeEntry | skillInstallApiTypes | type-only import | `DetectionConfidence`, `ToolDetectionRow`, `InstallResult`, `InstallRecord`, `SkillReleaseSummary`, `SkillPresenceResponse`, `PraxisSkillInstallAPI` | Types only; the module performs no fetch and touches no DOM. The presence map is keyed by `SkillPresenceResponse`, so one fetched response drives the install chip, the version chip and the update chip together. |
 | browserIpcShim | ipcAdapter | type-only import | `PraxisIpcResult` | No runtime dependency on ipcAdapter. |
 | themeInit | themeStore | named import | `ThemeMode`, `ResolvedTheme` | Reads the stored mode and applies the resolution. |
@@ -1874,7 +1947,7 @@ Every rule below is enforceable by a named mechanism that already exists in the 
 | `src/ports/` files carry no imports of any kind. | Enforced by review and stated in each port file's header; a port that imports stops being a type-only contract. |
 | `src/core/` knows no transport, no status code and no user-facing string. | `boardApi` returns result variants; the status mapping is recorded in `src/ports/app-api.ts` and applied in `routesBoard` and `routesProjects`. |
 | `src/core/` and the four markdown libraries log nothing. | The `LEGACY LAYOUT` warning is printed by `warnLegacyLayout` in `routesBoard` and, byte for byte, by `extractCli`. No `src/lib/` module logs either: `skillContentFetch` rethrows an install failure untouched, and the calling route owns the report. |
-| Test files carrying no assertions must not carry `.test.` in the name. | `src/test/fixture-project.ts` and `src/test/boundary/server-harness.ts` follow this; a `.test.` name would double-register the importing file's cases. |
+| Test files carrying no assertions must not carry `.test.` in the name. | `src/test/fixture-project.ts`, `src/test/expected-skill-ids.ts` and `src/test/boundary/server-harness.ts` follow this; a `.test.` name would double-register the importing file's cases. |
 
 ### 10.2 Quality Gates
 
@@ -2082,9 +2155,20 @@ already exists, named in the kebab-case, tier-prefixed convention.
   flash, and an inline `<head>` script is refused outright by `script-src 'self'`.
 - No new `<script>` tag may be added to either page without a matching entry point in
   `tools/bundle-public.mjs`; a per-file output would be swept away before the bundle runs.
-- Nothing in a bundle may reach `src/lib/`. Server-side modules must never enter the
-  browser graph, which is why the workstream-id fragment is duplicated in `boardEntry`
-  rather than imported.
+- Nothing in a bundle may reach `src/lib/`, with exactly one permitted exception:
+  `home.ts` may import `src/lib/agentic-tools-chip-rules.ts`. Server-side modules must
+  otherwise never enter the browser graph, which is why the workstream-id fragment is
+  duplicated in `boardEntry` rather than imported.
+- That exception holds only while `agentic-tools-chip-rules.ts` carries no `import`
+  statement of any kind — not a type-only one, and not `node:path`. One import there
+  pulls server code into `home.js` with a green build: `bundlePublic` guards only
+  `eval(` and `Function(`, `copyAssets` guards source maps, and no check anywhere reads
+  the import graph. The file's header comment is the only enforcement, so it must not be
+  removed.
+- The rules module must stay inside the intersection of the two projects that compile
+  it — the Node `tsconfig.json` and `src/public/tsconfig.json`, whose `include` names it
+  — so ES2020 syntax and the ES2020 library only, and no DOM type, no Node type, no
+  user-facing string and no side effect.
 
 ### `browser-ui-renderers`
 

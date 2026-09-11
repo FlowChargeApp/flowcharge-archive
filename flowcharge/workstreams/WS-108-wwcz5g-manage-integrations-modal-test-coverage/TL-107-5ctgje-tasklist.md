@@ -4,7 +4,7 @@ type: tasklist
 workstream: WS-108-wwcz5g
 slug: manage-integrations-modal-test-coverage
 title: "Manage Integrations modal test coverage"
-status: ready
+status: done
 created: 2026-09-11
 updated: 2026-09-11
 author: Anthony Koukoullis
@@ -571,7 +571,7 @@ fixed closing boilerplate.
       - "No source file was edited by this task. git status --short is byte-identical before and after the run, listing only CLAUDE.md, the workstream record and the .lease file, none of which this task touched."
   ```
 
-- [ ] 5. `ARCHITECTURE.md` review
+- [x] 5. `ARCHITECTURE.md` review
 
   ```yaml
   description: "Review every section of ARCHITECTURE.md against the branch diff and update what no longer matches the code."
@@ -597,8 +597,12 @@ fixed closing boilerplate.
     - "Were only the edits the diff justifies made, with no speculative rewrite?"
     - "Does the document keep its eleven-section format?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
+    evidence:
+      - "Nine edits, all traced to git diff b29a52a..HEAD. Section 3: added the integrationsChipRules component and the homeEntry import edge. Section 4: added src/lib/agentic-tools-chip-rules.ts, src/test/expected-skill-ids.ts and the two new unit test files. Section 5 preamble: three structural mirrors became four. Section 5.2: added IntegrationsScopeKind, SkillPresenceLike, IntegrationsRowRuleInput, InstallChipDecision, VersionChipDecision, RowNote and IntegrationsRowDecision with their relations. Section 6.5: added the integrationsChipRules participant and its two steps. Section 7.4: homeEntry paints, integrationsChipRules decides. Section 8: corrected the homeEntry-scopeResolver row, which still named isEligibleAtScope, and added the homeEntry-integrationsChipRules row. Section 10.1: added expected-skill-ids.ts to the no-assertions naming row. Section 11 browser-entry-bundles: narrowed the src/lib/ rule to permit home.ts -> agentic-tools-chip-rules.ts, and added the two constraints that keep the narrowing safe."
+      - "Sections 1, 2, 9, 10.2-10.5 and every other section-11 layer were reviewed and left unchanged: no ADR, container, dependency or quality gate in them is contradicted by the diff."
+      - "Mermaid check: 21 blocks, structurally checked with a scratchpad script for fence balance, diagram keyword, brace and paren balance, declared classDiagram classes and declared sequenceDiagram participants. The one item it reports, IntegrationsDeps --> ProjectRegistry in 5.2 naming a class declared in 5.1, is byte-identical at b29a52a and is a deliberate cross-subsection reference, not a regression from this branch."
   ```
 
 ## Divergences
