@@ -4,12 +4,12 @@ type: workstream
 workstream: WS-109-skrkxj
 slug: skill-install-engine-leftover-defects
 title: "Skill-install-engine leftover defects"
-status: backlog
+status: ready
 tags: [agentic-tools, bug, filesystem, server, maintenance]
 created: 2026-09-11
 updated: 2026-09-11
 author: Anthony Koukoullis
-depends_on: []
+depends_on: [WS-108-wwcz5g]
 links: [WS-106-1xers0]
 ---
 

@@ -4,12 +4,12 @@ type: workstream
 workstream: WS-110-ccijqv
 slug: skill-update-silent-overwrite-warning
 title: "Update button overwrites locally modified skill files with no warning"
-status: backlog
+status: ready
 tags: [agentic-tools, ux]
 created: 2026-09-11
 updated: 2026-09-11
 author: Anthony Koukoullis
-depends_on: []
+depends_on: [WS-109-skrkxj]
 links: [WS-107-do28jk]
 ---
 
