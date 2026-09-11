@@ -273,7 +273,7 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
       - "`git diff f0d4e2f -- ...PLN-88-tpbc8f-plan.md | grep -c \"^+.*- \\[ \\]\"` returns 0, so no checkbox line was introduced. No source file was edited."
   ```
 
-- [ ] 5. Test gate
+- [x] 5. Test gate
 
   ```yaml
   description: "Build and run the full suite. Do not merge while anything fails."
@@ -294,8 +294,14 @@ suite at that commit reports 387 pass, 0 fail. No correction adds a runtime depe
     - "Is every failure, if any, recorded in a new issue list in this workstream?"
     - "Is the branch left unmerged while any failure stands?"
   self_eval:
-    passed: false
+    passed: true
     failures: []
+    notes:
+      - "`npm test` ran twice on branch feature/skill-install-engine-leftover-defects. Both runs exited 0."
+      - "The pretest build ran the three tsc projects, copied the static assets, checked dist/ for source maps (none found) and bundled the browser code. No build error appeared."
+      - "The suite reports: tests 387, suites 0, pass 387, fail 0, cancelled 0, skipped 0, todo 0, duration_ms 3382.376."
+      - "The log holds zero lines matching `✖`, `not ok` or `error TS`, so no test failed and no type error was emitted."
+      - "No failure occurred, so no new issue list was needed and the branch stays unmerged for the ARCHITECTURE.md review in task 6."
   ```
 
 - [ ] 6. ARCHITECTURE.md review
