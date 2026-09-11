@@ -21,7 +21,10 @@ import { unwrapIpc } from './ipc-adapter';
 import type { PraxisIpcResult } from './ipc-adapter';
 import { resolveBasePathForScope } from './lib/agentic-tools-scope';
 import type { InstallScope } from './lib/agentic-tools-scope';
-import { deriveIntegrationsRowDecision } from '../lib/agentic-tools-chip-rules';
+import {
+  deriveIntegrationsRowDecision,
+  updateOverwriteWarningNeeded
+} from '../lib/agentic-tools-chip-rules';
 import type { IntegrationsRowRuleInput } from '../lib/agentic-tools-chip-rules';
 import type {
   DetectionConfidence,
@@ -430,6 +433,18 @@ import type {
   // version chip and the Update button.
   var UPDATE_AVAILABLE_LABEL = 'Update available';
 
+  // The blocking confirmation shown before an update overwrites skill files FlowCharge
+  // has no record of writing. src/lib/agentic-tools-chip-rules.ts decides whether it is
+  // needed and holds no user-facing string; this file owns the words, as it does for
+  // every other label in this modal.
+  function updateOverwriteWarningMessage(displayName: string): string {
+    return 'Update the FlowCharge Core skills for ' + displayName + '?\n\n' +
+      'FlowCharge has no record of installing these skill files, so they may hold local ' +
+      'changes. Updating overwrites every file the current release writes, and any local ' +
+      'change to those files is lost.\n\n' +
+      'Cancel leaves the files exactly as they are.';
+  }
+
   type IntegrationsRowEntry = {
     row: ToolDetectionRow;
     rowEl: HTMLElement;
@@ -546,7 +561,21 @@ import type {
 
     // One row, the same install path the Install selected button uses — so the
     // result lands on this row's own install chip and the failure alert is shared.
+    //
+    // The guard stays here rather than inside installIntegrationsSelected, which is what
+    // leaves the Install selected path structurally untouched. The record is read at the
+    // CURRENT scope, so a global and a project record for the same tool stay separate.
     updateButton.addEventListener('click', function () {
+      var recordKey = installRecordKey(entry.row.toolId, currentIntegrationsScope);
+      var warn = updateOverwriteWarningNeeded({
+        // Literals for now: task 2.1 replaces ledgerLoaded with
+        // integrationsInstallRecordsLoaded, and task 2.2 replaces installedThisSession
+        // with a read of integrationsLiveInstallKeys. The input shape is already final.
+        ledgerLoaded: true,
+        hasLedgerRecord: integrationsInstallRecords[recordKey] !== undefined,
+        installedThisSession: false
+      });
+      if (warn && !window.confirm(updateOverwriteWarningMessage(entry.row.displayName))) return;
       installIntegrationsSelected([entry]);
     });
 

@@ -178,3 +178,27 @@ export function deriveIntegrationsRowDecision(
     notes: notes
   };
 }
+
+export interface UpdateOverwriteWarningInput {
+  // Did the getInstallStatus fetch resolve in this dialog session? False while it is
+  // pending, and false after it failed, so the ledger says nothing either way.
+  ledgerLoaded: boolean;
+  // Does a record exist for this row's toolId at the currently selected scope?
+  hasLedgerRecord: boolean;
+  // Did FlowCharge install or update this tool at this scope earlier in this dialog
+  // session?
+  installedThisSession: boolean;
+}
+
+// Whether the caller must warn before an update overwrites files FlowCharge cannot show
+// it wrote. A function of its argument only: no DOM, no fetch, no user-facing string and
+// no side effect. The words and the dialog live in home.ts.
+//
+// installedThisSession wins over both other inputs: FlowCharge wrote those files a
+// moment ago, so there is nothing to warn about. Otherwise only a loaded ledger holding
+// a record answers false. An unloaded ledger answers true, because an unknown history is
+// exactly the case this warning exists for.
+export function updateOverwriteWarningNeeded(input: UpdateOverwriteWarningInput): boolean {
+  if (input.installedThisSession) return false;
+  return !(input.ledgerLoaded && input.hasLedgerRecord);
+}
